@@ -1,6 +1,7 @@
 '''Method(s) for getting geo info.
 '''
 from flask import Blueprint
+from flask import request
 import pycountry
 
 geo_api = Blueprint('geo_api', __name__)
@@ -18,6 +19,5 @@ def geo_info():
         subdivision: name of subdivision (state, district etc), if available
         latlong: String of lat/long coordinates, if available
     '''
-    pass
-    print("Country info")
+    places_list = request.args.get('places_list')
     return ''
