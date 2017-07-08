@@ -2,8 +2,12 @@
 
 How to ensure has access to pre-loaded models?
 '''
+from flask import Blueprint
 
 
+classifier_api = Blueprint('classifier_api', __name__)
+
+@classifier_api.route('/classify', methods=['GET'])
 def classify():
     # Query Database for scraped content
 

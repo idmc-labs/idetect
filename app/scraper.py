@@ -1,3 +1,4 @@
+from flask import Blueprint
 import newspaper
 import csv
 import urllib
@@ -11,6 +12,10 @@ from bs4 import BeautifulSoup
 import re
 
 
+
+scraper_api = Blueprint('scraper_api', __name__)
+
+@scraper_api.route('/scrape', methods=['GET'])
 def scrape():
     # Query Database for list of URLs
 
