@@ -33,7 +33,7 @@ def geo_info():
         location_info = {}
         country_info = city_subdivision_country(p)
         if country_info:
-            location_info['location_text'] = p
+            location_info['description'] = p
             location_info['country_code'] = country_info['country_code']
             output.append(location_info)
         else:
@@ -41,7 +41,7 @@ def geo_info():
                 p, use_layers=False, hints=hints)
             country_code = c_info['country_code']
             if country_code != '':
-                location_info['location_text'] = p
+                location_info['description'] = p
                 location_info['country_code'] = country_code
                 output.append(location_info)
     return jsonify(results = output)

@@ -14,3 +14,7 @@ def extract():
 
     # Save extracted facts in Fact Database
     pass
+
+
+def extract_facts(content):
+    pass
