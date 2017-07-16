@@ -1,8 +1,10 @@
 version: '3'
 services:
-  postgres:
+  localdb:
     build: docker/postgres
-    image: postgres
+    image: localdb
+    ports:
+      - 5432:5432
   flask:
     build:
       context: .
@@ -14,7 +16,7 @@ services:
     ports:
       - 5001:5001
     depends_on:
-      - postgres
+      - localdb
     env_file: docker.env
   conda:
     build:
@@ -27,5 +29,5 @@ services:
     ports:
       - 5002:5002
     depends_on:
-      - postgres
+      - localdb
     env_file: docker.env

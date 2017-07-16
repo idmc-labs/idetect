@@ -15,15 +15,15 @@ from idetect.scraper import scraper_api
 # Background functions for performing activties every X time
 
 def run_scraper():
-    requests.get("http://0.0.0.0:5000/scrape")
+    requests.get("http://0.0.0.0:5001/scrape")
 
 
 def run_classifier():
-    requests.get("http://0.0.0.0:5000/classify")
+    requests.get("http://0.0.0.0:5001/classify")
 
 
 def run_fact_extraction():
-    requests.get("http://0.0.0.0:5000/extract")
+    requests.get("http://0.0.0.0:5001/extract")
 
 
 def run_schedule():
@@ -43,4 +43,6 @@ if __name__ == "__main__":
     schedule.every(60).seconds.do(run_fact_extraction)
     t = Thread(target=run_schedule)
     t.start()
-    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
+    app.run(host='0.0.0.0', port=5001, debug=True, threaded=True,
+            static_folder='/home/idetect/web/static',
+            template_folder='/home/idetect/web/templates')
