@@ -1,0 +1,15 @@
+name: idetect
+channels:
+- defaults
+dependencies:
+- Flask
+- psycopg2
+- SQLAlchemy
+- spacy
+- requests
+- textract
+- pip:
+  - schedule
+  - pycountry
+  - newspaper3k
+prefix: /opt/conda/envs/idetect

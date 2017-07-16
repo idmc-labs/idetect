@@ -1,14 +1,15 @@
 #!/Users/simonbedford/anaconda3/bin/python
 
-from app import app
-import requests
-import schedule
 import time
 from threading import Thread
-from app.scraper import scraper_api
-from app.classifier import classifier_api
-from app.fact_extractor import extractor_api
-from app.geotagger import geo_api
+
+import requests
+import schedule
+from idetect import app
+from idetect.classifier import classifier_api
+from idetect.fact_extractor import extractor_api
+from idetect.geotagger import geo_api
+from idetect.scraper import scraper_api
 
 
 # Background functions for performing activties every X time

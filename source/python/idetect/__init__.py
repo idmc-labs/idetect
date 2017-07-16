@@ -6,8 +6,8 @@ import spacy
 app = Flask(__name__)
 
 
-with open('data/cities_to_countries.json', "r") as f:
-    cities_to_countries = json.load(f)
+#with open('data/cities_to_countries.json', "r") as f:
+cities_to_countries = {} # json.load(f)
 print("Loaded cities_to_countries dictionary.")
 
 ## Load Spacy English language model

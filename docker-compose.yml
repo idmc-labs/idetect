@@ -1,0 +1,31 @@
+version: '3'
+services:
+  postgres:
+    build: docker/postgres
+    image: postgres
+  flask:
+    build:
+      context: .
+      dockerfile: ./docker/idetect/Dockerfile
+    image: idetect
+    command: python3 /idetect/python/run.py
+    volumes:
+      - ./source:/idetect
+    ports:
+      - 5001:5001
+    depends_on:
+      - postgres
+    env_file: docker.env
+  conda:
+    build:
+      context: .
+      dockerfile: ./docker/idetect/Dockerfile
+    image: idetect
+    command: jupyter notebook --no-browser --ip=0.0.0.0 --port 5002 /idetect/notebooks
+    volumes:
+      - ./source:/idetect
+    ports:
+      - 5002:5002
+    depends_on:
+      - postgres
+    env_file: docker.env
