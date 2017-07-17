@@ -3,7 +3,6 @@ import os
 import random
 import time
 from datetime import datetime
-from multiprocessing import Process
 from unittest import TestCase
 
 from sqlalchemy import create_engine
@@ -32,7 +31,7 @@ class TestWorker(TestCase):
 
     def tearDown(self):
         for process in self.processes:
-            logger.debug(f"Terminating {process}")
+            logger.debug("Terminating {}".format(process))
             process.terminate()
         self.session.rollback()
         if self.session.query(Article).filter(Article.url == 'http://example.com').delete() > 0:
@@ -104,28 +103,23 @@ class TestWorker(TestCase):
         self.assertEqual(self.session.query(Article).filter(Article.status == Status.FETCHED).count(), n)
 
     def test_work_parallel(self):
-        n = 1000
+        n = 100
         for i in range(n):
             article = Article(url='http://example.com', status=Status.NEW)
             self.session.add(article)
             self.session.commit()
-        p = 4
-        for i in range(p):
-            worker = Worker(Status.NEW, Status.FETCHING, Status.FETCHED, Status.FETCHING_FAILED,
+        self.processes += Worker.start_processes(4, Status.NEW, Status.FETCHING, Status.FETCHED, Status.FETCHING_FAILED,
                             TestWorker.nap_fn, self.engine)
-            process = Process(target=worker.work_indefinitely, daemon=True)
-            self.processes.append(process)
-            process.start()
         self.engine.dispose()
         self.session = Session()
         start = datetime.now()
-        for i in range(int(n / p)):  # shouldn't take longer than this...
+        for i in range(int(n / len(self.processes))):  # shouldn't take longer than this...
             remaining = self.session.query(Article).filter(Article.status == Status.NEW).count()
             if remaining == 0:
-                logger.info(f"Processing took {datetime.now() - start}")
+                logger.info("Processing took {}".format(datetime.now() - start))
                 break
-            logger.info(f"{remaining} remain after {datetime.now() - start}")
+            logger.info("{} remain after {}".format(remaining, datetime.now() - start))
             time.sleep(1)
         else:
-            logger.info(f"Processing took {datetime.now() - start} seconds!.")
+            logger.info("Processing took {} seconds!.".format(datetime.now() - start))
         time.sleep(1)

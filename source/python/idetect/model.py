@@ -1,20 +1,14 @@
-import sqlalchemy
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-
-
 import os
 
-from sqlalchemy import Table, text
-from sqlalchemy import create_engine
+from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean, Numeric
-from sqlalchemy.orm import sessionmaker, relationship, object_session
-from datetime import datetime
+from sqlalchemy.orm import sessionmaker, object_session
+from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import func
 
 Base = declarative_base()
 Session = sessionmaker()
+
 
 def db_url():
     """Return the database URL based on environment variables"""
@@ -38,9 +32,7 @@ class Status:
 class UnexpectedArticleStatusException(Exception):
     def __init__(self, article, expected, actual):
         super(UnexpectedArticleStatusException, self).__init__(
-            "Expected article {id} to be in state {expected}, but was in state {actual}".format(
-                id=article.id, expected=expected, actual=actual
-            ))
+            "Expected article {} to be in state {}, but was in state {}".format(article.id, expected, actual))
         self.expected = expected
         self.actual = actual
 
@@ -70,5 +62,9 @@ class Article(Base):
                 Article.status: new_status
             })
         if result != 1:
-            updated = session.query(Article).filter(Article.id == self.id).one()
-            raise UnexpectedArticleStatusException(self, expected_status, updated.status)
+            try:
+                updated = session.query(Article).filter(Article.id == self.id).one()
+                raise UnexpectedArticleStatusException(self, expected_status, updated.status)
+            except NoResultFound:
+                raise UnexpectedArticleStatusException(self, expected_status, None)
+

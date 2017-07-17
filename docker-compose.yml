@@ -10,9 +10,11 @@ services:
       context: .
       dockerfile: ./docker/idetect/Dockerfile
     image: idetect
-    command: python3 /idetect/python/run.py
+    command: python3 /home/idetect/python/run.py
     volumes:
-      - ./source:/idetect
+      - ./source:/home/idetect
+      - ./source/web/static:/home/idetect/python/idetect/static
+      - ./source/web/templates:/home/idetect/python/idetect/templates
     ports:
       - 5001:5001
     depends_on:
@@ -23,9 +25,9 @@ services:
       context: .
       dockerfile: ./docker/idetect/Dockerfile
     image: idetect
-    command: jupyter notebook --no-browser --ip=0.0.0.0 --port 5002 /idetect/notebooks
+    command: jupyter notebook --no-browser --ip=0.0.0.0 --port 5002 /home/idetect/notebooks
     volumes:
-      - ./source:/idetect
+      - ./source:/home/idetect
     ports:
       - 5002:5002
     depends_on:

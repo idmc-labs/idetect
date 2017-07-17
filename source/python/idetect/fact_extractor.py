@@ -2,7 +2,7 @@
 
 How to ensure has access to pre-loaded models?
 '''
-from flask import Blueprint
+from flask import Blueprint, render_template
 
 extractor_api = Blueprint('extractor_api', __name__)
 
@@ -13,7 +13,7 @@ def extract():
     # For each piece of content, run fact extraction
 
     # Save extracted facts in Fact Database
-    pass
+    return render_template('success.html', endpoint=__name__)
 
 
 def extract_facts(content):

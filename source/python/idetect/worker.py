@@ -1,12 +1,14 @@
 import logging
 import os
+import random
 import signal
 import time
+from multiprocessing import Process
 
 from idetect.model import Article, UnexpectedArticleStatusException, Session
 
 logger = logging.getLogger(__name__)
-
+logger.setLevel(logging.INFO)
 
 class Worker:
     def __init__(self, status, working_status, success_status, failure_status, function, engine):
@@ -27,7 +29,7 @@ class Worker:
         signal.signal(signal.SIGTERM, self.terminate)
 
     def terminate(self, signum, frame):
-        print(f"Worker {os.getpid()} terminated")
+        logger.warn("Worker {} terminated".format(os.getpid()))
         self.terminated = True
 
     def work(self):
@@ -37,7 +39,6 @@ class Worker:
         """
         try:
             if self.session is None:
-                self.engine.dispose()  # each Worker must have its own session, made in-Process
                 Session.configure(bind=self.engine)
                 self.session = Session()
             claimed_one = False
@@ -50,17 +51,21 @@ class Worker:
                         return False  # no work to be done
                     article.update_status(self.working_status)
                     self.session.commit()
-                    logger.info(f"Worker claimed Article {article.id} in status {self.status}")
+                    logger.info("Worker {} claimed Article {} in status {}".format(
+                        os.getpid(), article.id, self.status))
                     claimed_one = True
                 except UnexpectedArticleStatusException:
                     pass  # another worker claimed this article before we could, try again
             try:
+                # actually run the work function on this article
                 self.function(article)
-                logger.info(f"Worker processed Article {article.id} {self.status} -> {self.success_status}")
+                logger.info("Worker {} processed Article {} {} -> {}".format(
+                    os.getpid(), article.id, self.status, self.success_status))
                 article.update_status(self.success_status)
                 self.session.commit()
             except Exception as e:
-                logger.warn(f"Worker failed to process Article {article.id} {self.status} -> {self.failure_status}",
+                logger.warn("Worker {} failed to process Article {} {} -> {}".format(
+                    os.getpid(), article.id, self.status, self.failure_status),
                             exc_info=e)
                 article.update_status(self.failure_status)
                 self.session.commit()
@@ -78,6 +83,8 @@ class Worker:
 
     def work_indefinitely(self, max_sleep=60):
         """While there is work to do, do it. If there's no work to do, take increasingly long naps until there is."""
+        logger.info("Worker {} working indefinitely".format(os.getpid()))
+        time.sleep(random.randrange(max_sleep)) # stagger start times
         sleep = 1
         while not self.terminated:
             if self.work_all() > 0:
@@ -85,3 +92,14 @@ class Worker:
             else:
                 time.sleep(sleep)
                 sleep = min(max_sleep, sleep * 2)
+
+    @staticmethod
+    def start_processes(num, status, working_status, success_status, failure_status, function, engine):
+        processes = []
+        engine.dispose()  # each Worker must have its own session, made in-Process
+        for i in range(num):
+            worker = Worker(status, working_status, success_status, failure_status, function, engine)
+            process = Process(target=worker.work_indefinitely, daemon=True)
+            processes.append(process)
+            process.start()
+        return processes
