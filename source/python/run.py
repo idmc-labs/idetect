@@ -1,48 +1,47 @@
-#!/Users/simonbedford/anaconda3/bin/python
+import logging
+import sys
+from math import ceil
+from multiprocessing import cpu_count
+from time import sleep
 
-import time
-from threading import Thread
+from sqlalchemy import create_engine
 
-import requests
-import schedule
-from idetect import app
-from idetect.classifier import classifier_api
-from idetect.fact_extractor import extractor_api
-from idetect.geotagger import geo_api
-from idetect.scraper import scraper_api
+from idetect.api import app
+from idetect.model import db_url, Base, Session, Status
+from idetect.worker import Worker
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.root.addHandler(logging.StreamHandler(sys.stderr))
 
-# Background functions for performing activties every X time
+engine = create_engine(db_url())
+Session.configure(bind=engine)
+Base.metadata.create_all(engine)
 
-def run_scraper():
-    requests.get("http://0.0.0.0:5001/scrape")
-
-
-def run_classifier():
-    requests.get("http://0.0.0.0:5001/classify")
-
-
-def run_fact_extraction():
-    requests.get("http://0.0.0.0:5001/extract")
+# with open('data/cities_to_countries.json', "r") as f:
+cities_to_countries = {}  # json.load(f)
+print("Loaded cities_to_countries dictionary.")
 
 
-def run_schedule():
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+## Load Spacy English language model
+## Uncomment this once using NLP
+# nlp = spacy.load('en')
+# print("Loaded Spacy english language models.")
 
+## TODO: Load pre-trained classifiers
 
-app.register_blueprint(scraper_api)
-app.register_blueprint(classifier_api)
-app.register_blueprint(extractor_api)
-app.register_blueprint(geo_api)
+def do_nothing(article):
+    sleep(60)
+
 
 if __name__ == "__main__":
-    schedule.every(60).seconds.do(run_scraper)
-    schedule.every(60).seconds.do(run_classifier)
-    schedule.every(60).seconds.do(run_fact_extraction)
-    t = Thread(target=run_schedule)
-    t.start()
-    app.run(host='0.0.0.0', port=5001, debug=True, threaded=True,
-            static_folder='/home/idetect/web/static',
-            template_folder='/home/idetect/web/templates')
+    # Start workers
+    n_workers = ceil(cpu_count() / 2)
+    # replace do_nothing with the actual work functions...
+    Worker.start_processes(n_workers, Status.NEW, Status.FETCHING, Status.FETCHED, Status.FETCHING_FAILED,
+                           do_nothing, engine)
+    Worker.start_processes(n_workers, Status.FETCHED, Status.PROCESSING, Status.PROCESSED, Status.PROCESSING_FAILED,
+                           do_nothing, engine)
+
+    # Start flask app
+    app.run(host='0.0.0.0', port=5001, debug=True, threaded=True)

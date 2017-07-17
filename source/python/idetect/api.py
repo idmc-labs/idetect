@@ -32,7 +32,7 @@ def add_url():
     session.commit()
     result = None # because the below doesn't work
     # result = Scraper().scrape(article.url)
-    return render_template('success.html', endpoint='scrape', article=article, result=result)
+    return render_template('success.html', endpoint='add_url', article=article, result=result)
 
 @app.route('/scrape/<int:article_id>', methods=['GET'])
 def scrape(article_id):
