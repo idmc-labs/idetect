@@ -1,12 +1,11 @@
 import logging
 import sys
 from math import ceil
-from multiprocessing import cpu_count
+from multiprocessing import cpu_count, active_children
 from time import sleep
 
 from sqlalchemy import create_engine
 
-from idetect.api import app
 from idetect.model import db_url, Base, Session, Status
 from idetect.worker import Worker
 
@@ -17,18 +16,6 @@ logger.root.addHandler(logging.StreamHandler(sys.stderr))
 engine = create_engine(db_url())
 Session.configure(bind=engine)
 Base.metadata.create_all(engine)
-
-# with open('data/cities_to_countries.json', "r") as f:
-cities_to_countries = {}  # json.load(f)
-print("Loaded cities_to_countries dictionary.")
-
-
-## Load Spacy English language model
-## Uncomment this once using NLP
-# nlp = spacy.load('en')
-# print("Loaded Spacy english language models.")
-
-## TODO: Load pre-trained classifiers
 
 def do_nothing(article):
     sleep(60)
@@ -43,5 +30,6 @@ if __name__ == "__main__":
     Worker.start_processes(n_workers, Status.FETCHED, Status.PROCESSING, Status.PROCESSED, Status.PROCESSING_FAILED,
                            do_nothing, engine)
 
-    # Start flask app
-    app.run(host='0.0.0.0', port=5001, debug=True, threaded=True)
+    # run until all children are finished
+    for child in active_children():
+        child.join()

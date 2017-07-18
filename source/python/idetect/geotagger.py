@@ -6,15 +6,11 @@ from itertools import permutations
 
 import pycountry
 import requests
-from flask import Blueprint
-from flask import jsonify
-from flask import request
-from idetect import cities_to_countries
 
-geo_api = Blueprint('geo_api', __name__)
+# with open('data/cities_to_countries.json', "r") as f:
+cities_to_countries = {}  # json.load(f)
+print("Loaded cities_to_countries dictionary.")
 
-
-@geo_api.route('/geo_info', methods=['GET'])
 def geo_info():
     '''This exposes the internal geo tagging functionality.
     In fact extraction, the geo tagging solution can be internal or external.

@@ -1,1 +1,6 @@
 */__pycache__/
+source/python/idetect/__pycache__
+source/.ipython
+source/.jupyter
+source/.local
+source/notebooks/.ipynb_checkpoints

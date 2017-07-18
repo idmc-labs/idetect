@@ -3,6 +3,13 @@
 How to ensure has access to pre-loaded models?
 '''
 
+## Load Spacy English language model
+## Uncomment this once using NLP
+# nlp = spacy.load('en')
+# print("Loaded Spacy english language models.")
+
+## TODO: Load pre-trained classifiers
+
 def classify(article):
     # Query Database for scraped content
 

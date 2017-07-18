@@ -5,22 +5,33 @@ services:
     image: localdb
     ports:
       - 5432:5432
-  flask:
+  api:
     build:
       context: .
       dockerfile: ./docker/idetect/Dockerfile
     image: idetect
-    command: python3 /home/idetect/python/run.py
+    command: python3 /home/idetect/python/run_api.py
     volumes:
       - ./source:/home/idetect
-      - ./source/web/static:/home/idetect/python/idetect/static
-      - ./source/web/templates:/home/idetect/python/idetect/templates
+      - ./source/web/static:/home/idetect/python/static
+      - ./source/web/templates:/home/idetect/python/templates
     ports:
       - 5001:5001
     depends_on:
       - localdb
     env_file: docker.env
-  conda:
+  workers:
+    build:
+      context: .
+      dockerfile: ./docker/idetect/Dockerfile
+    image: idetect
+    command: python3 /home/idetect/python/run_workers.py
+    volumes:
+      - ./source:/home/idetect
+    depends_on:
+      - localdb
+    env_file: docker.env
+  notebooks:
     build:
       context: .
       dockerfile: ./docker/idetect/Dockerfile
