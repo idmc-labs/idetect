@@ -1,14 +1,15 @@
 '''Method(s) for getting geo info.
 '''
-from flask import Blueprint
-from flask import request
-from flask import jsonify
-from app import cities_to_countries
-import pycountry
 import ast
 import unicodedata
-import requests
 from itertools import permutations
+
+import pycountry
+import requests
+from flask import Blueprint
+from flask import jsonify
+from flask import request
+from idetect import cities_to_countries
 
 geo_api = Blueprint('geo_api', __name__)
 

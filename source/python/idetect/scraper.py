@@ -1,4 +1,4 @@
-from flask import Blueprint
+from flask import Blueprint, render_template
 import newspaper
 import csv
 import urllib
@@ -10,24 +10,6 @@ from collections import OrderedDict
 import datetime
 from bs4 import BeautifulSoup
 import re
-
-
-
-scraper_api = Blueprint('scraper_api', __name__)
-
-@scraper_api.route('/scrape', methods=['GET'])
-def scrape():
-    # Query Database for list of URLs
-
-    # For each URL, try and access and scrape
-
-    # If successful, save contents & metadata & change status
-
-    # If unsuccessful, save metadata
-
-    # Save date scraped and increase attempts by 1
-    pass
-
 
 # PDF helper functions
 

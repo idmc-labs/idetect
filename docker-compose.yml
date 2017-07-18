@@ -1,0 +1,35 @@
+version: '3'
+services:
+  localdb:
+    build: docker/postgres
+    image: localdb
+    ports:
+      - 5432:5432
+  flask:
+    build:
+      context: .
+      dockerfile: ./docker/idetect/Dockerfile
+    image: idetect
+    command: python3 /home/idetect/python/run.py
+    volumes:
+      - ./source:/home/idetect
+      - ./source/web/static:/home/idetect/python/idetect/static
+      - ./source/web/templates:/home/idetect/python/idetect/templates
+    ports:
+      - 5001:5001
+    depends_on:
+      - localdb
+    env_file: docker.env
+  conda:
+    build:
+      context: .
+      dockerfile: ./docker/idetect/Dockerfile
+    image: idetect
+    command: jupyter notebook --no-browser --ip=0.0.0.0 --port 5002 /home/idetect/notebooks
+    volumes:
+      - ./source:/home/idetect
+    ports:
+      - 5002:5002
+    depends_on:
+      - localdb
+    env_file: docker.env

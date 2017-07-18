@@ -1,0 +1,10 @@
+Flask
+psycopg2
+SQLAlchemy
+spacy
+requests
+schedule
+pycountry
+newspaper3k
+# textract  # has to be installed separately because of dependency problems, see Dockerfile
+jupyter
