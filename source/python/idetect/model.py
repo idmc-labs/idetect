@@ -122,6 +122,13 @@ class ReportTerm:
     UNINHABITABLE = 'uninhabitable housing'
 
 
+report_location = Table(
+    'report_location', Base.metadata,
+    Column('report', ForeignKey('report.id'), primary_key=True),
+    Column('location', ForeignKey('location.id'), primary_key=True)
+)
+
+
 class Report(Base):
     __tablename__ = 'report'
 
@@ -138,3 +145,33 @@ class Report(Base):
     analyzer = Column(String)
     accuracy = Column(Numeric)
     analysis_date = Column(DateTime)
+    locations = relationship(
+        'Location', secondary=report_location, back_populates='reports')
+
+
+class CountryTerm(Base):
+    __tablename__ = 'country_term'
+
+    term = Column(String, primary_key=True)
+    code = Column(String(3))
+
+
+class LocationType:
+    ADDRESS = 'address'
+    NEIGHBERHOOD = 'neighberhood'
+    CITY = 'city'
+    SUBDIVISION = 'subdivision'
+    COUNTRY = 'country'
+    UNKNOWN = 'unknown'
+
+
+class Location(Base):
+    __tablename__ = 'location'
+
+    id = Column(Integer, primary_key=True)
+    description = Column(String)
+    location_type = Column(String)
+    # How to add reference to Country / Country Code
+    latlong = Column(String)
+    reports = relationship(
+        'Report', secondary=report_location, back_populates='locations')
