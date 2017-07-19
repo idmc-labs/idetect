@@ -1,6 +1,6 @@
 import os
 
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Numeric
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, object_session
 from sqlalchemy.orm.exc import NoResultFound
@@ -36,15 +36,34 @@ class UnexpectedArticleStatusException(Exception):
         self.expected = expected
         self.actual = actual
 
+article_content = Table(
+    'article_content', Base.metadata,
+    Column('article', ForeignKey('article.id'), primary_key=True),
+    Column('content', ForeignKey('content.id'), primary_key=True)
+)
 
 class Article(Base):
     __tablename__ = 'article'
 
     id = Column(Integer, primary_key=True)
+    url_id = Column(Integer)
     url = Column(String)
+    domain = Column(String)
     status = Column(String)
+    title = Column(String)
+    authors = Column(String)
+    language = Column(String(2))
+    relevance = Column(Boolean)
+    category = Column(String)
+    accuracy = Column(Numeric)
+    analyzer = Column(String)
+    response_code = Column(Integer)
+    retrieval_attempts = Column(Integer)
+    publication_date = Column(DateTime)
+    retrieval_date = Column(DateTime)
     created = Column(DateTime(timezone=True), server_default=func.now())
     updated = Column(DateTime(timezone=True), onupdate=func.now())
+    content = relationship('Content', secondary=article_content, back_populates='article')
 
     def update_status(self, new_status):
         """
@@ -67,4 +86,12 @@ class Article(Base):
                 raise UnexpectedArticleStatusException(self, expected_status, updated.status)
             except NoResultFound:
                 raise UnexpectedArticleStatusException(self, expected_status, None)
+
+class Content(Base):
+    __tablename__ = 'content'
+
+    id = Column(Integer, primary_key=True)
+    article = relationship('Article', secondary=article_content, back_populates='content')
+    content = Column(String)
+    content_type = Column(String)
 
