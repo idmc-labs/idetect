@@ -30,6 +30,7 @@ class Status:
 
 
 class UnexpectedArticleStatusException(Exception):
+
     def __init__(self, article, expected, actual):
         super(UnexpectedArticleStatusException, self).__init__(
             "Expected article {} to be in state {}, but was in state {}".format(article.id, expected, actual))
@@ -41,6 +42,7 @@ article_content = Table(
     Column('article', ForeignKey('article.id'), primary_key=True),
     Column('content', ForeignKey('content.id'), primary_key=True)
 )
+
 
 class Article(Base):
     __tablename__ = 'article'
@@ -63,7 +65,8 @@ class Article(Base):
     retrieval_date = Column(DateTime)
     created = Column(DateTime(timezone=True), server_default=func.now())
     updated = Column(DateTime(timezone=True), onupdate=func.now())
-    content = relationship('Content', secondary=article_content, back_populates='article')
+    content = relationship(
+        'Content', secondary=article_content, back_populates='article')
 
     def update_status(self, new_status):
         """
@@ -82,16 +85,56 @@ class Article(Base):
             })
         if result != 1:
             try:
-                updated = session.query(Article).filter(Article.id == self.id).one()
-                raise UnexpectedArticleStatusException(self, expected_status, updated.status)
+                updated = session.query(Article).filter(
+                    Article.id == self.id).one()
+                raise UnexpectedArticleStatusException(
+                    self, expected_status, updated.status)
             except NoResultFound:
-                raise UnexpectedArticleStatusException(self, expected_status, None)
+                raise UnexpectedArticleStatusException(
+                    self, expected_status, None)
+
 
 class Content(Base):
     __tablename__ = 'content'
 
     id = Column(Integer, primary_key=True)
-    article = relationship('Article', secondary=article_content, back_populates='content')
+    article = relationship(
+        'Article', secondary=article_content, back_populates='content')
     content = Column(String)
     content_type = Column(String)
 
+
+class ReportUnit:
+    PEOPLE = 'people'
+    HOUSEHOLDS = 'households'
+
+
+class ReportTerm:
+    DISPLACED = 'displaced'
+    EVACUATED = 'evacuated'
+    FLED = 'forced to flee'
+    HOMELESS = 'homeless'
+    CAMP = 'in relief camp'
+    SHELTERED = 'sheltered'
+    RELOCATED = 'relocated'
+    DESTROYED = 'destroyed housing'
+    DAMAGED = 'partially destroyed housing'
+    UNINHABITABLE = 'uninhabitable housing'
+
+
+class Report(Base):
+    __tablename__ = 'report'
+
+    id = Column(Integer, primary_key=True)
+    article_id = Column('article', Integer, ForeignKey(
+        'article.id'), primary_key=True)
+    article = relationship('Article', back_populates='reports')
+    reporting_unit = Column(String)
+    reporting_term = Column(String)
+    mentions_displacement_figure = Column(Boolean)
+    specific_displacement_figure = Column(Integer)
+    vague_displacement_figure = Column(String)
+    tag_locations = Column(String)
+    analyzer = Column(String)
+    accuracy = Column(Numeric)
+    analysis_date = Column(DateTime)
