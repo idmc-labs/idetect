@@ -61,6 +61,7 @@ class Article(Base):
     analyzer = Column(String)
     response_code = Column(Integer)
     retrieval_attempts = Column(Integer)
+    completion = Column(Numeric)
     publication_date = Column(DateTime)
     retrieval_date = Column(DateTime)
     created = Column(DateTime(timezone=True), server_default=func.now())
@@ -136,6 +137,8 @@ class Report(Base):
     article_id = Column('article', Integer, ForeignKey(
         'article.id'), primary_key=True)
     article = relationship('Article', back_populates='reports')
+    sentence_start = Column(Integer)
+    sentence_end = Column(Integer)
     reporting_unit = Column(String)
     reporting_term = Column(String)
     mentions_displacement_figure = Column(Boolean)
