@@ -1,8 +1,8 @@
 import os
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Numeric
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Numeric, ForeignKey, Table
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, object_session
+from sqlalchemy.orm import sessionmaker, object_session, relationship
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import func
 
@@ -30,12 +30,12 @@ class Status:
 
 
 class UnexpectedArticleStatusException(Exception):
-
     def __init__(self, article, expected, actual):
         super(UnexpectedArticleStatusException, self).__init__(
             "Expected article {} to be in state {}, but was in state {}".format(article.id, expected, actual))
         self.expected = expected
         self.actual = actual
+
 
 article_content = Table(
     'article_content', Base.metadata,
@@ -68,6 +68,7 @@ class Article(Base):
     updated = Column(DateTime(timezone=True), onupdate=func.now())
     content = relationship(
         'Content', secondary=article_content, back_populates='article')
+    reports = relationship('Report')
 
     def update_status(self, new_status):
         """
@@ -125,17 +126,17 @@ class ReportTerm:
 
 report_location = Table(
     'report_location', Base.metadata,
-    Column('report', ForeignKey('report.id'), primary_key=True),
-    Column('location', ForeignKey('location.id'), primary_key=True)
+    Column('report', Integer, ForeignKey('report.id')),
+    Column('location', Integer, ForeignKey('location.id'))
 )
 
 
 class Report(Base):
     __tablename__ = 'report'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, unique=True)
     article_id = Column('article', Integer, ForeignKey(
-        'article.id'), primary_key=True)
+        'article.id'))
     article = relationship('Article', back_populates='reports')
     sentence_start = Column(Integer)
     sentence_end = Column(Integer)
@@ -152,16 +153,23 @@ class Report(Base):
         'Location', secondary=report_location, back_populates='reports')
 
 
+class Country(Base):
+    __tablename__ = 'country'
+
+    code = Column(String(3), primary_key=True)
+    preferred_term = Column(String)
+
+
 class CountryTerm(Base):
     __tablename__ = 'country_term'
 
     term = Column(String, primary_key=True)
-    code = Column(String(3))
+    country = Column(String(3), ForeignKey(Country.code))
 
 
 class LocationType:
     ADDRESS = 'address'
-    NEIGHBERHOOD = 'neighberhood'
+    NEIGHBORHOOD = 'neighborhood'
     CITY = 'city'
     SUBDIVISION = 'subdivision'
     COUNTRY = 'country'
@@ -171,10 +179,11 @@ class LocationType:
 class Location(Base):
     __tablename__ = 'location'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, unique=True)
     description = Column(String)
     location_type = Column(String)
-    # How to add reference to Country / Country Code
+    country_code = Column('country', ForeignKey(Country.code))
+    country = relationship(Country)
     latlong = Column(String)
     reports = relationship(
         'Report', secondary=report_location, back_populates='locations')
