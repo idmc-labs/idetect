@@ -1,8 +1,8 @@
 import os
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Numeric, ForeignKey, Table
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Numeric, ForeignKey, Table, desc
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, object_session, relationship
+from sqlalchemy.orm import sessionmaker, object_session, relationship, make_transient
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import func
 
@@ -37,6 +37,15 @@ class UnexpectedArticleStatusException(Exception):
         self.actual = actual
 
 
+class NotLatestException(Exception):
+    def __init__(self, ours, other):
+        super(NotLatestException, self).__init__(
+            "Tried to update {}, but {} was the latest".format(ours, other)
+        )
+        self.ours = ours
+        self.other = other
+
+
 article_content = Table(
     'article_content', Base.metadata,
     Column('article', ForeignKey('article.id'), primary_key=True),
@@ -48,8 +57,8 @@ class Article(Base):
     __tablename__ = 'article'
 
     id = Column(Integer, primary_key=True)
-    url_id = Column(Integer)
-    url = Column(String)
+    url_id = Column(Integer, nullable=False)
+    url = Column(String, nullable=False)
     domain = Column(String)
     status = Column(String)
     title = Column(String)
@@ -70,30 +79,44 @@ class Article(Base):
         'Content', secondary=article_content, back_populates='article')
     reports = relationship('Report')
 
+    def __str__(self):
+        return "<Article {} {} {}>".format(self.id, self.url_id, self.url)
+
+    @classmethod
+    def most_recent(cls, session, url_id=None, url=None, lock=False):
+        """Return the Article with the most recent updated timestamp"""
+        query = session.query(cls)
+        if url_id is not None:
+            query = query.filter(Article.url_id == url_id)
+        if url is not None:
+            query = query.filter(Article.url == url)
+        if lock:
+            # This prevents this being run again until the transaction is committed or rolled back
+            query = query.with_for_update()
+        return query.order_by(desc(Article.updated)).limit(1).first()
+
     def update_status(self, new_status):
         """
-        Atomically Update the status of this Article from to new_status.
-        If something changed the status of this article since it was loaded, raise.
+        Try to update the status of this article. If this is not the most recent article for this
+        url_id, this will raise NotLatestException.
         """
         session = object_session(self)
-        if not session:
-            raise RuntimeError("Object has not been persisted in a session.")
+        try:
+            if not session:
+                raise RuntimeError("Object has not been persisted in a session.")
 
-        expected_status = self.status
-        result = session.query(Article).filter(Article.id == self.id, Article.status == self.status) \
-            .update(
-            {
-                Article.status: new_status
-            })
-        if result != 1:
-            try:
-                updated = session.query(Article).filter(
-                    Article.id == self.id).one()
-                raise UnexpectedArticleStatusException(
-                    self, expected_status, updated.status)
-            except NoResultFound:
-                raise UnexpectedArticleStatusException(
-                    self, expected_status, None)
+            # with_for_update makes sure that something else can't run this code at the same time
+            most_recent = Article.most_recent(session, self.url_id, lock=True)
+            if most_recent.id != self.id:
+                raise NotLatestException(self, most_recent)
+
+            make_transient(self)
+            self.id = None
+            self.status = new_status
+            session.add(self)
+            session.commit()
+        finally:
+            session.rollback()  # make sure we release the FOR UPDATE lock
 
 
 class Content(Base):

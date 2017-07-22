@@ -44,7 +44,7 @@ class TestWorker(TestCase):
     def test_work_one(self):
         worker = Worker(Status.NEW, Status.FETCHING, Status.FETCHED, Status.FETCHING_FAILED,
                         TestWorker.nap_fn, self.engine)
-        article = Article(url='http://example.com', status=Status.NEW)
+        article = Article(url='http://example.com', url_id=1, status=Status.NEW)
         self.session.add(article)
         self.session.commit()
         self.assertTrue(worker.work(), "Worker didn't find work")
@@ -61,7 +61,7 @@ class TestWorker(TestCase):
     def test_work_failure(self):
         worker = Worker(Status.NEW, Status.FETCHING, Status.FETCHED, Status.FETCHING_FAILED,
                         TestWorker.err_fn, self.engine)
-        article = Article(url='http://example.com', status=Status.NEW)
+        article = Article(url='http://example.com', url_id=1, status=Status.NEW)
         self.session.add(article)
         self.session.commit()
         self.assertTrue(worker.work(), "Worker didn't find work")
@@ -76,7 +76,7 @@ class TestWorker(TestCase):
                          TestWorker.nap_fn, self.engine)
         worker2 = Worker(Status.FETCHED, Status.PROCESSING, Status.PROCESSED, Status.PROCESSING_FAILED,
                          TestWorker.nap_fn, self.engine)
-        article = Article(url='http://example.com', status=Status.NEW)
+        article = Article(url='http://example.com', url_id=1, status=Status.NEW)
         self.session.add(article)
         self.session.commit()
         self.assertFalse(worker2.work(), "Worker2 found work")
@@ -94,7 +94,7 @@ class TestWorker(TestCase):
                         TestWorker.nap_fn, self.engine)
         n = 3
         for i in range(n):
-            article = Article(url='http://example.com', status=Status.NEW)
+            article = Article(url='http://example.com', url_id=i, status=Status.NEW)
             self.session.add(article)
             self.session.commit()
         self.assertEqual(worker.work_all(), 3)
@@ -105,7 +105,7 @@ class TestWorker(TestCase):
     def test_work_parallel(self):
         n = 100
         for i in range(n):
-            article = Article(url='http://example.com', status=Status.NEW)
+            article = Article(url='http://example.com', url_id=i, status=Status.NEW)
             self.session.add(article)
             self.session.commit()
         self.processes += Worker.start_processes(4, Status.NEW, Status.FETCHING, Status.FETCHED, Status.FETCHING_FAILED,

@@ -5,7 +5,7 @@ import sqlalchemy
 from sqlalchemy import create_engine
 
 from idetect.model import Base, Session, Status, Article, UnexpectedArticleStatusException, CountryTerm, Location, \
-    LocationType, Country
+    LocationType, Country, NotLatestException
 
 
 class TestModel(TestCase):
@@ -21,25 +21,28 @@ class TestModel(TestCase):
 
     def tearDown(self):
         self.session.rollback()
-        version = sqlalchemy.__version__
         self.session.query(Article).filter(Article.url =='http://example.com').delete()
         self.session.commit()
 
     def test_status_update(self):
         article = Article(url='http://example.com',
+                          url_id=123,
                           status=Status.NEW)
         self.session.add(article)
         self.session.commit()
 
         article.update_status(Status.FETCHING)
-        self.session.commit()
         self.assertEqual(article.status, Status.FETCHING)
 
         # meanwhile, some other process changed the status of this...
-        self.session.execute("UPDATE article SET status = :status WHERE id = :id",
-                             { 'status': Status.FETCHING_FAILED, 'id': article.id})
+        session2 = Session()
+        try:
+            other = Article.most_recent(session2, article.url_id)
+            other.update_status(Status.FETCHING_FAILED)
+        finally:
+            session2.rollback()
 
-        with self.assertRaises(UnexpectedArticleStatusException):
+        with self.assertRaises(NotLatestException):
             article.update_status(Status.FETCHED)
 
     def test_country_term(self):
