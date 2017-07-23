@@ -1,8 +1,8 @@
 import os
 
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Numeric, ForeignKey, Table
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, object_session
+from sqlalchemy.orm import sessionmaker, object_session, relationship
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import func
 
@@ -37,14 +37,38 @@ class UnexpectedArticleStatusException(Exception):
         self.actual = actual
 
 
+article_content = Table(
+    'article_content', Base.metadata,
+    Column('article', ForeignKey('article.id'), primary_key=True),
+    Column('content', ForeignKey('content.id'), primary_key=True)
+)
+
+
 class Article(Base):
     __tablename__ = 'article'
 
     id = Column(Integer, primary_key=True)
+    url_id = Column(Integer)
     url = Column(String)
+    domain = Column(String)
     status = Column(String)
+    title = Column(String)
+    authors = Column(String)
+    language = Column(String(2))
+    relevance = Column(Boolean)
+    category = Column(String)
+    accuracy = Column(Numeric)
+    analyzer = Column(String)
+    response_code = Column(Integer)
+    retrieval_attempts = Column(Integer)
+    completion = Column(Numeric)
+    publication_date = Column(DateTime(timezone=True))
+    retrieval_date =Column(DateTime(timezone=True), server_default=func.now())
     created = Column(DateTime(timezone=True), server_default=func.now())
     updated = Column(DateTime(timezone=True), onupdate=func.now())
+    content = relationship(
+        'Content', secondary=article_content, back_populates='article')
+    reports = relationship('Report')
 
     def update_status(self, new_status):
         """
@@ -63,8 +87,102 @@ class Article(Base):
             })
         if result != 1:
             try:
-                updated = session.query(Article).filter(Article.id == self.id).one()
-                raise UnexpectedArticleStatusException(self, expected_status, updated.status)
+                updated = session.query(Article).filter(
+                    Article.id == self.id).one()
+                raise UnexpectedArticleStatusException(
+                    self, expected_status, updated.status)
             except NoResultFound:
-                raise UnexpectedArticleStatusException(self, expected_status, None)
+                raise UnexpectedArticleStatusException(
+                    self, expected_status, None)
 
+
+class Content(Base):
+    __tablename__ = 'content'
+
+    id = Column(Integer, primary_key=True)
+    article = relationship(
+        'Article', secondary=article_content, back_populates='content')
+    content = Column(String)
+    content_type = Column(String)
+
+
+class ReportUnit:
+    PEOPLE = 'people'
+    HOUSEHOLDS = 'households'
+
+
+class ReportTerm:
+    DISPLACED = 'displaced'
+    EVACUATED = 'evacuated'
+    FLED = 'forced to flee'
+    HOMELESS = 'homeless'
+    CAMP = 'in relief camp'
+    SHELTERED = 'sheltered'
+    RELOCATED = 'relocated'
+    DESTROYED = 'destroyed housing'
+    DAMAGED = 'partially destroyed housing'
+    UNINHABITABLE = 'uninhabitable housing'
+
+
+report_location = Table(
+    'report_location', Base.metadata,
+    Column('report', Integer, ForeignKey('report.id')),
+    Column('location', Integer, ForeignKey('location.id'))
+)
+
+
+class Report(Base):
+    __tablename__ = 'report'
+
+    id = Column(Integer, primary_key=True, unique=True)
+    article_id = Column('article', Integer, ForeignKey(
+        'article.id'))
+    article = relationship('Article', back_populates='reports')
+    sentence_start = Column(Integer)
+    sentence_end = Column(Integer)
+    reporting_unit = Column(String)
+    reporting_term = Column(String)
+    specific_displacement_figure = Column(Integer)
+    vague_displacement_figure = Column(String)
+    tag_locations = Column(String)
+    analyzer = Column(String)
+    accuracy = Column(Numeric)
+    analysis_date = Column(DateTime)
+    locations = relationship(
+        'Location', secondary=report_location, back_populates='reports')
+
+
+class Country(Base):
+    __tablename__ = 'country'
+
+    code = Column(String(3), primary_key=True)
+    preferred_term = Column(String)
+
+
+class CountryTerm(Base):
+    __tablename__ = 'country_term'
+
+    term = Column(String, primary_key=True)
+    country = Column(String(3), ForeignKey(Country.code))
+
+
+class LocationType:
+    ADDRESS = 'address'
+    NEIGHBORHOOD = 'neighborhood'
+    CITY = 'city'
+    SUBDIVISION = 'subdivision'
+    COUNTRY = 'country'
+    UNKNOWN = 'unknown'
+
+
+class Location(Base):
+    __tablename__ = 'location'
+
+    id = Column(Integer, primary_key=True, unique=True)
+    description = Column(String)
+    location_type = Column(String)
+    country_code = Column('country', ForeignKey(Country.code))
+    country = relationship(Country)
+    latlong = Column(String)
+    reports = relationship(
+        'Report', secondary=report_location, back_populates='locations')
