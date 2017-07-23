@@ -1,3 +1,5 @@
+import os
+import requests
 import gensim
 import pandas as pd
 import numpy as np
@@ -7,21 +9,49 @@ from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.externals import joblib
 
-class CategoryModel(object):
-    def __init__(self):
-        self.load_model()
+from idetect.model import Category
 
-    def load_model(self, model_path='category.pkl'):
-        self.model = joblib.load(model_path)
-        return self
+class CategoryModel(object):
+    def __init__(self, model_path=None):
+        self.model = self.load_model(model_path=model_path)
+
+    def load_model(self, model_path=None):
+        if model_path and os.path.isfile(model_path):
+            clf = joblib.load(model_path)
+        else:
+            default_model_path = 'category.pkl'
+            if os.path.isfile(default_model_path):
+                clf = joblib.load(default_model_path)
+            else:
+                url = 'https://s3-us-west-2.amazonaws.com/idmc-idetect/category_models/category.pkl'
+                r = requests.get(url, stream=True)
+                if not os.path.isfile(default_model_path):
+                    try:
+                        os.makedirs(os.path.dirname(default_model_path))
+                    except OSError as exc: # Guard against race condition
+                        if exc.errno != errno.EEXIST:
+                            raise
+                with open(default_model_path, 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=1024):
+                        if chunk:  # filter out keep-alive new chunks
+                            f.write(chunk)
+                clf = joblib.load(default_model_path)
+        return clf
 
     def predict(self, text):
         try:
-            category = self.model.predict(pd.Series(text))
-            return category
+            category = self.model.predict(pd.Series(text))[0]
         except:
-            return 'unknown'
-        
+            # if error occurs, classify as most likely category
+            category = 'disaster'
+
+        if category == 'disaster':
+            return Category.DISASTER
+        elif category == 'conflict':
+            return Category.CONFLICT
+        else:
+            return Category.OTHER
+
 class Tokenizer(TransformerMixin):
     def __init__(self, stop_words=None):
         self.stop_words = stop_words
