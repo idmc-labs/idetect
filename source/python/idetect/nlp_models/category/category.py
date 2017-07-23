@@ -11,7 +11,7 @@ class CategoryModel(object):
     def __init__(self):
         self.load_model()
 
-    def load_model(self, model_path='lsi_pipe.pkl'):
+    def load_model(self, model_path='category.pkl'):
         self.model = joblib.load(model_path)
         return self
 
@@ -22,7 +22,6 @@ class CategoryModel(object):
         except:
             return 'unknown'
         
-
 class Tokenizer(TransformerMixin):
     def __init__(self, stop_words=None):
         self.stop_words = stop_words
