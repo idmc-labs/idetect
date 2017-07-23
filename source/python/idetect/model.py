@@ -216,7 +216,7 @@ class Report(Base):
     tag_locations = Column(String)
     analyzer = Column(String)
     accuracy = Column(Numeric)
-    analysis_date = Column(DateTime)
+    analysis_date = Column(DateTime(timezone=True), server_default=func.now())
     locations = relationship(
         'Location', secondary=report_location, back_populates='reports')
 
