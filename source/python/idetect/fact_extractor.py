@@ -5,7 +5,7 @@ How to ensure has access to pre-loaded models?
 from interpreter import Interpreter, person_reporting_terms, structure_reporting_terms, person_reporting_units, \
     structure_reporting_units, relevant_article_terms
 import spacy
-from model import Article, Content, ReportUnit, ReportTerm, Report, Country, CountryTerm, LocationType, Location, Session, Base
+from model import Report, Location, Session, Base
 from geotagger import get_geo_info
 import json
 
@@ -27,7 +27,8 @@ def save_reports(article, reports):
     for r in reports:
         report = Report(article_id=article.id, reporting_unit=r.reporting_unit, subject_term=r.reporting_term,
                         sentence_start=r.sentence_start, sentence_end=r.sentence_end,
-                        specific_displacement_figure=r.quantity[0], vague_displacement_figure=r.quantity[1],
+                        specific_displacement_figure=r.quantity[
+                            0], vague_displacement_figure=r.quantity[1],
                         tag_locations=json.dumps(r.tag_spans))
         session.add(report)
         session.commit()

@@ -5,7 +5,7 @@ import parsedatetime
 import string
 from spacy.tokens import Token, Span
 from datetime import datetime, timedelta
-from functools import reduce
+from model import ReportUnit, ReportTerm
 
 
 person_reporting_terms = [
@@ -605,37 +605,37 @@ class Interpreter(object):
 
     def convert_unit(self, reporting_unit):
         if reporting_unit.lemma_ in self.structure_unit_lemmas:
-            return "Households"
+            return ReportUnit.HOUSEHOLDS
         elif reporting_unit.lemma_ in self.household_lemmas:
-            return "Households"
+            return ReportUnit.HOUSEHOLDS
         else:
-            return "People"
+            return ReportUnit.PEOPLE
 
     def convert_term(self, reporting_term):
         reporting_term = reporting_term.text.split(" ")
         reporting_term = [self.nlp(t)[0].lemma_ for t in reporting_term]
         if "displace" in reporting_term:
-            return "Displaced"
+            return ReportTerm.DISPLACED
         elif "evacuate" in reporting_term:
-            return "Evacuated"
+            return ReportTerm.EVACUATED
         elif "flee" in reporting_term:
-            return "Forced to Flee"
+            return ReportTerm.FLED
         elif "homeless" in reporting_term:
-            return "Homeless"
+            return ReportTerm.HOMELESS
         elif "camp" in reporting_term:
-            return "In Relief Camp"
+            return ReportTerm.CAMP
         elif len(set(reporting_term) & set(["shelter", "accommodate"])) > 0:
-            return "Sheltered"
+            return ReportTerm.SHELTERED
         elif "relocate" in reporting_term:
-            return "Relocated"
+            return ReportTerm.RELOCATED
         elif "destroy" in reporting_term:
-            return "Destroyed Housing"
+            return ReportTerm.DESTROYED
         elif "damage" in reporting_term:
-            return "Partially Destroyed Housing"
+            return ReportTerm.DAMAGED
         elif "uninhabitable" in reporting_term:
-            return "Uninhabitable Housing"
+            return ReportTerm.UNINHABITABLE
         else:
-            return "Displaced"
+            return ReportTerm.DISPLACED
 
     def process_article_new(self, story):
         """
@@ -664,40 +664,6 @@ class Interpreter(object):
             if len(reports) > 0:
                 processed_reports.append(self.choose_report(reports))
         return processed_reports
-
-    def choose_report(self, reports):
-        '''Choose report based on the heuristics mentioned in the first cell
-        '''
-        people_reports = []
-        household_reports_1 = []
-        household_reports_2 = []
-
-        for r in reports:
-            if r.reporting_unit == "People":
-                people_reports.append(r)
-            elif r.reporting_unit == "Households":
-                if r.reporting_term in ("Partially Destroyed Housing", "Uninhabitable Housing"):
-                    household_reports_2.append(r)
-                else:
-                    household_reports_1.append(r)
-        if len(people_reports) > 0:
-            report = self.first_report(people_reports)
-        elif len(household_reports_1) > 0:
-            report = self.first_report(household_reports_1)
-        elif len(household_reports_2) > 0:
-            report = self.first_report(household_reports_2)
-        else:
-            report = reports[0]
-
-        return report
-
-    def first_report(self, reports):
-        '''Choose the first report based on location in text'''
-        report_locs = []
-        for report in reports:
-            report_locs.append(
-                (report, minimum_loc(report.tag_spans)))
-        return sorted(report_locs, key=lambda x: x[1])[0][0]
 
 
 class Fact(object):
