@@ -4,9 +4,9 @@ import json
 import unicodedata
 import pycountry
 import requests
-from model import LocationType
+from idetect.model import LocationType
 
-with open('../../data/cities_to_countries.json', "r") as f:
+with open('/home/idetect/data/cities_to_countries.json', "r") as f:
     cities_to_countries = json.load(f)
 print("Loaded cities_to_countries dictionary.")
 

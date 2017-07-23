@@ -5,7 +5,7 @@ import parsedatetime
 import string
 from spacy.tokens import Token, Span
 from datetime import datetime, timedelta
-from model import ReportUnit, ReportTerm
+from idetect.model import ReportUnit, ReportTerm
 
 
 person_reporting_terms = [

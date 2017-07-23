@@ -2,22 +2,22 @@
 
 How to ensure has access to pre-loaded models?
 '''
-from interpreter import Interpreter, person_reporting_terms, structure_reporting_terms, person_reporting_units, \
+from idetect.interpreter import Interpreter, person_reporting_terms, structure_reporting_terms, person_reporting_units, \
     structure_reporting_units, relevant_article_terms
 import spacy
-from model import Report, Location, Session, Base
-from geotagger import get_geo_info
+from idetect.model import Report, Location, Session, Base
+from idetect.geotagger import get_geo_info
 import json
 
 nlp = spacy.load("en")
 print("Loaded Spacy English Language NLP Models.")
 
 
-def extract_reports(article, reports):
+def extract_reports(article):
     # Get rules-based facts along with sentence numbers
     interpreter = Interpreter(nlp, person_reporting_terms, structure_reporting_terms, person_reporting_units,
                               structure_reporting_units, relevant_article_terms)
-    content = article.content.content
+    content = article.content[0].content
     reports = interpreter.process_article_new(content)
     if len(reports) > 0:
         save_reports(reports)

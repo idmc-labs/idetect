@@ -2,6 +2,8 @@ Flask
 psycopg2
 SQLAlchemy
 spacy
+textacy
+parsedatetime
 requests
 schedule
 pycountry

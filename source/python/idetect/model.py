@@ -69,7 +69,7 @@ class Article(Base):
     retrieval_attempts = Column(Integer, default=0)
     completion = Column(Numeric)
     publication_date = Column(DateTime(timezone=True))
-    retrieval_date =Column(DateTime(timezone=True), server_default=func.now())
+    retrieval_date = Column(DateTime(timezone=True))
     created = Column(DateTime(timezone=True), server_default=func.now())
     updated = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     content = relationship(
