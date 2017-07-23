@@ -61,13 +61,8 @@ def get_absolute_date(relative_date_string, publication_date=None):
             # likely because year isn't specified or date_string is relative
 
             # Check a specific date is included
-            # TODO: Smarter way or regex to check if relative_date_string
-            #       contains a month name?
-            months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun',
-                      'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
-            contains_month = reduce(
-                lambda result, month: result or relative_date_string.lower().find(month) != -1,
-                months, False)
+            contains_month = re.search(
+                'jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec', relative_date_string.lower())
 
             if contains_month:
                 # TODO: Is it enough to just check for month names to determine if a
@@ -115,15 +110,9 @@ class Interpreter(object):
         self.relevant_article_lemmas = [t.lemma_ for t in self.nlp(
             " ".join(relevant_article_terms))]
 
-    def test_token_equality(self, token_a, token_b):
-        if token_a.i == token_b.i:
-            return True
-        else:
-            return False
-
     def check_if_collection_contains_token(self, token, collection):
         for c in collection:
-            if self.test_token_equality(token, c):
+            if token.i == c.i:
                 return True
         return False
 
