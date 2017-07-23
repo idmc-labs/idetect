@@ -553,7 +553,7 @@ class Interpreter(object):
                             unit = 'People'
                         quantity = Fact(o, o, o.lemma_, 'quantity')
                         report = Report(unit, self.convert_term(verb), [p.text for p in possible_locations],
-                                        story.text, self.set_report_span([verb, quantity, possible_locations]), quantity)
+                                        sentence.start_char, sentence.end_char, self.set_report_span([verb, quantity, possible_locations]), quantity)
                         reports.append(report)
                         break
             elif o.lemma_ in search_type:
@@ -570,7 +570,7 @@ class Interpreter(object):
                 reporting_unit = Fact(
                     reporting_unit, reporting_unit, reporting_unit.lemma_, "unit")
                 report = Report(self.convert_unit(reporting_unit), self.convert_term(verb), [p.text for p in possible_locations],
-                                story.text, self.set_report_span([verb, quantity, possible_locations]), quantity)
+                                sentence.start_char, sentence.end_char, self.set_report_span([verb, quantity, possible_locations]), quantity)
                 reports.append(report)
                 break
         return reports
@@ -730,7 +730,7 @@ class Fact(object):
 class Report(object):
     '''Wrapper for reports extracted using rules'''
 
-    def __init__(self, reporting_unit, reporting_term, locations, story, tag_spans=[], quantity=None):
+    def __init__(self, reporting_unit, reporting_term, locations, sentence_start, sentence_end, tag_spans=[], quantity=None):
         self.reporting_unit = convert_tokens_to_strings(reporting_unit)
         self.reporting_term = convert_tokens_to_strings(reporting_term)
         if quantity:
@@ -742,7 +742,8 @@ class Report(object):
             self.locations = [convert_tokens_to_strings(l) for l in locations]
         else:
             self.locations = []
-        self.story = story
+        self.sentence_start = sentence_start
+        self.sentence_end = sentence_end
         self.tag_spans = tag_spans
         self.sentence_idx = None
 

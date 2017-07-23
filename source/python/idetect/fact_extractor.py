@@ -26,7 +26,7 @@ def extract_reports(article, reports):
 def save_reports(article, reports):
     for r in reports:
         report = Report(article_id=article.id, reporting_unit=r.reporting_unit, subject_term=r.reporting_term,
-                        sentence_start, sentence_end, specific_displacement_figure, vague_displacement_figure,
+                        sentence_start=r.sentence_start, sentence_end=r.sentence_end, specific_displacement_figure, vague_displacement_figure,
                         tag_locations=json.dumps(r.tag_spans))
         session.add(report)
         session.commit()
