@@ -28,6 +28,11 @@ class Status:
     FETCHING_FAILED = 'fetching failed'
     PROCESSING_FAILED = 'processing failed'
 
+class Category:
+    OTHER = 'other'
+    DISASTER = 'disaster'
+    CONFLICT = 'conflict'
+
 
 class UnexpectedArticleStatusException(Exception):
     def __init__(self, article, expected, actual):
