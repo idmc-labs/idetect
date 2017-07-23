@@ -9,7 +9,7 @@ from idetect.model import Report, Location, Session, Base
 from idetect.geotagger import get_geo_info
 import json
 
-nlp = spacy.load("en")
+nlp = spacy.load("en_default")
 print("Loaded Spacy English Language NLP Models.")
 
 
@@ -20,12 +20,12 @@ def extract_reports(article):
     content = article.content[0].content
     reports = interpreter.process_article_new(content)
     if len(reports) > 0:
-        save_reports(reports)
+        save_reports(article, reports)
 
 
 def save_reports(article, reports):
     for r in reports:
-        report = Report(article_id=article.id, reporting_unit=r.reporting_unit, subject_term=r.reporting_term,
+        report = Report(article_id=article.id, reporting_unit=r.reporting_unit, reporting_term=r.reporting_term,
                         sentence_start=r.sentence_start, sentence_end=r.sentence_end,
                         specific_displacement_figure=r.quantity[
                             0], vague_displacement_figure=r.quantity[1],

@@ -659,10 +659,7 @@ class Interpreter(object):
             current_locations = self.extract_locations(sentence)
             if current_locations:
                 locations_memory = current_locations
-            for r in reports:
-                r.sentence_idx = i
-            if len(reports) > 0:
-                processed_reports.append(self.choose_report(reports))
+            processed_reports.extend(reports)
         return processed_reports
 
 
