@@ -1,10 +1,9 @@
 import os
 from unittest import TestCase
 
-import sqlalchemy
 from sqlalchemy import create_engine
 
-from idetect.model import Base, Session, Status, Article, UnexpectedArticleStatusException, CountryTerm, Location, \
+from idetect.model import Base, Session, Status, Article, CountryTerm, Location, \
     LocationType, Country, NotLatestException
 
 
@@ -21,7 +20,7 @@ class TestModel(TestCase):
 
     def tearDown(self):
         self.session.rollback()
-        self.session.query(Article).filter(Article.url =='http://example.com').delete()
+        self.session.query(Article).filter(Article.url == 'http://example.com').delete()
         self.session.commit()
 
     def test_status_update(self):
@@ -31,19 +30,49 @@ class TestModel(TestCase):
         self.session.add(article)
         self.session.commit()
 
-        article.update_status(Status.FETCHING)
+        article.create_new_version(Status.FETCHING)
         self.assertEqual(article.status, Status.FETCHING)
 
         # meanwhile, some other process changed the status of this...
         session2 = Session()
         try:
-            other = Article.most_recent(session2, article.url_id)
-            other.update_status(Status.FETCHING_FAILED)
+            other = Article.get_latest_version(session2, article.url_id)
+            other.create_new_version(Status.FETCHING_FAILED)
         finally:
             session2.rollback()
 
         with self.assertRaises(NotLatestException):
-            article.update_status(Status.FETCHED)
+            article.create_new_version(Status.FETCHED)
+
+    def test_select_latest_version(self):
+        article1 = Article(url='http://example.com',
+                           url_id=123,
+                           status=Status.NEW)
+        self.session.add(article1)
+        self.session.commit()
+        article1.create_new_version(Status.FETCHING)
+        article2 = Article(url='http://example.com',
+                           url_id=234,
+                           status=Status.NEW)
+        self.session.add(article2)
+        self.session.commit()
+        article2.create_new_version(Status.FETCHING)
+        article2.create_new_version(Status.FETCHED)
+
+        new = Article.select_latest_version(self.session) \
+            .filter(Article.status == Status.NEW) \
+            .all()
+        self.assertCountEqual(new, [])
+
+        fetching = Article.select_latest_version(self.session) \
+            .filter(Article.status == Status.FETCHING) \
+            .all()
+        self.assertCountEqual(fetching, [article1])
+
+        fetched = Article.select_latest_version(self.session) \
+            .filter(Article.status == Status.FETCHED) \
+            .all()
+        self.assertCountEqual(fetched, [article2])
 
     def test_country_term(self):
         mmr = Country(code="MMR", preferred_term="Myanmar")

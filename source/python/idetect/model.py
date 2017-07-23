@@ -3,7 +3,6 @@ import os
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Numeric, ForeignKey, Table, desc
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, object_session, relationship, make_transient
-from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import func
 
 Base = declarative_base()
@@ -29,18 +28,10 @@ class Status:
     PROCESSING_FAILED = 'processing failed'
 
 
-class UnexpectedArticleStatusException(Exception):
-    def __init__(self, article, expected, actual):
-        super(UnexpectedArticleStatusException, self).__init__(
-            "Expected article {} to be in state {}, but was in state {}".format(article.id, expected, actual))
-        self.expected = expected
-        self.actual = actual
-
-
 class NotLatestException(Exception):
     def __init__(self, ours, other):
         super(NotLatestException, self).__init__(
-            "Tried to update {}, but {} was the latest".format(ours, other)
+            "Tried to update {} ({}), but {} ({}) was the latest".format(ours, ours.updated, other, other.updated)
         )
         self.ours = ours
         self.other = other
@@ -74,7 +65,7 @@ class Article(Base):
     publication_date = Column(DateTime)
     retrieval_date = Column(DateTime)
     created = Column(DateTime(timezone=True), server_default=func.now())
-    updated = Column(DateTime(timezone=True), onupdate=func.now())
+    updated = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     content = relationship(
         'Content', secondary=article_content, back_populates='article')
     reports = relationship('Report')
@@ -82,22 +73,32 @@ class Article(Base):
     def __str__(self):
         return "<Article {} {} {}>".format(self.id, self.url_id, self.url)
 
+    def get_updated_version(self):
+        """Return the most recent version of this article by updated timestamp"""
+        return Article.get_latest_version(object_session(self), self.url_id)
+
     @classmethod
-    def most_recent(cls, session, url_id=None, url=None, lock=False):
-        """Return the Article with the most recent updated timestamp"""
+    def get_latest_version(cls, session, url_id=None, url=None, lock=False):
+        """
+        Return the Article with the given url_id or url with the most recent updated timestamp.
+        If lock is True, uses FOR UPDATE locking, so that other calls to get_latest_version will
+        block until the transaction is committed or rolled back.
+        """
         query = session.query(cls)
         if url_id is not None:
             query = query.filter(Article.url_id == url_id)
         if url is not None:
             query = query.filter(Article.url == url)
+        # if neither url_id nor url is provided, this returns the most recent article overall
         if lock:
             # This prevents this being run again until the transaction is committed or rolled back
             query = query.with_for_update()
         return query.order_by(desc(Article.updated)).limit(1).first()
 
-    def update_status(self, new_status):
+    def create_new_version(self, new_status):
         """
-        Try to update the status of this article. If this is not the most recent article for this
+        Try to create a new version of this article with the new status.
+        If this is not the most recent version for this
         url_id, this will raise NotLatestException.
         """
         session = object_session(self)
@@ -105,18 +106,35 @@ class Article(Base):
             if not session:
                 raise RuntimeError("Object has not been persisted in a session.")
 
-            # with_for_update makes sure that something else can't run this code at the same time
-            most_recent = Article.most_recent(session, self.url_id, lock=True)
-            if most_recent.id != self.id:
-                raise NotLatestException(self, most_recent)
+            # lock to prevent simultaneous updates
+            latest = Article.get_latest_version(session, self.url_id, lock=True)
+            if latest.id != self.id:
+                raise NotLatestException(self, latest)
 
             make_transient(self)
             self.id = None
+            self.updated = None
             self.status = new_status
             session.add(self)
             session.commit()
         finally:
             session.rollback()  # make sure we release the FOR UPDATE lock
+
+    @classmethod
+    def select_latest_version(cls, session):
+        """
+        Returns a SELECT query that will only match the most recent versions of the articles it matches.
+        You can further filter/order/limit the query.
+        """
+        sub = session.query(
+            Article,
+            func.row_number().over(
+                partition_by=Article.url_id,
+                order_by=desc(Article.updated)
+            ).label("row_number")
+        ).subquery("a")
+        query = session.query(Article).select_entity_from(sub).filter(sub.c.row_number == 1)
+        return query
 
 
 class Content(Base):
