@@ -142,7 +142,6 @@ class Report(Base):
     sentence_end = Column(Integer)
     reporting_unit = Column(String)
     reporting_term = Column(String)
-    mentions_displacement_figure = Column(Boolean)
     specific_displacement_figure = Column(Integer)
     vague_displacement_figure = Column(String)
     tag_locations = Column(String)
