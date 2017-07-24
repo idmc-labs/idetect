@@ -33,6 +33,9 @@ class Category:
     DISASTER = 'disaster'
     CONFLICT = 'conflict'
 
+class Relevance:
+    DISPLACEMENT = 'displacement'
+    NOT_DISPLACEMENT = 'not displacement'
 
 class UnexpectedArticleStatusException(Exception):
     def __init__(self, article, expected, actual):
