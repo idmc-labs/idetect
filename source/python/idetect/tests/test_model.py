@@ -4,7 +4,8 @@ from unittest import TestCase
 import sqlalchemy
 from sqlalchemy import create_engine
 
-from idetect.model import Base, Session, Status, Article, UnexpectedArticleStatusException
+from idetect.model import Base, Session, Status, Article, UnexpectedArticleStatusException, CountryTerm, Location, \
+    LocationType, Country
 
 
 class TestModel(TestCase):
@@ -14,6 +15,7 @@ class TestModel(TestCase):
             user='tester', passwd='tester', db_host=db_host, db='idetect_test')
         engine = create_engine(db_url)
         Session.configure(bind=engine)
+        Base.metadata.drop_all(engine)
         Base.metadata.create_all(engine)
         self.session = Session()
 
@@ -39,3 +41,15 @@ class TestModel(TestCase):
 
         with self.assertRaises(UnexpectedArticleStatusException):
             article.update_status(Status.FETCHED)
+
+    def test_country_term(self):
+        mmr = Country(code="MMR", preferred_term="Myanmar")
+        myanmar = CountryTerm(term="Myanmar", country=mmr)
+        burma = CountryTerm(term="Burma", country=mmr)
+        yangon = Location(description="Yangon",
+                          location_type=LocationType.CITY,
+                          country=mmr,
+                          latlong="16°51′N 96°11′E")
+
+        self.assertEqual(yangon.country, myanmar.country)
+        self.assertEqual(yangon.country, burma.country)
