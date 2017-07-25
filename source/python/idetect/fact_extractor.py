@@ -5,6 +5,7 @@ How to ensure has access to pre-loaded models?
 from idetect.interpreter import Interpreter, person_reporting_terms, structure_reporting_terms, person_reporting_units, \
     structure_reporting_units, relevant_article_terms
 import spacy
+from sqlalchemy.orm import object_session
 from idetect.model import Report, Location, Session, Base
 from idetect.geotagger import get_geo_info
 import json
@@ -17,13 +18,14 @@ def extract_reports(article):
     # Get rules-based facts along with sentence numbers
     interpreter = Interpreter(nlp, person_reporting_terms, structure_reporting_terms, person_reporting_units,
                               structure_reporting_units, relevant_article_terms)
+    session = object_session(article)
     content = article.content[0].content
     reports = interpreter.process_article_new(content)
     if len(reports) > 0:
-        save_reports(article, reports)
+        save_reports(article, reports, session)
 
 
-def save_reports(article, reports):
+def save_reports(article, reports, session):
     for r in reports:
         report = Report(article_id=article.id, reporting_unit=r.reporting_unit, reporting_term=r.reporting_term,
                         sentence_start=r.sentence_start, sentence_end=r.sentence_end,
@@ -34,10 +36,10 @@ def save_reports(article, reports):
         session.commit()
 
         for location in r.locations:
-            process_location(report, location)
+            process_location(report, location, session)
 
 
-def process_location(report, location):
+def process_location(report, location, session):
     loc = session.query(Location).filter_by(
         description=location).one_or_none()
     if loc:
