@@ -23,5 +23,3 @@ class Classifier(object):
         content = self.article.content
         category = self.category_model.predict(content)
         return category
-
-
