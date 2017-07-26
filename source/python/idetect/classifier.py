@@ -1,4 +1,6 @@
 from idetect.nlp_models.category import CategoryModel
+from idetect.nlp_models.relevance import RelevanceModel
+from idetect.fact_extractor import extract_reports
 
 '''Method(s) for running classifier on extracted content.
 
@@ -15,11 +17,13 @@ How to ensure has access to pre-loaded models?
 class Classifier(object):
     def __init__(self, article):
         self.category_model = CategoryModel()
-        # TODO
-        # relevance_model = RelevanceModel()
+        self.relevance_model = RelevanceModel()
         self.article = article
 
     def classify(self, article):
         content = self.article.content
         category = self.category_model.predict(content)
-        return category
+        relevance = self.relevance_model.transform(content)
+        if relevance == Relevance.DISPLACEMENT:
+            reports = extract_reports(self.article)
+        return relevance, category, reports

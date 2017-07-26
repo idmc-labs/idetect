@@ -19,7 +19,7 @@ class RelevanceModel(object):
         if model_path and os.path.isfile(model_path):
             clf = joblib.load(model_path)
         else:
-            default_model_path = 'category.pkl'
+            default_model_path = 'relevance_classifier.pkl'
             if os.path.isfile(default_model_path):
                 clf = joblib.load(default_model_path)
             else:
