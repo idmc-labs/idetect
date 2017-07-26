@@ -176,3 +176,30 @@ class LsiTransformer(TransformerMixin):
         corpus_lsi = self.make_corpus(corpus_tfidf)
         return self.lsi_to_vecs(corpus_lsi)
         
+class Combiner(BaseEstimator, TransformerMixin):
+    def __init__(self, ml_model, kw_model):
+        self.ml_model = ml_model
+        self.kw_model = kw_model
+        
+    def combine_relevance_tags(self, classified, keyword_tagged):
+        combined = []
+        for classifier, keyword in zip(classified, keyword_tagged):
+            if keyword == 'no' and classifier == 'no':
+                tag = 'no'
+            elif keyword == 'yes' and classifier == 'yes':
+                tag = 'yes'
+            elif keyword == 'no' and classifier == 'yes':
+                tag = 'yes'
+            elif keyword == 'yes' and classifier == 'no':
+                tag = 'yes'
+            combined.append(tag)
+        return combined
+    
+    def fit(self, X, y=None):
+        return self
+        
+    def transform(self, X, *args):
+        ml_tagged = self.ml_model.predict(X)
+        kw_tagged = self.kw_model.transform(X)
+        combined = self.combine_relevance_tags(ml_tagged, kw_tagged)
+        return combined
