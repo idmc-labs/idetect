@@ -10,15 +10,30 @@ from collections import OrderedDict
 import datetime
 from bs4 import BeautifulSoup
 import re
+from sqlalchemy.orm import object_session
+from idetect.model import Content
 
 
 def scrape_article(article):
+    session = object_session(article)
+    # Update the retrieval date and retrieval_attempts
+    article.retrieval_date = datetime.datetime.now()
+    article.retrieval_attempts += 1
+    session.commit()
+    # Attempt to scrape article
     content, publish_date, title, content_type, authors, domain = scrape(
         article.url)
-    if content == 'retrieval_failed':
-        pass
-    else:
-        pass
+    if content == 'retrieval_failed':  # If the scraper fails 'nicely', raise an Exception
+        raise Exception("Retrieval Failed")
+    else:  # Update the relevant attributes and create content
+        article.domain = domain
+        article.publication_date = publish_date
+        article.title = title
+        article.authors = authors
+        content = Content(article=[article],
+                          content=content, content_type=content_type)
+        session.add(content)
+        session.commit()
 
 
 def scrape(url, scrape_pdfs=True):
@@ -140,7 +155,7 @@ def html_article(url):
 
     a = newspaper.Article(url)
     a.download()
-    if a.is_downloaded:
+    if a.download_state == 2:
         a.parse()
         article_domain = a.source_url
         article_title = a.title
