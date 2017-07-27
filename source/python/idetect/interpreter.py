@@ -660,7 +660,7 @@ class Interpreter(object):
             if current_locations:
                 locations_memory = current_locations
             processed_reports.extend(reports)
-        return processed_reports
+        return list(set(processed_reports))
 
 
 class Fact(object):

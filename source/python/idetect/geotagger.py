@@ -162,7 +162,7 @@ def layer_to_entity(layer):
     elif layer in ('locality'):
         return LocationType.CITY
     elif layer in ('county', 'region'):
-        return LocationType.SUBDIVSION
+        return LocationType.SUBDIVISION
     elif layer in ('country'):
         return LocationType.COUNTRY
     else:

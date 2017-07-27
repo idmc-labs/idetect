@@ -6,7 +6,7 @@ from idetect.interpreter import Interpreter, person_reporting_terms, structure_r
     structure_reporting_units, relevant_article_terms
 import spacy
 from sqlalchemy.orm import object_session
-from idetect.model import Report, Location, Session, Base
+from idetect.model import Report, Location, Country
 from idetect.geotagger import get_geo_info
 import json
 
