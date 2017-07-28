@@ -1,10 +1,11 @@
 import os
 from unittest import TestCase
+from datetime import datetime
 
 from sqlalchemy import create_engine
 
 from idetect.model import Base, Session, Status, Article, CountryTerm, Location, \
-    LocationType, Country, NotLatestException
+    LocationType, Country, NotLatestException, Content, Report
 
 
 class TestModel(TestCase):
@@ -20,7 +21,8 @@ class TestModel(TestCase):
 
     def tearDown(self):
         self.session.rollback()
-        self.session.query(Article).filter(Article.url == 'http://example.com').delete()
+        for article in self.session.query(Article).filter(Article.url == 'http://example.com').all():
+            self.session.delete(article)
         self.session.commit()
 
     def test_status_update(self):
@@ -43,6 +45,65 @@ class TestModel(TestCase):
 
         with self.assertRaises(NotLatestException):
             article.create_new_version(Status.FETCHED)
+
+    def test_create_new_version(self):
+        article = Article(url='http://example.com',
+                           url_id=123,
+                           status=Status.PROCESSING)
+        content = Content(content_type="text/html", content="Lorem ipsum")
+        article.content = [content]
+        report = Report(analysis_date=datetime.now())
+        article.reports = [report]
+        self.session.add(article)
+        self.session.commit()
+
+        old_id = article.id
+        article.create_new_version(Status.PROCESSED)
+        self.assertNotEqual(old_id, article.id)
+        self.assertEqual(article.content, [content])
+        self.assertEqual(article.reports, [report])
+
+        old_article = self.session.query(Article).get(old_id)
+        self.assertEqual(old_article.content, [content])
+        self.assertEqual(old_article.reports, [report])
+
+    def test_cascading_delete(self):
+        article = Article(url='http://example.com',
+                           url_id=123,
+                           status=Status.PROCESSING)
+        content = Content(content_type="text/html", content="Lorem ipsum")
+        article.content = [content]
+        report = Report(analysis_date=datetime.now())
+        article.reports = [report]
+        self.session.add(article)
+        self.session.commit()
+
+        old_id = article.id
+        article.create_new_version(Status.PROCESSED)
+        new_id = article.id
+        self.assertIsNotNone(new_id)
+        self.assertNotEqual(old_id, new_id)
+        self.assertEqual(article.content, [content])
+        self.assertEqual(article.reports, [report])
+
+        old_article = self.session.query(Article).get(old_id)
+        self.assertEqual(old_article.content, [content])
+        self.assertEqual(old_article.reports, [report])
+
+        self.assertEqual(self.session.query(Article).count(), 2)
+        self.assertEqual(self.session.query(Report).count(), 1)
+        self.assertEqual(self.session.query(Content).count(), 1)
+
+        self.session.delete(article)
+        self.session.commit()
+
+        self.assertEqual(self.session.query(Article).count(), 1)
+        self.assertEqual(self.session.query(Report).count(), 1)
+        self.assertEqual(self.session.query(Content).count(), 1)
+
+        self.assertIsNone(self.session.query(Article).get(new_id))
+        self.assertIsNotNone(self.session.query(Article).get(old_id))
+
 
     def test_select_latest_version(self):
         article1 = Article(url='http://example.com',

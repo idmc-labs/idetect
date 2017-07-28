@@ -39,10 +39,15 @@ class NotLatestException(Exception):
 
 article_content = Table(
     'article_content', Base.metadata,
-    Column('article', ForeignKey('article.id'), primary_key=True),
-    Column('content', ForeignKey('content.id'), primary_key=True)
+    Column('article', ForeignKey('article.id', ondelete="CASCADE"), primary_key=True),
+    Column('content', ForeignKey('content.id', ondelete="CASCADE"), primary_key=True)
 )
 
+article_report = Table(
+    'article_report', Base.metadata,
+    Column('article', ForeignKey('article.id', ondelete="CASCADE"), primary_key=True),
+    Column('report', ForeignKey('report.id', ondelete="CASCADE"), primary_key=True)
+)
 
 class Article(Base):
     __tablename__ = 'article'
@@ -68,7 +73,7 @@ class Article(Base):
     updated = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     content = relationship(
         'Content', secondary=article_content, back_populates='article')
-    reports = relationship('Report')
+    reports = relationship('Report', secondary=article_report, back_populates='article')
 
     def __str__(self):
         return "<Article {} {} {}>".format(self.id, self.url_id, self.url)
@@ -111,10 +116,17 @@ class Article(Base):
             if latest.id != self.id:
                 raise NotLatestException(self, latest)
 
+            reports = self.reports
+            content = self.content
+
             make_transient(self)
             self.id = None
             self.updated = None
             self.status = new_status
+            session.add(self)
+            session.commit()
+            self.reports = reports
+            self.content = content
             session.add(self)
             session.commit()
         finally:
@@ -176,9 +188,7 @@ class Report(Base):
     __tablename__ = 'report'
 
     id = Column(Integer, primary_key=True, unique=True)
-    article_id = Column('article', Integer, ForeignKey(
-        'article.id'))
-    article = relationship('Article', back_populates='reports')
+    article = relationship('Article', secondary=article_report, back_populates='reports')
     sentence_start = Column(Integer)
     sentence_end = Column(Integer)
     reporting_unit = Column(String)
