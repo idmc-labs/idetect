@@ -1,17 +1,15 @@
-from flask import Blueprint, render_template
 import newspaper
-import csv
 import urllib
 from urllib import request
 from urllib.parse import urlparse
 import textract
 import os
-from collections import OrderedDict
 import datetime
 from bs4 import BeautifulSoup
 import re
 from sqlalchemy.orm import object_session
 from idetect.model import Content
+from tempfile import NamedTemporaryFile
 
 
 def scrape_article(article):
@@ -151,26 +149,33 @@ def html_article(article, session):
 
 def get_pdf(url):
     ''' Takes a pdf url, downloads it and saves it locally.'''
+    pdf_file = NamedTemporaryFile( suffix=".pdf", prefix="tmp_", delete=False )
     response = request.urlopen(url)  # not sure if this is needed?
     publish_date = response.getheader('Last-Modified')
-    pdf_file = open('file_to_convert.pdf', 'wb')
+    #pdf_file = open(ntf, 'wb')
     pdf_file.write(response.read())
     pdf_file.close()
-    return os.path.join('./', 'file_to_convert.pdf'), publish_date
+    return os.path.join('./', pdf_file.name), publish_date
 
 
 def get_body_text(url):
     ''' This function will extract all text from the url passed in
     '''
     filepath, publish_date = get_pdf(url)
+    print(filepath)
     if filepath == '':
         return '', None
     else:
-        text = str(textract.process(filepath, method='pdfminer'), 'utf-8')
-        text = text.replace('\n', ' ')  # can replace with a call to
-        text = text.replace('\xa0', ' ')  # the helper function.
-        publish_date = format_date(publish_date)
-        return text, publish_date
+        try:
+            text = str(textract.process(filepath, method='pdfminer'), 'utf-8')
+            text = text.replace('\n', ' ')  # can replace with a call to
+            text = text.replace('\xa0', ' ')  # the helper function.
+            publish_date = format_date(publish_date)
+            os.unlink(filepath)
+            return text, publish_date
+        except:
+            os.unlink(filepath)
+            raise Exception("PDF2Text Failed")
 
 
 def pdf_article(url, article, session):
