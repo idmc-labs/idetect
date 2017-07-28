@@ -198,14 +198,6 @@ def get_body_text(url):
         return text, publish_date
 
 
-def remove_pdf(filepath):
-    ''' Deletes pdf from disk
-    Not currently in use as pdfs downloads overwrite self, but may come in 
-    useful later if pdfs are downloaded and stored under different names.
-    '''
-    os.remove(filepath)
-
-
 def pdf_article(url):
     try:
         article_text, article_pub_date = get_body_text(url)
