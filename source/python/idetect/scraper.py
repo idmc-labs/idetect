@@ -21,43 +21,25 @@ def scrape_article(article):
     article.retrieval_attempts += 1
     session.commit()
     # Attempt to scrape article
-    content, publish_date, title, content_type, authors, domain = scrape(
-        article.url)
-    if content == 'retrieval_failed':  # If the scraper fails 'nicely', raise an Exception
-        raise Exception("Retrieval Failed")
-    else:  # Update the relevant attributes and create content
-        article.domain = domain
-        article.publication_date = publish_date
-        article.title = title
-        article.authors = authors
-        content = Content(article=[article],
-                          content=content, content_type=content_type)
-        session.add(content)
-        session.commit()
+    scrape(article, session)
 
 
-def scrape(url, scrape_pdfs=True):
+def scrape(article, session, scrape_pdfs=True):
     """
     Scrapes content and metadata from an url
     Parameters
     ----------
-    url: the url to be scraped
+    article: the article object to be scraped
+    session: the article session
     scrape_pdfs: determines whether pdf files will be scraped or not
                  default: True
 
-    Returns
-    -------
-    article: An article object prepared by scraping the url.
-
-
     """
-    pdf_check = is_pdf_consolidated_test(url)
+    pdf_check = is_pdf_consolidated_test(article.url)
     if pdf_check and scrape_pdfs:
-        article = pdf_article(pdf_check)
-        return article
+        pdf_article(pdf_check, article, session)
     elif not pdf_check:
-        article = html_article(url)
-        return article
+        html_article(article, session)
     else:
         pass
 
@@ -142,33 +124,35 @@ def format_date(date_string):
     return formatted_date
 
 
-def html_article(url):
+def html_article(article, session):
     """Downloads and extracts content plus metadata for html page
     Parameters
     ----------
-    url: url of page to be scraped
+    article: article object to be scraped
+    session: the article session
 
     Returns
     -------
-    article: An object of class Article containing the content and metadata.
+    article: The updated article object
     """
 
-    a = newspaper.Article(url)
+    a = newspaper.Article(article.url)
     a.download()
     if a.download_state == 2:
         a.parse()
-        article_domain = a.source_url
-        article_title = a.title
-        article_authors = a.authors
-        article_pub_date = a.publish_date
-        article_text = remove_newline(a.text)
-        # tag the type of article
-        # currently default to text but should be able to determine img/video
-        # etc
-        article_content_type = 'text'
-        return article_text, article_pub_date, article_title, article_content_type, article_authors, article_domain
+        article.domain = a.source_url
+        article.title = a.title
+        article.authors = a.authors
+        article.publication_date = a.publish_date
+
+        content = Content(article=[article],
+                          content=remove_newline(a.text), content_type='text')
+        session.add(content)
+        session.commit()
+
+        return article
     else:  # Temporary fix to deal with https://github.com/codelucas/newspaper/issues/280
-        return "retrieval_failed", None, "", datetime.datetime.now(), "", ""
+        raise Exception("Retrieval Failed")
 
 
 def get_pdf(url):
@@ -198,17 +182,20 @@ def get_body_text(url):
         return text, publish_date
 
 
-def pdf_article(url):
+def pdf_article(url, article, session):
     try:
         article_text, article_pub_date = get_body_text(url)
         if article_text == '':
-            return "retrieval_failed", None, "", datetime.datetime.now(), "", ""
+            raise Exception("Retrieval Failed")
         else:
-            article_domain = urlparse(url).hostname
+            article.domain = urlparse(url).hostname
+            article.publication_date = article_pub_date
+
             article_content_type = 'pdf'
             # improve parsing of pdfs to extract these?
-            article_title = ''
-            article_authors = ''
-            return article_text, article_pub_date, article_title, article_content_type, article_authors, article_domain
+            content = Content(article=[article],
+                              content=article_text, content_type='pdf')
+            session.add(content)
+            session.commit()
     except:
         return "retrieval_failed", None, "", datetime.datetime.now(), "", ""
