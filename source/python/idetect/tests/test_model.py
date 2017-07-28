@@ -13,7 +13,7 @@ class TestModel(TestCase):
         db_host = os.environ.get('DB_HOST')
         db_url = 'postgresql://{user}:{passwd}@{db_host}/{db}'.format(
             user='tester', passwd='tester', db_host=db_host, db='idetect_test')
-        engine = create_engine(db_url)
+        engine = create_engine(db_url, echo=True)
         Session.configure(bind=engine)
         Base.metadata.drop_all(engine)
         Base.metadata.create_all(engine)

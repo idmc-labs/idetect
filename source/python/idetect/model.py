@@ -49,6 +49,7 @@ article_report = Table(
     Column('report', ForeignKey('report.id', ondelete="CASCADE"), primary_key=True)
 )
 
+
 class Article(Base):
     __tablename__ = 'article'
 
@@ -137,6 +138,23 @@ class Article(Base):
         """
         Returns a SELECT query that will only match the most recent versions of the articles it matches.
         You can further filter/order/limit the query.
+        
+        The query returned is of the form:
+        
+        SELECT a.*
+        FROM (SELECT article.*,
+                     row_number() OVER (PARTITION BY article.url_id ORDER BY article.updated DESC) AS row_number 
+              FROM article) AS a 
+        WHERE a.row_number = 1
+        
+        You can add further clauses by applying filters, orders, and limits like
+            .filter(Article.status == Status.NEW)
+            .order_by(Article.updated)
+            .first()
+        adds
+            AND a.status = 'NEW'
+            ORDER BY a.updated
+            LIMIT 1
         """
         sub = session.query(
             Article,
