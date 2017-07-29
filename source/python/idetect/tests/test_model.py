@@ -1,11 +1,11 @@
 import os
 from unittest import TestCase
+from datetime import datetime
 
-import sqlalchemy
 from sqlalchemy import create_engine
 
-from idetect.model import Base, Session, Status, Article, UnexpectedArticleStatusException, CountryTerm, Location, \
-    LocationType, Country
+from idetect.model import Base, Session, Status, Article, CountryTerm, Location, \
+    LocationType, Country, NotLatestException, Content, Report
 
 
 class TestModel(TestCase):
@@ -13,7 +13,7 @@ class TestModel(TestCase):
         db_host = os.environ.get('DB_HOST')
         db_url = 'postgresql://{user}:{passwd}@{db_host}/{db}'.format(
             user='tester', passwd='tester', db_host=db_host, db='idetect_test')
-        engine = create_engine(db_url)
+        engine = create_engine(db_url, echo=True)
         Session.configure(bind=engine)
         Base.metadata.drop_all(engine)
         Base.metadata.create_all(engine)
@@ -21,26 +21,119 @@ class TestModel(TestCase):
 
     def tearDown(self):
         self.session.rollback()
-        version = sqlalchemy.__version__
-        self.session.query(Article).filter(Article.url =='http://example.com').delete()
+        for article in self.session.query(Article).filter(Article.url == 'http://example.com').all():
+            self.session.delete(article)
         self.session.commit()
 
     def test_status_update(self):
         article = Article(url='http://example.com',
+                          url_id=123,
                           status=Status.NEW)
         self.session.add(article)
         self.session.commit()
 
-        article.update_status(Status.FETCHING)
-        self.session.commit()
+        article.create_new_version(Status.FETCHING)
         self.assertEqual(article.status, Status.FETCHING)
 
         # meanwhile, some other process changed the status of this...
-        self.session.execute("UPDATE article SET status = :status WHERE id = :id",
-                             { 'status': Status.FETCHING_FAILED, 'id': article.id})
+        session2 = Session()
+        try:
+            other = Article.get_latest_version(session2, article.url_id)
+            other.create_new_version(Status.FETCHING_FAILED)
+        finally:
+            session2.rollback()
 
-        with self.assertRaises(UnexpectedArticleStatusException):
-            article.update_status(Status.FETCHED)
+        with self.assertRaises(NotLatestException):
+            article.create_new_version(Status.FETCHED)
+
+    def test_create_new_version(self):
+        article = Article(url='http://example.com',
+                           url_id=123,
+                           status=Status.PROCESSING)
+        content = Content(content_type="text/html", content="Lorem ipsum")
+        article.content = [content]
+        report = Report(analysis_date=datetime.now())
+        article.reports = [report]
+        self.session.add(article)
+        self.session.commit()
+
+        old_id = article.id
+        article.create_new_version(Status.PROCESSED)
+        self.assertNotEqual(old_id, article.id)
+        self.assertEqual(article.content, [content])
+        self.assertEqual(article.reports, [report])
+
+        old_article = self.session.query(Article).get(old_id)
+        self.assertEqual(old_article.content, [content])
+        self.assertEqual(old_article.reports, [report])
+
+    def test_cascading_delete(self):
+        article = Article(url='http://example.com',
+                           url_id=123,
+                           status=Status.PROCESSING)
+        content = Content(content_type="text/html", content="Lorem ipsum")
+        article.content = [content]
+        report = Report(analysis_date=datetime.now())
+        article.reports = [report]
+        self.session.add(article)
+        self.session.commit()
+
+        old_id = article.id
+        article.create_new_version(Status.PROCESSED)
+        new_id = article.id
+        self.assertIsNotNone(new_id)
+        self.assertNotEqual(old_id, new_id)
+        self.assertEqual(article.content, [content])
+        self.assertEqual(article.reports, [report])
+
+        old_article = self.session.query(Article).get(old_id)
+        self.assertEqual(old_article.content, [content])
+        self.assertEqual(old_article.reports, [report])
+
+        self.assertEqual(self.session.query(Article).count(), 2)
+        self.assertEqual(self.session.query(Report).count(), 1)
+        self.assertEqual(self.session.query(Content).count(), 1)
+
+        self.session.delete(article)
+        self.session.commit()
+
+        self.assertEqual(self.session.query(Article).count(), 1)
+        self.assertEqual(self.session.query(Report).count(), 1)
+        self.assertEqual(self.session.query(Content).count(), 1)
+
+        self.assertIsNone(self.session.query(Article).get(new_id))
+        self.assertIsNotNone(self.session.query(Article).get(old_id))
+
+
+    def test_select_latest_version(self):
+        article1 = Article(url='http://example.com',
+                           url_id=123,
+                           status=Status.NEW)
+        self.session.add(article1)
+        self.session.commit()
+        article1.create_new_version(Status.FETCHING)
+        article2 = Article(url='http://example.com',
+                           url_id=234,
+                           status=Status.NEW)
+        self.session.add(article2)
+        self.session.commit()
+        article2.create_new_version(Status.FETCHING)
+        article2.create_new_version(Status.FETCHED)
+
+        new = Article.select_latest_version(self.session) \
+            .filter(Article.status == Status.NEW) \
+            .all()
+        self.assertCountEqual(new, [])
+
+        fetching = Article.select_latest_version(self.session) \
+            .filter(Article.status == Status.FETCHING) \
+            .all()
+        self.assertCountEqual(fetching, [article1])
+
+        fetched = Article.select_latest_version(self.session) \
+            .filter(Article.status == Status.FETCHED) \
+            .all()
+        self.assertCountEqual(fetched, [article2])
 
     def test_country_term(self):
         mmr = Country(code="MMR", preferred_term="Myanmar")
