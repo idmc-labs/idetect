@@ -42,7 +42,7 @@ class TestWorker(TestCase):
         time.sleep(random.randrange(1))
 
     def test_work_one(self):
-        worker = Worker(Status.NEW, Status.FETCHING, Status.FETCHED, Status.FETCHING_FAILED,
+        worker = Worker(Status.NEW, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
                         TestWorker.nap_fn, self.engine)
         article = Article(url='http://example.com', url_id=1, status=Status.NEW)
         self.session.add(article)
@@ -50,7 +50,7 @@ class TestWorker(TestCase):
         self.assertTrue(worker.work(), "Worker didn't find work")
 
         article2 = article.get_updated_version()
-        self.assertEqual(article2.status, Status.FETCHED)
+        self.assertEqual(article2.status, Status.SCRAPED)
 
         self.assertFalse(worker.work(), "Worker found work")
 
@@ -59,7 +59,7 @@ class TestWorker(TestCase):
         raise RuntimeError("Nope")
 
     def test_work_failure(self):
-        worker = Worker(Status.NEW, Status.FETCHING, Status.FETCHED, Status.FETCHING_FAILED,
+        worker = Worker(Status.NEW, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
                         TestWorker.err_fn, self.engine)
         article = Article(url='http://example.com', url_id=1, status=Status.NEW)
         self.session.add(article)
@@ -67,14 +67,14 @@ class TestWorker(TestCase):
         self.assertTrue(worker.work(), "Worker didn't find work")
 
         article2 = article.get_updated_version()
-        self.assertEqual(article2.status, Status.FETCHING_FAILED)
+        self.assertEqual(article2.status, Status.SCRAPING_FAILED)
 
         self.assertFalse(worker.work(), "Worker found work")
 
     def test_work_chain(self):
-        worker1 = Worker(Status.NEW, Status.FETCHING, Status.FETCHED, Status.FETCHING_FAILED,
+        worker1 = Worker(Status.NEW, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
                          TestWorker.nap_fn, self.engine)
-        worker2 = Worker(Status.FETCHED, Status.PROCESSING, Status.PROCESSED, Status.PROCESSING_FAILED,
+        worker2 = Worker(Status.SCRAPED, Status.PROCESSING, Status.PROCESSED, Status.PROCESSING_FAILED,
                          TestWorker.nap_fn, self.engine)
         article = Article(url='http://example.com', url_id=1, status=Status.NEW)
         self.session.add(article)
@@ -90,7 +90,7 @@ class TestWorker(TestCase):
         self.assertFalse(worker2.work(), "Worker2 found work")
 
     def test_work_all(self):
-        worker = Worker(Status.NEW, Status.FETCHING, Status.FETCHED, Status.FETCHING_FAILED,
+        worker = Worker(Status.NEW, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
                         TestWorker.nap_fn, self.engine)
         n = 3
         for i in range(n):
@@ -100,7 +100,7 @@ class TestWorker(TestCase):
         self.assertEqual(worker.work_all(), 3)
 
         self.assertEqual(Article.select_latest_version(self.session).filter(Article.status == Status.NEW).count(), 0)
-        self.assertEqual(Article.select_latest_version(self.session).filter(Article.status == Status.FETCHED).count(), n)
+        self.assertEqual(Article.select_latest_version(self.session).filter(Article.status == Status.SCRAPED).count(), n)
 
     def test_work_parallel(self):
         n = 100
@@ -110,12 +110,13 @@ class TestWorker(TestCase):
             self.session.commit()
         remaining = Article.select_latest_version(self.session).filter(Article.status == Status.NEW).count()
         self.assertEqual(remaining, n)
-        self.processes += Worker.start_processes(4, Status.NEW, Status.FETCHING, Status.FETCHED, Status.FETCHING_FAILED,
+        self.processes += Worker.start_processes(4, Status.NEW, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
                                                  TestWorker.nap_fn, self.engine)
         self.engine.dispose()
         self.session = Session()
         start = datetime.now()
-        for i in range(int(n / len(self.processes))):  # shouldn't take longer than this...
+        max_seconds = int(n / len(self.processes))  # shouldn't take longer than this...
+        for i in range(max_seconds):
             remaining = Article.select_latest_version(self.session).filter(Article.status == Status.NEW).count()
             if remaining == 0:
                 logger.info("Processing took {}".format(datetime.now() - start))
@@ -124,4 +125,5 @@ class TestWorker(TestCase):
             time.sleep(1)
         else:
             logger.info("Processing took {} seconds!.".format(datetime.now() - start))
+            self.fail("Did not complete work after {} seconds".format(max_seconds))
         time.sleep(1)

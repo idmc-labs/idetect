@@ -20,11 +20,11 @@ def db_url():
 
 class Status:
     NEW = 'new'
-    FETCHING = 'fetching'
-    FETCHED = 'fetched'
+    SCRAPING = 'scraping'
+    SCRAPED = 'scraped'
     PROCESSING = 'processing'
     PROCESSED = 'processed'
-    FETCHING_FAILED = 'fetching failed'
+    SCRAPING_FAILED = 'scraping failed'
     PROCESSING_FAILED = 'processing failed'
 
 
