@@ -2,9 +2,9 @@
 
 How to ensure has access to pre-loaded models?
 '''
+import spacy
 from interpreter import Interpreter, person_reporting_terms, structure_reporting_terms, person_reporting_units, \
     structure_reporting_units, relevant_article_terms
-import spacy
 
 nlp = spacy.load("en")
 print("Loaded Spacy English Language NLP Models.")

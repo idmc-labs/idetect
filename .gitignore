@@ -4,3 +4,4 @@ source/.ipython
 source/.jupyter
 source/.local
 source/notebooks/.ipynb_checkpoints
+__pycache__

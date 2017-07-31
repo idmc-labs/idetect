@@ -30,7 +30,7 @@ class Worker:
         signal.signal(signal.SIGTERM, self.terminate)
 
     def terminate(self, signum, frame):
-        logger.warn("Worker {} terminated".format(os.getpid()))
+        logger.warning("Worker {} terminated".format(os.getpid()))
         self.terminated = True
 
     def work(self):
@@ -71,7 +71,7 @@ class Worker:
                 article.create_new_version(self.success_status)
                 self.session.commit()
             except Exception as e:
-                logger.warn("Worker {} failed to process Article {} {} -> {}".format(
+                logger.warning("Worker {} failed to process Article {} {} -> {}".format(
                     os.getpid(), article.id, self.status, self.failure_status),
                     exc_info=e)
                 article.create_new_version(self.failure_status)
