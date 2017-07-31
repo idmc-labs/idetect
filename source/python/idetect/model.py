@@ -66,7 +66,7 @@ class Article(Base):
     accuracy = Column(Numeric)
     analyzer = Column(String)
     response_code = Column(Integer)
-    retrieval_attempts = Column(Integer)
+    retrieval_attempts = Column(Integer, default=0)
     completion = Column(Numeric)
     publication_date = Column(DateTime(timezone=True))
     retrieval_date =Column(DateTime(timezone=True), server_default=func.now())
