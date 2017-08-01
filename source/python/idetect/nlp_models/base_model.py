@@ -42,34 +42,32 @@ class DownloadableModel(object):
                     fcntl.flock(f, fcntl.LOCK_EX)
                     if os.path.getsize(model_path) > 0:
                         model = joblib.load(model_path)
+                        return model
                 except IOError as e:
                     if e.errno != errno.EAGAIN:
                         raise
                 finally:
                     fcntl.flock(f, fcntl.LOCK_UN)
-        else:  # download file
-            # if file directory doesn't exist create it
-            if os.path.dirname(model_path):
-                if not os.path.isdir(os.path.dirname(model_path)):
-                    try:
-                        os.makedirs(os.path.dirname(model_path))
-                    except OSError as exc:  # Guard against rare condition
-                        if exc.errno != errno.EEXIST:
-                            raise
-            with open(model_path, 'wb+') as f:
-                try:
-                    fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                    if os.path.getsize(model_path) == 0:
-                        r = requests.get(model_url, stream=True)
-                        for chunk in r.iter_content(chunk_size=1024):
-                            if chunk:  # filter out keep-alive new chunks
-                                f.write(chunk)
-                except BlockingIOError as e:
-                    fcntl.flock(f, fcntl.LOCK_EX)
-                finally:
-                    fcntl.flock(f, fcntl.LOCK_UN)
-            model = joblib.load(model_path)
+        # if file directory doesn't exist create it
+        try:
+            os.makedirs(os.path.dirname(model_path))
+        except FileExistsError:
+                pass
+        with open(model_path, 'wb+') as f:
+            try:
+                fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                if os.path.getsize(model_path) == 0:
+                    r = requests.get(model_url, stream=True)
+                    for chunk in r.iter_content(chunk_size=1024):
+                        if chunk:  # filter out keep-alive new chunks
+                            f.write(chunk)
+            except BlockingIOError as e:
+                fcntl.flock(f, fcntl.LOCK_EX)
+            finally:
+                fcntl.flock(f, fcntl.LOCK_UN)
+        model = joblib.load(model_path)
         return model
+
 
     def predict(self, text):
         """ This method should be overwritten to fit the specific case of the

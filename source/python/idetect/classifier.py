@@ -1,6 +1,7 @@
 from idetect.nlp_models.category import CategoryModel
 from idetect.nlp_models.relevance import RelevanceModel
 from idetect.fact_extractor import extract_reports
+from idetect.model import Category, Relevance
 
 '''Method(s) for running classifier on extracted content.
 
