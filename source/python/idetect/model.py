@@ -171,8 +171,7 @@ class Content(Base):
     __tablename__ = 'content'
 
     id = Column(Integer, primary_key=True)
-    article = relationship(
-        'Article', secondary=article_content, back_populates='content')
+    article = relationship('Article', back_populates='content')
     content = Column(String)
     content_type = Column(String)
 

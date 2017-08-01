@@ -19,7 +19,7 @@ def extract_reports(article):
     interpreter = Interpreter(nlp, person_reporting_terms, structure_reporting_terms, person_reporting_units,
                               structure_reporting_units, relevant_article_terms)
     session = object_session(article)
-    content = article.content[0].content
+    content = article.content.content
     reports = interpreter.process_article_new(content)
     if len(reports) > 0:
         save_reports(article, reports, session)
