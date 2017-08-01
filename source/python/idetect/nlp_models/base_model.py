@@ -52,7 +52,8 @@ class DownloadableModel(object):
         try:
             os.makedirs(os.path.dirname(model_path))
         except FileExistsError:
-                pass
+            if not os.path.isdir(os.path.dirname(model_path)):
+                raise
         with open(model_path, 'wb+') as f:
             try:
                 fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
