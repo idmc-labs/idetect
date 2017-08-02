@@ -4,4 +4,8 @@ source/.ipython
 source/.jupyter
 source/.local
 source/notebooks/.ipynb_checkpoints
+
+# pickled NLP models
+source/python/idetect/nlp_models/*.pkl
+
 __pycache__

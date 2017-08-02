@@ -27,6 +27,14 @@ class Status:
     SCRAPING_FAILED = 'scraping failed'
     PROCESSING_FAILED = 'processing failed'
 
+class Category:
+    OTHER = 'other'
+    DISASTER = 'disaster'
+    CONFLICT = 'conflict'
+
+class Relevance:
+    DISPLACEMENT = 'displacement'
+    NOT_DISPLACEMENT = 'not displacement'
 
 class NotLatestException(Exception):
     def __init__(self, ours, other):

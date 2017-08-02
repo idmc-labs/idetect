@@ -1,3 +1,8 @@
+from idetect.nlp_models.category import CategoryModel
+from idetect.nlp_models.relevance import RelevanceModel
+from idetect.fact_extractor import extract_reports
+from idetect.model import Category, Relevance
+
 '''Method(s) for running classifier on extracted content.
 
 How to ensure has access to pre-loaded models?
@@ -10,12 +15,16 @@ How to ensure has access to pre-loaded models?
 
 ## TODO: Load pre-trained classifiers
 
-def classify(article):
-    # Query Database for scraped content
+class Classifier(object):
+    def __init__(self, article):
+        self.category_model = CategoryModel()
+        self.relevance_model = RelevanceModel()
+        self.article = article
 
-    # For each piece of content run relevance classifier
-
-    # For relevant content run category classifier
-
-    # Update metadata columns in URL table
-    return True
+    def classify(self, article):
+        content = self.article.content
+        category = self.category_model.predict(content)
+        relevance = self.relevance_model.transform(content)
+        if relevance == Relevance.DISPLACEMENT:
+            reports = extract_reports(self.article)
+        return relevance, category, reports
