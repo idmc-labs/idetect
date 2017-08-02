@@ -72,9 +72,9 @@ class Article(Base):
     retrieval_date = Column(DateTime(timezone=True))
     created = Column(DateTime(timezone=True), server_default=func.now())
     updated = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    content = relationship(
-        'Content', secondary=article_content, back_populates='article')
     reports = relationship('Report', secondary=article_report, back_populates='article')
+    content_id = Column('content', Integer, ForeignKey('content.id'))
+    content = relationship('Content', back_populates='article')
 
     def __str__(self):
         return "<Article {} {} {}>".format(self.id, self.url_id, self.url)
@@ -171,7 +171,6 @@ class Content(Base):
     __tablename__ = 'content'
 
     id = Column(Integer, primary_key=True)
-    article_id = Column('article', Integer, ForeignKey('article.id'))
     article = relationship('Article', back_populates='content')
     content = Column(String)
     content_type = Column(String)
