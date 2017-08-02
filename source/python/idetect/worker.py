@@ -5,10 +5,11 @@ import signal
 import time
 from multiprocessing import Process
 
-from idetect.model import Article, UnexpectedArticleStatusException, Session
+from idetect.model import Article, Session, NotLatestException
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
 
 class Worker:
     def __init__(self, status, working_status, success_status, failure_status, function, engine):
@@ -29,7 +30,7 @@ class Worker:
         signal.signal(signal.SIGTERM, self.terminate)
 
     def terminate(self, signum, frame):
-        logger.warn("Worker {} terminated".format(os.getpid()))
+        logger.warning("Worker {} terminated".format(os.getpid()))
         self.terminated = True
 
     def work(self):
@@ -45,29 +46,35 @@ class Worker:
             article = None
             while not claimed_one:
                 try:
-                    article = self.session.query(Article).filter(Article.status == self.status) \
-                        .order_by(Article.updated).first()  # choose the least-recently-updated article with this status
+                    # Only consider the most recent article for each url_id
+                    # ... that has the right status
+                    # ... sort by updated date
+                    # ... pick the first (oldest)
+                    article = Article.select_latest_version(self.session) \
+                        .filter(Article.status == self.status) \
+                        .order_by(Article.updated) \
+                        .first()
                     if article is None:
                         return False  # no work to be done
-                    article.update_status(self.working_status)
+                    article.create_new_version(self.working_status)
                     self.session.commit()
                     logger.info("Worker {} claimed Article {} in status {}".format(
                         os.getpid(), article.id, self.status))
                     claimed_one = True
-                except UnexpectedArticleStatusException:
+                except NotLatestException:
                     pass  # another worker claimed this article before we could, try again
             try:
                 # actually run the work function on this article
                 self.function(article)
                 logger.info("Worker {} processed Article {} {} -> {}".format(
                     os.getpid(), article.id, self.status, self.success_status))
-                article.update_status(self.success_status)
+                article.create_new_version(self.success_status)
                 self.session.commit()
             except Exception as e:
-                logger.warn("Worker {} failed to process Article {} {} -> {}".format(
+                logger.warning("Worker {} failed to process Article {} {} -> {}".format(
                     os.getpid(), article.id, self.status, self.failure_status),
-                            exc_info=e)
-                article.update_status(self.failure_status)
+                    exc_info=e)
+                article.create_new_version(self.failure_status)
                 self.session.commit()
             return True
         finally:
@@ -84,7 +91,7 @@ class Worker:
     def work_indefinitely(self, max_sleep=60):
         """While there is work to do, do it. If there's no work to do, take increasingly long naps until there is."""
         logger.info("Worker {} working indefinitely".format(os.getpid()))
-        time.sleep(random.randrange(max_sleep)) # stagger start times
+        time.sleep(random.randrange(max_sleep))  # stagger start times
         sleep = 1
         while not self.terminated:
             if self.work_all() > 0:

@@ -7,3 +7,5 @@ source/notebooks/.ipynb_checkpoints
 
 # pickled NLP models
 source/python/idetect/nlp_models/*.pkl
+
+__pycache__
