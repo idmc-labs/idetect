@@ -14,7 +14,7 @@ def classify(article):
     session = object_session(article)
     content = article.content.content
     category = CategoryModel().predict(content)
-    relevance = RelevanceModel.transform(content)
+    relevance = RelevanceModel().transform(content)
     article.category = category
     article.relevance = relevance
     session.commit()
