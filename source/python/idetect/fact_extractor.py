@@ -15,7 +15,11 @@ print("Loaded Spacy English Language NLP Models.")
 
 
 def extract_reports(article):
-    # Get rules-based facts along with sentence numbers
+    '''Extract reports (facts) for given article
+    :params article: instance of Article
+    :return: None
+    '''
+
     interpreter = Interpreter(nlp, person_reporting_terms, structure_reporting_terms, person_reporting_units,
                               structure_reporting_units, relevant_article_terms)
     session = object_session(article)
@@ -26,6 +30,12 @@ def extract_reports(article):
 
 
 def save_reports(article, reports, session):
+    '''Loop through extracted reports and save them to database
+    :params article: instance of Article
+    :params reports: list of extracted reports
+    :params session: session object corresponding to the article
+    :return: None
+    '''
     for r in reports:
         report = Report(article_id=article.id, reporting_unit=r.reporting_unit, reporting_term=r.reporting_term,
                         sentence_start=r.sentence_start, sentence_end=r.sentence_end,
@@ -35,11 +45,18 @@ def save_reports(article, reports, session):
         session.add(report)
         session.commit()
 
+        # Loop over each extracted location and save to Database
         for location in r.locations:
             process_location(report, location, session)
 
 
 def process_location(report, location, session):
+    '''Get geo info for a given location and add the location to database
+    :params report: instance of Report
+    :params location: location name, a String
+    :params session: session object corresponding to location
+    :return: None
+    '''
     loc = session.query(Location).filter_by(
         description=location).one_or_none()
     if loc:
