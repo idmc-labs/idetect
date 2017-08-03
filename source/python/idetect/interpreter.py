@@ -237,6 +237,13 @@ class Interpreter(object):
         return matched
 
     def convert_to_facts(self, fact_array, fact_type, start_offset=0):
+        """
+        Convert extracted Spacy Tokens and Spans to Fact objects.
+        param: fact_array       array of Spacy Tokens or Spans
+        param: fact_type        type of Fact, i.e. Unit, Term, Quantity
+        param: start_offset     Start offset (index) from beginning of article
+        returns: A list of Facts
+        """
         facts = []
         for fact in fact_array:
             if isinstance(fact, Token):
@@ -249,7 +256,7 @@ class Interpreter(object):
 
     def extract_locations(self, sentence, root=None):
         """
-        Examines a sentence and identifies if any of its constituent tokens describe a location.
+        Examine a sentence and identifies if any of its constituent tokens describe a location.
         If a root token is specified, only location tokens below the level of this token in the tree will be examined.
         If no root is specified, location tokens will be drawn from the entirety of the span.
         param: sentence       a span
@@ -306,6 +313,12 @@ class Interpreter(object):
         return True
 
     def basic_number(self, token):
+        """
+        Test if a token is equivalent to a relevant number using
+        Spacy like_num method and comparing to list of strings
+        param: Token    A Spacy Token
+        returns: True or False
+        """
         if token.text in ("dozens", "hundreds", "thousands", "fifty"):
             return True
         if token.like_num:
@@ -330,6 +343,11 @@ class Interpreter(object):
         return sentence_reports
 
     def article_relevance(self, article):
+        """
+        Test article for relevance based on certain pre-defined terms.
+        param: article      An instance of Spacy doc class
+        return: True if article is relevant
+        """
         for token in article:
             if token.lemma_ in self.relevant_article_lemmas:
                 return True
@@ -385,6 +403,9 @@ class Interpreter(object):
     def get_quantity_from_phrase(self, phrase, offset=0):
         """
         Look for number-like tokens within noun phrase.
+        param: phrase   A sequence of Spacy Tokens
+        param: offset   The index offset from beginning of article, an int
+        return: Fact instance
         """
         for token in phrase:
             if self.basic_number(token):
@@ -416,12 +437,25 @@ class Interpreter(object):
             return Fact(None)
 
     def simple_subjects_and_objects(self, verb):
+        """
+        Extract all simple subjects and objects for a given verb.
+        Uses Textacy get_objects_of_verb and get_subjects_of_verb methods
+        param: verb     A Spacy Token
+        return: A list of verb subjects and objects (Spacy Tokens or Spans)
+        """
         verb_objects = get_objects_of_verb(verb)
         verb_subjects = get_subjects_of_verb(verb)
         verb_objects.extend(verb_subjects)
         return verb_objects
 
     def nouns_from_relative_clause(self, sentence, verb):
+        """
+        Given a sentence and verb, look for relative clauses and 
+        identify nouns  
+        param: sentence     A Spacy Span
+        param: verb     A SPacy Token
+        return: A Spacy token (the extracted noun)
+        """
         possible_clauses = list(
             pos_regex_matches(sentence, r'<NOUN>+<VERB>'))
         for clause in possible_clauses:
@@ -484,6 +518,13 @@ class Interpreter(object):
         return list(set(verb_objects))
 
     def test_noun_conj(self, sentence, noun):
+        """
+        Given a sentence and verb, look for conjunctions containing
+        that noun
+        param: sentence     A Spacy Span
+        param: noun     A Spacy Token
+        return: A Spacy span (the conjunction containing the noun)
+        """
         possible_conjs = list(pos_regex_matches(
             sentence, r'<NOUN><CONJ><NOUN>'))
         for conj in possible_conjs:
@@ -491,15 +532,24 @@ class Interpreter(object):
                 return conj
 
     def next_word(self, story, token):
+        """
+        Get the next word in a given story based on a passed token.
+        param: story     A Spacy doc instance
+        param: token     A Spacy Token
+        return: A Spacy token
+        """
         if token.i == len(story) - 1:
             return None
         else:
             return story[token.i + 1]
 
     def set_report_span(self, facts):
-        '''Convert a list of facts into their corresponding
+        """
+        Convert a list of facts into their corresponding
         marker spans for visualizing with Displacy
-        '''
+        param facts: a list of Facts
+        return: A list of fact_spans (dictionaries)
+        """
         report_span = []
         for f in facts:
             if isinstance(f, list):
@@ -576,6 +626,11 @@ class Interpreter(object):
         return reports
 
     def cleanup(self, text):
+        """
+        Cleanup text based on commonly encountered errors.
+        param: text     A string
+        return: A cleaned string
+        """
         text = re.sub(r'([a-zA-Z0-9])(IMPACT)', r'\1. \2', text)
         text = re.sub(r'([a-zA-Z0-9])(RESPONSE)', r'\1. \2', text)
         text = re.sub(r'(IMPACT)([a-zA-Z0-9])', r'\1. \2', text)
@@ -593,6 +648,12 @@ class Interpreter(object):
         return output
 
     def extract_all_dates(self, story, publication_date=None):
+        """
+        Extract all dates from an article.
+        param: story     A string
+        param: publication_date     A datetime
+        return: A list of dates
+        """
         date_times = []
         story = self.cleanup(story)
         story = self.nlp(story)
@@ -604,6 +665,11 @@ class Interpreter(object):
         return date_times
 
     def convert_unit(self, reporting_unit):
+        """
+        Convert extracted reporting units to predefined terms.
+        param: reporting_unit   A Fact
+        return: An attribute of ReportUnit
+        """
         if reporting_unit.lemma_ in self.structure_unit_lemmas:
             return ReportUnit.HOUSEHOLDS
         elif reporting_unit.lemma_ in self.household_lemmas:
@@ -612,6 +678,11 @@ class Interpreter(object):
             return ReportUnit.PEOPLE
 
     def convert_term(self, reporting_term):
+        """
+        Convert extracted reporting terms to predefined terms.
+        param: reporting_unit   A Fact
+        return: An attribute of ReportTerm
+        """
         reporting_term = reporting_term.text.split(" ")
         reporting_term = [self.nlp(t)[0].lemma_ for t in reporting_term]
         if "displace" in reporting_term:
