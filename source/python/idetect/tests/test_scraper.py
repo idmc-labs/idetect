@@ -31,7 +31,7 @@ class TestScraper(TestCase):
         self.session.add(article)
         self.session.commit()
         scrape(article)
-        content = article.content[0]
+        content = article.content
         self.assertEqual("text", content.content_type)
         self.assertTrue("Katrina" in content.content)
         self.assertTrue("Louisiana" in content.content)
@@ -44,7 +44,7 @@ class TestScraper(TestCase):
         self.session.add(article)
         self.session.commit()
         scrape(article)
-        content = article.content[0]
+        content = article.content
         self.assertEqual("pdf", content.content_type)
         self.assertTrue("Katrina" in content.content)
         self.assertTrue("Louisiana" in content.content)
