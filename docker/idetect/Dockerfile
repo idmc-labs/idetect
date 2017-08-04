@@ -13,7 +13,7 @@ RUN apt-get -y install libxslt1-dev antiword unrtf poppler-utils pstotext \
         tesseract-ocr flac ffmpeg lame libmad0 libsox-fmt-mp3 sox libjpeg-dev \
         postgresql libpq-dev git
 RUN pip3 install --upgrade pip && \
-    pip3 install NumPy SciPy spacy scikit-learn nltk gensim
+    pip3 install NumPy SciPy spacy
 
 ## download the spacy model using curl for progress indication
 ## uncomment the below to include it in the build
@@ -23,6 +23,8 @@ RUN pip3 install --upgrade pip && \
 #        https://github.com/explosion/spacy-models/releases/download/en_core_web_md-1.2.1/en_core_web_md-1.2.1.tar.gz
 #RUN pip3 install "/spacy-data/en_core_web_md-1.2.1.tar.gz" && \
 #    python3 -m spacy link en_core_web_md en_default
+
+RUN pip3 install pandas scikit-learn gensim
 
 COPY ./source/python/requirements.txt /tmp
 RUN pip3 install -r /tmp/requirements.txt
