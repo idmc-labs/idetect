@@ -5,7 +5,7 @@ import parsedatetime
 import string
 from spacy.tokens import Token, Span
 from datetime import datetime, timedelta
-from functools import reduce
+from idetect.model import ReportUnit, ReportTerm
 
 
 person_reporting_terms = [
@@ -237,6 +237,13 @@ class Interpreter(object):
         return matched
 
     def convert_to_facts(self, fact_array, fact_type, start_offset=0):
+        """
+        Convert extracted Spacy Tokens and Spans to Fact objects.
+        param: fact_array       array of Spacy Tokens or Spans
+        param: fact_type        type of Fact, i.e. Unit, Term, Quantity
+        param: start_offset     Start offset (index) from beginning of article
+        returns: A list of Facts
+        """
         facts = []
         for fact in fact_array:
             if isinstance(fact, Token):
@@ -249,7 +256,7 @@ class Interpreter(object):
 
     def extract_locations(self, sentence, root=None):
         """
-        Examines a sentence and identifies if any of its constituent tokens describe a location.
+        Examine a sentence and identifies if any of its constituent tokens describe a location.
         If a root token is specified, only location tokens below the level of this token in the tree will be examined.
         If no root is specified, location tokens will be drawn from the entirety of the span.
         param: sentence       a span
@@ -306,6 +313,12 @@ class Interpreter(object):
         return True
 
     def basic_number(self, token):
+        """
+        Test if a token is equivalent to a relevant number using
+        Spacy like_num method and comparing to list of strings
+        param: Token    A Spacy Token
+        returns: True or False
+        """
         if token.text in ("dozens", "hundreds", "thousands", "fifty"):
             return True
         if token.like_num:
@@ -330,6 +343,11 @@ class Interpreter(object):
         return sentence_reports
 
     def article_relevance(self, article):
+        """
+        Test article for relevance based on certain pre-defined terms.
+        param: article      An instance of Spacy doc class
+        return: True if article is relevant
+        """
         for token in article:
             if token.lemma_ in self.relevant_article_lemmas:
                 return True
@@ -385,6 +403,9 @@ class Interpreter(object):
     def get_quantity_from_phrase(self, phrase, offset=0):
         """
         Look for number-like tokens within noun phrase.
+        param: phrase   A sequence of Spacy Tokens
+        param: offset   The index offset from beginning of article, an int
+        return: Fact instance
         """
         for token in phrase:
             if self.basic_number(token):
@@ -416,12 +437,25 @@ class Interpreter(object):
             return Fact(None)
 
     def simple_subjects_and_objects(self, verb):
+        """
+        Extract all simple subjects and objects for a given verb.
+        Uses Textacy get_objects_of_verb and get_subjects_of_verb methods
+        param: verb     A Spacy Token
+        return: A list of verb subjects and objects (Spacy Tokens or Spans)
+        """
         verb_objects = get_objects_of_verb(verb)
         verb_subjects = get_subjects_of_verb(verb)
         verb_objects.extend(verb_subjects)
         return verb_objects
 
     def nouns_from_relative_clause(self, sentence, verb):
+        """
+        Given a sentence and verb, look for relative clauses and 
+        identify nouns  
+        param: sentence     A Spacy Span
+        param: verb     A SPacy Token
+        return: A Spacy token (the extracted noun)
+        """
         possible_clauses = list(
             pos_regex_matches(sentence, r'<NOUN>+<VERB>'))
         for clause in possible_clauses:
@@ -484,6 +518,13 @@ class Interpreter(object):
         return list(set(verb_objects))
 
     def test_noun_conj(self, sentence, noun):
+        """
+        Given a sentence and verb, look for conjunctions containing
+        that noun
+        param: sentence     A Spacy Span
+        param: noun     A Spacy Token
+        return: A Spacy span (the conjunction containing the noun)
+        """
         possible_conjs = list(pos_regex_matches(
             sentence, r'<NOUN><CONJ><NOUN>'))
         for conj in possible_conjs:
@@ -491,15 +532,24 @@ class Interpreter(object):
                 return conj
 
     def next_word(self, story, token):
+        """
+        Get the next word in a given story based on a passed token.
+        param: story     A Spacy doc instance
+        param: token     A Spacy Token
+        return: A Spacy token
+        """
         if token.i == len(story) - 1:
             return None
         else:
             return story[token.i + 1]
 
     def set_report_span(self, facts):
-        '''Convert a list of facts into their corresponding
+        """
+        Convert a list of facts into their corresponding
         marker spans for visualizing with Displacy
-        '''
+        param facts: a list of Facts
+        return: A list of fact_spans (dictionaries)
+        """
         report_span = []
         for f in facts:
             if isinstance(f, list):
@@ -553,7 +603,7 @@ class Interpreter(object):
                             unit = 'People'
                         quantity = Fact(o, o, o.lemma_, 'quantity')
                         report = Report(unit, self.convert_term(verb), [p.text for p in possible_locations],
-                                        story.text, self.set_report_span([verb, quantity, possible_locations]), quantity)
+                                        sentence.start_char, sentence.end_char, self.set_report_span([verb, quantity, possible_locations]), quantity)
                         reports.append(report)
                         break
             elif o.lemma_ in search_type:
@@ -570,12 +620,17 @@ class Interpreter(object):
                 reporting_unit = Fact(
                     reporting_unit, reporting_unit, reporting_unit.lemma_, "unit")
                 report = Report(self.convert_unit(reporting_unit), self.convert_term(verb), [p.text for p in possible_locations],
-                                story.text, self.set_report_span([verb, quantity, possible_locations]), quantity)
+                                sentence.start_char, sentence.end_char, self.set_report_span([verb, quantity, possible_locations]), quantity)
                 reports.append(report)
                 break
         return reports
 
     def cleanup(self, text):
+        """
+        Cleanup text based on commonly encountered errors.
+        param: text     A string
+        return: A cleaned string
+        """
         text = re.sub(r'([a-zA-Z0-9])(IMPACT)', r'\1. \2', text)
         text = re.sub(r'([a-zA-Z0-9])(RESPONSE)', r'\1. \2', text)
         text = re.sub(r'(IMPACT)([a-zA-Z0-9])', r'\1. \2', text)
@@ -593,6 +648,12 @@ class Interpreter(object):
         return output
 
     def extract_all_dates(self, story, publication_date=None):
+        """
+        Extract all dates from an article.
+        param: story     A string
+        param: publication_date     A datetime
+        return: A list of dates
+        """
         date_times = []
         story = self.cleanup(story)
         story = self.nlp(story)
@@ -604,38 +665,48 @@ class Interpreter(object):
         return date_times
 
     def convert_unit(self, reporting_unit):
+        """
+        Convert extracted reporting units to predefined terms.
+        param: reporting_unit   A Fact
+        return: An attribute of ReportUnit
+        """
         if reporting_unit.lemma_ in self.structure_unit_lemmas:
-            return "Households"
+            return ReportUnit.HOUSEHOLDS
         elif reporting_unit.lemma_ in self.household_lemmas:
-            return "Households"
+            return ReportUnit.HOUSEHOLDS
         else:
-            return "People"
+            return ReportUnit.PEOPLE
 
     def convert_term(self, reporting_term):
+        """
+        Convert extracted reporting terms to predefined terms.
+        param: reporting_unit   A Fact
+        return: An attribute of ReportTerm
+        """
         reporting_term = reporting_term.text.split(" ")
         reporting_term = [self.nlp(t)[0].lemma_ for t in reporting_term]
         if "displace" in reporting_term:
-            return "Displaced"
+            return ReportTerm.DISPLACED
         elif "evacuate" in reporting_term:
-            return "Evacuated"
+            return ReportTerm.EVACUATED
         elif "flee" in reporting_term:
-            return "Forced to Flee"
+            return ReportTerm.FLED
         elif "homeless" in reporting_term:
-            return "Homeless"
+            return ReportTerm.HOMELESS
         elif "camp" in reporting_term:
-            return "In Relief Camp"
+            return ReportTerm.CAMP
         elif len(set(reporting_term) & set(["shelter", "accommodate"])) > 0:
-            return "Sheltered"
+            return ReportTerm.SHELTERED
         elif "relocate" in reporting_term:
-            return "Relocated"
+            return ReportTerm.RELOCATED
         elif "destroy" in reporting_term:
-            return "Destroyed Housing"
+            return ReportTerm.DESTROYED
         elif "damage" in reporting_term:
-            return "Partially Destroyed Housing"
+            return ReportTerm.DAMAGED
         elif "uninhabitable" in reporting_term:
-            return "Uninhabitable Housing"
+            return ReportTerm.UNINHABITABLE
         else:
-            return "Displaced"
+            return ReportTerm.DISPLACED
 
     def process_article_new(self, story):
         """
@@ -659,45 +730,8 @@ class Interpreter(object):
             current_locations = self.extract_locations(sentence)
             if current_locations:
                 locations_memory = current_locations
-            for r in reports:
-                r.sentence_idx = i
-            if len(reports) > 0:
-                processed_reports.append(self.choose_report(reports))
-        return processed_reports
-
-    def choose_report(self, reports):
-        '''Choose report based on the heuristics mentioned in the first cell
-        '''
-        people_reports = []
-        household_reports_1 = []
-        household_reports_2 = []
-
-        for r in reports:
-            if r.reporting_unit == "People":
-                people_reports.append(r)
-            elif r.reporting_unit == "Households":
-                if r.reporting_term in ("Partially Destroyed Housing", "Uninhabitable Housing"):
-                    household_reports_2.append(r)
-                else:
-                    household_reports_1.append(r)
-        if len(people_reports) > 0:
-            report = self.first_report(people_reports)
-        elif len(household_reports_1) > 0:
-            report = self.first_report(household_reports_1)
-        elif len(household_reports_2) > 0:
-            report = self.first_report(household_reports_2)
-        else:
-            report = reports[0]
-
-        return report
-
-    def first_report(self, reports):
-        '''Choose the first report based on location in text'''
-        report_locs = []
-        for report in reports:
-            report_locs.append(
-                (report, minimum_loc(report.tag_spans)))
-        return sorted(report_locs, key=lambda x: x[1])[0][0]
+            processed_reports.extend(reports)
+        return list(set(processed_reports))
 
 
 class Fact(object):
@@ -730,19 +764,20 @@ class Fact(object):
 class Report(object):
     '''Wrapper for reports extracted using rules'''
 
-    def __init__(self, reporting_unit, reporting_term, locations, story, tag_spans=[], quantity=None):
+    def __init__(self, reporting_unit, reporting_term, locations, sentence_start, sentence_end, tag_spans=[], quantity=None):
         self.reporting_unit = convert_tokens_to_strings(reporting_unit)
         self.reporting_term = convert_tokens_to_strings(reporting_term)
         if quantity:
             self.quantity = convert_quantity(
                 convert_tokens_to_strings(quantity))
         else:
-            self.quantity = None
+            self.quantity = (None, None)
         if locations:
             self.locations = [convert_tokens_to_strings(l) for l in locations]
         else:
             self.locations = []
-        self.story = story
+        self.sentence_start = sentence_start
+        self.sentence_end = sentence_end
         self.tag_spans = tag_spans
         self.sentence_idx = None
 
@@ -760,108 +795,10 @@ def convert_quantity(value):
     and enhanced with numerical and array input
     '''
     value = value.replace(",", "")
-    Small = {
-        'zero': 0,
-        'one': 1,
-        'two': 2,
-        'three': 3,
-        'four': 4,
-        'five': 5,
-        'six': 6,
-        'seven': 7,
-        'eight': 8,
-        'nine': 9,
-        'ten': 10,
-        'eleven': 11,
-        'twelve': 12,
-        'thirteen': 13,
-        'fourteen': 14,
-        'fifteen': 15,
-        'sixteen': 16,
-        'seventeen': 17,
-        'eighteen': 18,
-        'nineteen': 19,
-        'twenty': 20,
-        'thirty': 30,
-        'forty': 40,
-        'fifty': 50,
-        'sixty': 60,
-        'seventy': 70,
-        'eighty': 80,
-        'ninety': 90}
-
-    Magnitude = {
-        'thousand':     1000,
-        'million':      1000000,
-        'billion':      1000000000,
-        'trillion':     1000000000000,
-        'quadrillion':  1000000000000000,
-        'quintillion':  1000000000000000000,
-        'sextillion':   1000000000000000000000,
-        'septillion':   1000000000000000000000000,
-        'octillion':    1000000000000000000000000000,
-        'nonillion':    1000000000000000000000000000000,
-        'decillion':    1000000000000000000000000000000000,
-    }
-
-    Vague = {
-        'numbers':      5,
-        'dozens':       55,
-        'tens':         55,
-        'hundreds':     550,
-        'thousands':    5500,
-        'millions':     5500000,
-        'billions':     5500000000,
-        'trillions':    5500000000000,
-        'quadrillions': 5500000000000000,
-        'quintillions': 5500000000000000000,
-        'sextillions':  5500000000000000000000,
-        'septillions':  5500000000000000000000000,
-        'octillions':   5500000000000000000000000000,
-        'nonillions':   5500000000000000000000000000000,
-        'decillions':   5500000000000000000000000000000000,
-    }
-
-    a = []
-    if not type(value) is list:
-        value = [value]
-    for s_item in value:
-        a += re.split(r"[\s-]+", str(s_item))
-    n = 0
-    g = 0
-    vague_of = False
-    for w in a:
-        try:
-            x = int(w)
-            g += x
-        except:
-            if w.lower() == 'of':
-                vague_of = True
-                continue
-
-            if vague_of:
-                if w[-1:] != 's':
-                    w = w + 's'
-                if w == 'hundreds' or w == 'hundred':
-                    g *= 100
-                elif w[:-1] in Magnitude:
-                    g *= Magnitude[w[:-1]]
-                continue
-
-            if w in Small:
-                g += Small[w]
-            elif w == "hundred" and g != 0:
-                g *= 100
-            elif w in Magnitude:
-                n += g * Magnitude[w]
-                g = 0
-            elif w in Vague:
-                g = Vague[w]
-            else:
-                return None
-
-        vague_of = False
-    return n + g
+    try:
+        return (int(value), None)
+    except:
+        return (None, value)
 
 
 def convert_tokens_to_strings(value):

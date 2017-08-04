@@ -80,12 +80,12 @@ class Article(Base):
     retrieval_attempts = Column(Integer, default=0)
     completion = Column(Numeric)
     publication_date = Column(DateTime(timezone=True))
-    retrieval_date =Column(DateTime(timezone=True), server_default=func.now())
+    retrieval_date = Column(DateTime(timezone=True))
     created = Column(DateTime(timezone=True), server_default=func.now())
     updated = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    content = relationship(
-        'Content', secondary=article_content, back_populates='article')
     reports = relationship('Report', secondary=article_report, back_populates='article')
+    content_id = Column('content', Integer, ForeignKey('content.id'))
+    content = relationship('Content', back_populates='article')
 
     def __str__(self):
         return "<Article {} {} {}>".format(self.id, self.url_id, self.url)
@@ -182,8 +182,7 @@ class Content(Base):
     __tablename__ = 'content'
 
     id = Column(Integer, primary_key=True)
-    article = relationship(
-        'Article', secondary=article_content, back_populates='content')
+    article = relationship('Article', back_populates='content')
     content = Column(String)
     content_type = Column(String)
 
@@ -227,7 +226,7 @@ class Report(Base):
     tag_locations = Column(String)
     analyzer = Column(String)
     accuracy = Column(Numeric)
-    analysis_date = Column(DateTime)
+    analysis_date = Column(DateTime(timezone=True), server_default=func.now())
     locations = relationship(
         'Location', secondary=report_location, back_populates='reports')
 

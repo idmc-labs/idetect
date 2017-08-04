@@ -2,11 +2,11 @@
 '''
 import json
 import unicodedata
-
 import pycountry
 import requests
+from idetect.model import LocationType
 
-with open('../../data/cities_to_countries.json', "r") as f:
+with open('/home/idetect/data/cities_to_countries.json', "r") as f:
     cities_to_countries = json.load(f)
 print("Loaded cities_to_countries dictionary.")
 
@@ -156,14 +156,14 @@ def mapzen_coordinates(place_name, country_code=None):
 
 def layer_to_entity(layer):
     if layer in ('address', 'street'):
-        return 'address'
+        return LocationType.ADDRESS
     elif layer in ('neighbourhood', 'borough', 'localadmin'):
-        return 'neighberhood'
+        return LocationType.NEIGHBORHOOD
     elif layer in ('locality'):
-        return 'city'
+        return LocationType.CITY
     elif layer in ('county', 'region'):
-        return 'subdivision'
+        return LocationType.SUBDIVISION
     elif layer in ('country'):
-        return 'country'
+        return LocationType.COUNTRY
     else:
-        return 'unknown'
+        return LocationType.UNKNOWN

@@ -1,11 +1,11 @@
 import os
-from unittest import TestCase
 from datetime import datetime
+from unittest import TestCase
 
 from sqlalchemy import create_engine
 
 from idetect.model import Base, Session, Status, Article, CountryTerm, Location, \
-    LocationType, Country, NotLatestException, Content, Report
+    LocationType, Country, Content, NotLatestException, Report
 
 
 class TestModel(TestCase):
@@ -48,10 +48,10 @@ class TestModel(TestCase):
 
     def test_create_new_version(self):
         article = Article(url='http://example.com',
-                           url_id=123,
-                           status=Status.PROCESSING)
+                          url_id=123,
+                          status=Status.PROCESSING)
         content = Content(content_type="text/html", content="Lorem ipsum")
-        article.content = [content]
+        article.content = content
         report = Report(analysis_date=datetime.now())
         article.reports = [report]
         self.session.add(article)
@@ -60,19 +60,19 @@ class TestModel(TestCase):
         old_id = article.id
         article.create_new_version(Status.PROCESSED)
         self.assertNotEqual(old_id, article.id)
-        self.assertEqual(article.content, [content])
+        self.assertEqual(article.content, content)
         self.assertEqual(article.reports, [report])
 
         old_article = self.session.query(Article).get(old_id)
-        self.assertEqual(old_article.content, [content])
+        self.assertEqual(old_article.content, content)
         self.assertEqual(old_article.reports, [report])
 
     def test_cascading_delete(self):
         article = Article(url='http://example.com',
-                           url_id=123,
-                           status=Status.PROCESSING)
+                          url_id=123,
+                          status=Status.PROCESSING)
         content = Content(content_type="text/html", content="Lorem ipsum")
-        article.content = [content]
+        article.content = content
         report = Report(analysis_date=datetime.now())
         article.reports = [report]
         self.session.add(article)
@@ -83,11 +83,11 @@ class TestModel(TestCase):
         new_id = article.id
         self.assertIsNotNone(new_id)
         self.assertNotEqual(old_id, new_id)
-        self.assertEqual(article.content, [content])
+        self.assertEqual(article.content, content)
         self.assertEqual(article.reports, [report])
 
         old_article = self.session.query(Article).get(old_id)
-        self.assertEqual(old_article.content, [content])
+        self.assertEqual(old_article.content, content)
         self.assertEqual(old_article.reports, [report])
 
         self.assertEqual(self.session.query(Article).count(), 2)
@@ -103,7 +103,6 @@ class TestModel(TestCase):
 
         self.assertIsNone(self.session.query(Article).get(new_id))
         self.assertIsNotNone(self.session.query(Article).get(old_id))
-
 
     def test_select_latest_version(self):
         article1 = Article(url='http://example.com',
@@ -134,6 +133,23 @@ class TestModel(TestCase):
             .filter(Article.status == Status.SCRAPED) \
             .all()
         self.assertCountEqual(fetched, [article2])
+
+    def test_content_transfer(self):
+        article = Article(url='http://example.com',
+                          url_id=123,
+                          status=Status.FETCHING)
+        self.session.add(article)
+        self.session.commit()
+
+        article.create_new_version(Status.FETCHED)
+        article.content = Content(content_type="text", content="Lorem ipsum")
+        self.session.commit()
+        old_article_id = article.id
+        old_content_id = article.content.id
+
+        article.create_new_version(Status.PROCESSING)
+        self.assertNotEqual(old_article_id, article.id)
+        self.assertEqual(old_content_id, article.content.id)
 
     def test_country_term(self):
         mmr = Country(code="MMR", preferred_term="Myanmar")

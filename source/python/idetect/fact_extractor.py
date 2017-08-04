@@ -2,17 +2,72 @@
 
 How to ensure has access to pre-loaded models?
 '''
-import spacy
-from interpreter import Interpreter, person_reporting_terms, structure_reporting_terms, person_reporting_units, \
+from idetect.interpreter import Interpreter, person_reporting_terms, structure_reporting_terms, person_reporting_units, \
     structure_reporting_units, relevant_article_terms
+import spacy
+from sqlalchemy.orm import object_session
+from idetect.model import Report, Location, Country
+from idetect.geotagger import get_geo_info
+import json
 
-nlp = spacy.load("en")
+nlp = spacy.load("en_default")
 print("Loaded Spacy English Language NLP Models.")
 
 
-def extract_facts(content):
-    # Get rules-based facts along with sentence numbers
+def extract_reports(article):
+    '''Extract reports (facts) for given article
+    :params article: instance of Article
+    :return: None
+    '''
+
     interpreter = Interpreter(nlp, person_reporting_terms, structure_reporting_terms, person_reporting_units,
                               structure_reporting_units, relevant_article_terms)
+    session = object_session(article)
+    content = article.content.content
     reports = interpreter.process_article_new(content)
-    return reports
+    if len(reports) > 0:
+        save_reports(article, reports, session)
+
+
+def save_reports(article, reports, session):
+    '''Loop through extracted reports and save them to database
+    :params article: instance of Article
+    :params reports: list of extracted reports
+    :params session: session object corresponding to the article
+    :return: None
+    '''
+    for r in reports:
+        report = Report(article_id=article.id, reporting_unit=r.reporting_unit, reporting_term=r.reporting_term,
+                        sentence_start=r.sentence_start, sentence_end=r.sentence_end,
+                        specific_displacement_figure=r.quantity[
+                            0], vague_displacement_figure=r.quantity[1],
+                        tag_locations=json.dumps(r.tag_spans))
+        session.add(report)
+        session.commit()
+
+        # Loop over each extracted location and save to Database
+        for location in r.locations:
+            process_location(report, location, session)
+
+
+def process_location(report, location, session):
+    '''Get geo info for a given location and add the location to database
+    :params report: instance of Report
+    :params location: location name, a String
+    :params session: session object corresponding to location
+    :return: None
+    '''
+    loc = session.query(Location).filter_by(
+        description=location).one_or_none()
+    if loc:
+        report.locations.append(loc)
+    else:
+        loc_info = get_geo_info(location)
+        if loc_info['flag'] != 'no-results':
+            country = session.query(Country).filter_by(
+                code=loc_info['country_code']).one_or_none()
+            location = Location(description=loc_info['place_name'], location_type=loc_info['type'], country_code=country.code,
+                                country=country, latlong=loc_info['coordinates'])
+            session.add(location)
+            session.commit()
+            report.locations.append(location)
