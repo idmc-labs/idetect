@@ -15,18 +15,14 @@ RUN apt-get -y install curl && \
 RUN apt-get -y install libffi-dev && \
     pip3 install cld2-cffi
 
-# install the big packages and the ones with complex dependencies
-RUN apt-get -y install libxslt1-dev antiword unrtf poppler-utils pstotext \
-        tesseract-ocr flac ffmpeg lame libmad0 libsox-fmt-mp3 sox libjpeg-dev \
-        postgresql libpq-dev git
-RUN pip3 install --upgrade pip && \
-    pip3 install NumPy SciPy spacy scikit-learn pandas nltk gensim
+RUN apt-get -y install postgresql libpq-dev git
 
+# install the big packages and the ones with complex dependencies
+RUN pip3 install --upgrade pip && \
+    pip3 install NumPy SciPy spacy scikit-learn pandas nltk gensim pdfminer.six pycountry
 
 RUN pip3 install "/spacy-data/en_core_web_md-1.2.1.tar.gz" && \
     python3 -m spacy link en_core_web_md en_default
-
-RUN pip3 install pandas scikit-learn gensim
 
 COPY ./source/python/requirements.txt /tmp
 RUN pip3 install -r /tmp/requirements.txt
