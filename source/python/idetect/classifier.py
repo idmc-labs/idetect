@@ -1,21 +1,20 @@
-'''Method(s) for running classifier on extracted content.
+from idetect.nlp_models.category import CategoryModel
+from idetect.nlp_models.relevance import RelevanceModel
+from sqlalchemy.orm import object_session
 
-How to ensure has access to pre-loaded models?
+'''Method(s) for running classifier on extracted content.
 '''
 
-## Load Spacy English language model
-## Uncomment this once using NLP
-# nlp = spacy.load('en')
-# print("Loaded Spacy english language models.")
-
-## TODO: Load pre-trained classifiers
-
 def classify(article):
-    # Query Database for scraped content
-
-    # For each piece of content run relevance classifier
-
-    # For relevant content run category classifier
-
-    # Update metadata columns in URL table
-    return True
+    """
+    Classify article into category & relevance and save results to database
+    :params article: An Article instance
+    :return: None
+    """
+    session = object_session(article)
+    content = article.content.content
+    category = CategoryModel().predict(content)
+    relevance = RelevanceModel().transform(content)
+    article.category = category
+    article.relevance = relevance
+    session.commit()

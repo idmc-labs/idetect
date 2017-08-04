@@ -32,19 +32,19 @@ class TestModel(TestCase):
         self.session.add(article)
         self.session.commit()
 
-        article.create_new_version(Status.FETCHING)
-        self.assertEqual(article.status, Status.FETCHING)
+        article.create_new_version(Status.SCRAPING)
+        self.assertEqual(article.status, Status.SCRAPING)
 
         # meanwhile, some other process changed the status of this...
         session2 = Session()
         try:
             other = Article.get_latest_version(session2, article.url_id)
-            other.create_new_version(Status.FETCHING_FAILED)
+            other.create_new_version(Status.SCRAPING_FAILED)
         finally:
             session2.rollback()
 
         with self.assertRaises(NotLatestException):
-            article.create_new_version(Status.FETCHED)
+            article.create_new_version(Status.SCRAPED)
 
     def test_create_new_version(self):
         article = Article(url='http://example.com',
@@ -110,14 +110,14 @@ class TestModel(TestCase):
                            status=Status.NEW)
         self.session.add(article1)
         self.session.commit()
-        article1.create_new_version(Status.FETCHING)
+        article1.create_new_version(Status.SCRAPING)
         article2 = Article(url='http://example.com',
                            url_id=234,
                            status=Status.NEW)
         self.session.add(article2)
         self.session.commit()
-        article2.create_new_version(Status.FETCHING)
-        article2.create_new_version(Status.FETCHED)
+        article2.create_new_version(Status.SCRAPING)
+        article2.create_new_version(Status.SCRAPED)
 
         new = Article.select_latest_version(self.session) \
             .filter(Article.status == Status.NEW) \
@@ -125,12 +125,12 @@ class TestModel(TestCase):
         self.assertCountEqual(new, [])
 
         fetching = Article.select_latest_version(self.session) \
-            .filter(Article.status == Status.FETCHING) \
+            .filter(Article.status == Status.SCRAPING) \
             .all()
         self.assertCountEqual(fetching, [article1])
 
         fetched = Article.select_latest_version(self.session) \
-            .filter(Article.status == Status.FETCHED) \
+            .filter(Article.status == Status.SCRAPED) \
             .all()
         self.assertCountEqual(fetched, [article2])
 

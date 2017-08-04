@@ -1,9 +1,9 @@
 from flask import Flask, render_template, abort, request, redirect, url_for
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, desc
 
 from idetect.model import db_url, Base, Article, Session, Status
 from idetect.classifier import classify
-from idetect.scraper import Scraper
+from idetect.scraper import scrape
 
 import logging
 
@@ -18,21 +18,21 @@ Base.metadata.create_all(engine)
 
 @app.route('/')
 def homepage():
-    return render_template('index.html')
+    articles = Article.select_latest_version(Session()).order_by(desc(Article.updated)).limit(10).all()
+    return render_template('index.html', articles=articles)
 
 @app.route('/add_url', methods=['POST'])
 def add_url():
     url = request.form['url']
+    url_id = request.form['url_id']
     logger.info("Scraping by url: {url}".format(url=url))
-    if url is None:
+    if url is None or url_id is None:
         return redirect(url_for('/'))
-    article = Article(url=url, status=Status.NEW)
+    article = Article(url=url, url_id=url_id, status=Status.NEW)
     session = Session()
     session.add(article)
     session.commit()
-    result = None # because the below doesn't work
-    # result = Scraper().scrape(article.url)
-    return render_template('success.html', endpoint='add_url', article=article, result=result)
+    return render_template('success.html', endpoint='add_url', article=article)
 
 @app.route('/scrape/<int:article_id>', methods=['GET'])
 def scrape(article_id):
@@ -40,7 +40,7 @@ def scrape(article_id):
     article = Session().query(Article).get(article_id)
     if article is None:
         abort(403)
-    result = Scraper().scrape(article.url)
+    result = scrape(article.url)
     return render_template('success.html', endpoint='scrape', article=article, result=result)
 
 @app.route('/classify/<int:article_id>', methods=['GET'])

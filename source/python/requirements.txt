@@ -8,5 +8,5 @@ requests
 schedule
 pycountry
 newspaper3k
-# textract  # has to be installed separately because of dependency problems, see Dockerfile
+pdfminer.six
 jupyter

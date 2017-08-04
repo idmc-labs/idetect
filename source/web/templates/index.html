@@ -6,6 +6,28 @@
   Welcome to the idetect API
 
   <form action="add_url" method="POST">
-  Scrape URL: <input name="url"> <input type="submit">
+    Scrape URL: <input name="url"> <br/>
+    URL ID: <input name="url_id"> <br/>
+    <input type="submit">
   </form>
+
+  <table>
+    <tr>
+      <th>URL ID</th>
+      <th>URL</th>
+      <th>Status</th>
+      <th>Last Updated</th>
+      <th>Content</th>
+    </tr>
+    {% for article in articles %}
+    <tr>
+      <td>{{ article.url_id }}</td>
+      <td>{{ article.url }}</td>
+      <td>{{ article.status }}</td>
+      <td>{{ article.updated }}</td>
+      <td>{{ article.content[0].content[:100] if article.content else "None" }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
 </div>
