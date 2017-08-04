@@ -11,7 +11,7 @@ from idetect.worker import Worker
 
 from idetect.scraper import scrape
 from idetect.classifier import classify
-from idetect.fact_extractor import extract_facts
+from idetect.fact_extractor import extract_reports
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -37,7 +37,7 @@ if __name__ == "__main__":
                            classify, engine)
 
     Worker.start_processes(n_workers, Status.CLASSIFIED, Status.PROCESSING, Status.PROCESSED, Status.PROCESSING_FAILED,
-                           extract_facts, engine)
+                           extract_reports, engine)
 
     # run until all children are finished
     for child in active_children():

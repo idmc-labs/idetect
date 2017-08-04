@@ -137,11 +137,11 @@ class TestModel(TestCase):
     def test_content_transfer(self):
         article = Article(url='http://example.com',
                           url_id=123,
-                          status=Status.FETCHING)
+                          status=Status.SCRAPING)
         self.session.add(article)
         self.session.commit()
 
-        article.create_new_version(Status.FETCHED)
+        article.create_new_version(Status.SCRAPED)
         article.content = Content(content_type="text", content="Lorem ipsum")
         self.session.commit()
         old_article_id = article.id

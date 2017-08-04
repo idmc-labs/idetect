@@ -24,6 +24,8 @@ RUN pip3 install --upgrade pip && \
 #RUN pip3 install "/spacy-data/en_core_web_md-1.2.1.tar.gz" && \
 #    python3 -m spacy link en_core_web_md en_default
 
+RUN pip3 install pandas scikit-learn gensim
+
 COPY ./source/python/requirements.txt /tmp
 RUN pip3 install -r /tmp/requirements.txt
 
