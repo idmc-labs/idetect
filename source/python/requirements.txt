@@ -10,3 +10,4 @@ pycountry
 newspaper3k
 pdfminer.six
 jupyter
+pandas

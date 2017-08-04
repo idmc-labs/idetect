@@ -13,7 +13,7 @@ RUN apt-get -y install libxslt1-dev antiword unrtf poppler-utils pstotext \
         tesseract-ocr flac ffmpeg lame libmad0 libsox-fmt-mp3 sox libjpeg-dev \
         postgresql libpq-dev git
 RUN pip3 install --upgrade pip && \
-    pip3 install NumPy SciPy spacy
+    pip3 install NumPy SciPy spacy scikit-learn nltk gensim
 
 ## download the spacy model using curl for progress indication
 ## uncomment the below to include it in the build
