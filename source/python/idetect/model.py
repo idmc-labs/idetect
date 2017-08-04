@@ -22,10 +22,13 @@ class Status:
     NEW = 'new'
     SCRAPING = 'scraping'
     SCRAPED = 'scraped'
+    CLASSIFYING = 'classifying'
+    CLASSIFIED = 'classified'
     PROCESSING = 'processing'
     PROCESSED = 'processed'
     SCRAPING_FAILED = 'scraping failed'
     PROCESSING_FAILED = 'processing failed'
+    CLASSIFYING_FAILED = 'classifying failed'
 
 class Category:
     OTHER = 'other'
