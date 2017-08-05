@@ -65,7 +65,7 @@ class Article(Base):
     __tablename__ = 'article'
 
     id = Column(Integer, primary_key=True)
-    url_id = Column(Integer, nullable=False)
+    url_id = Column(String, nullable=False)
     url = Column(String, nullable=False)
     domain = Column(String)
     status = Column(String)
@@ -176,6 +176,15 @@ class Article(Base):
         ).subquery("a")
         query = session.query(Article).select_entity_from(sub).filter(sub.c.row_number == 1)
         return query
+
+    @classmethod
+    def status_counts(cls, session):
+        """Returns a dictonary of status to the count of the Articles that have that status as their latest value"""
+        sub = Article.select_latest_version(session).subquery()
+        status_counts = session.query(sub.columns.status, func.count(sub.columns.status)) \
+                               .group_by(sub.columns.status).all()
+        return dict(status_counts)
+
 
 
 class Content(Base):

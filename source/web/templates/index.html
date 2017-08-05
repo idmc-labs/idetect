@@ -11,6 +11,23 @@
     <input type="submit">
   </form>
 
+  <h2> Arcticle Counts </h2>
+
+  <table>
+    <tr>
+      <th>Status</th>
+      <th>Count</th>
+    </tr>
+    {% for status in counts.keys() %}
+    <tr>
+      <td>{{ status }}</td>
+      <td>{{ counts[status] }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h2> Recently Updated Articles </h2>
+
   <table>
     <tr>
       <th>URL ID</th>
@@ -25,7 +42,7 @@
       <td>{{ article.url }}</td>
       <td>{{ article.status }}</td>
       <td>{{ article.updated }}</td>
-      <td>{{ article.content[0].content[:100] if article.content else "None" }}</td>
+      <td>{{ article.content.content[:100] if article.content else "None" }}</td>
     </tr>
     {% endfor %}
   </table>

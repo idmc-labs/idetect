@@ -18,8 +18,10 @@ Base.metadata.create_all(engine)
 
 @app.route('/')
 def homepage():
-    articles = Article.select_latest_version(Session()).order_by(desc(Article.updated)).limit(10).all()
-    return render_template('index.html', articles=articles)
+    session = Session()
+    articles = Article.select_latest_version(session).order_by(desc(Article.updated)).limit(10).all()
+    counts = Article.status_counts(session)
+    return render_template('index.html', articles=articles, counts=counts)
 
 @app.route('/add_url', methods=['POST'])
 def add_url():
