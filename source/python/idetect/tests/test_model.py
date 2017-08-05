@@ -134,6 +134,8 @@ class TestModel(TestCase):
             .all()
         self.assertCountEqual(fetched, [article2])
 
+        self.assertEqual(Article.status_counts(self.session), {'scraping': 1, 'scraped': 1})
+
     def test_content_transfer(self):
         article = Article(url='http://example.com',
                           url_id=123,
