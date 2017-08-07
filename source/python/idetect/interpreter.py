@@ -5,26 +5,7 @@ import parsedatetime
 import string
 from spacy.tokens import Token, Span
 from datetime import datetime, timedelta
-from idetect.model import ReportUnit, ReportTerm
-
-
-person_reporting_terms = [
-    'displaced', 'evacuated', 'forced', 'flee', 'homeless', 'relief camp',
-    'sheltered', 'relocated', 'stranded', 'stuck', 'accommodated']
-
-structure_reporting_terms = [
-    'destroyed', 'damaged', 'swept', 'collapsed',
-    'flooded', 'washed', 'inundated', 'evacuate'
-]
-
-person_reporting_units = ["families", "person", "people", "individuals", "locals",
-                          "villagers", "residents",
-                          "occupants", "citizens", "households"]
-
-structure_reporting_units = ["home", "house", "hut", "dwelling", "building"]
-
-relevant_article_terms = ['Rainstorm', 'hurricane',
-                          'tornado', 'rain', 'storm', 'earthquake']
+from idetect.model import ReportUnit, ReportTerm, TermType, ReportKeyword
 
 
 def get_absolute_date(relative_date_string, publication_date=None):
@@ -90,23 +71,32 @@ def get_absolute_date(relative_date_string, publication_date=None):
 
 class Interpreter(object):
 
-    def __init__(self, nlp, person_reporting_terms, structure_reporting_terms, person_reporting_units,
-                 structure_reporting_units, relevant_article_terms):
+    def __init__(self, session, nlp):
         self.nlp = nlp
+        person_reporting_terms = [t.description for t in session.query(
+            ReportKeyword).filter_by(term_type=TermType.PERSON_TERM).all()]
         self.person_term_lemmas = [t.lemma_ for t in self.nlp(
             " ".join(person_reporting_terms))]
+        structure_reporting_terms = [t.description for t in session.query(
+            ReportKeyword).filter_by(term_type=TermType.STRUCTURE_TERM).all()]
         self.structure_term_lemmas = [t.lemma_ for t in self.nlp(
             " ".join(structure_reporting_terms))]
         self.joint_term_lemmas = list(
             set(self.structure_term_lemmas) & set(self.person_term_lemmas))
+        person_reporting_units = [t.description for t in session.query(
+            ReportKeyword).filter_by(term_type=TermType.PERSON_UNIT).all()]
         self.person_unit_lemmas = [t.lemma_ for t in self.nlp(
             " ".join(person_reporting_units))]
+        structure_reporting_units = [t.description for t in session.query(
+            ReportKeyword).filter_by(term_type=TermType.STRUCTURE_UNIT).all()]
         self.structure_unit_lemmas = [t.lemma_ for t in self.nlp(
             " ".join(structure_reporting_units))]
         self.household_lemmas = [t.lemma_ for t in self.nlp(
             " ".join(["families", "households"]))]
         self.reporting_term_lemmas = self.person_term_lemmas + self.structure_term_lemmas
         self.reporting_unit_lemmas = self.person_unit_lemmas + self.structure_unit_lemmas
+        relevant_article_terms = [t.description for t in session.query(
+            ReportKeyword).filter_by(term_type=TermType.ARTICLE_KEYWORD).all()]
         self.relevant_article_lemmas = [t.lemma_ for t in self.nlp(
             " ".join(relevant_article_terms))]
 

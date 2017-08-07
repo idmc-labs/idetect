@@ -287,8 +287,8 @@ class TermType:
     ARTICLE_KEYWORD = 'article_keyword'
 
 
-class ReportTerm(Base):
-    __tablename__ = 'report_term'
+class ReportKeyword(Base):
+    __tablename__ = 'report_keyword'
 
     id = Column(Integer, primary_key=True)
     description = Column(String)
