@@ -37,7 +37,7 @@ if __name__ == "__main__":
     Worker.start_processes(n_workers, Status.SCRAPED, Status.CLASSIFYING, Status.CLASSIFIED, Status.CLASSIFYING_FAILED,
                            classify, engine)
 
-    Worker.start_processes(n_workers, Status.CLASSIFIED, Status.PROCESSING, Status.PROCESSED, Status.PROCESSING_FAILED,
+    Worker.start_processes(n_workers, Status.CLASSIFIED, Status.EXTRACTING, Status.EXTRACTED, Status.EXTRACTING_FAILED,
                            extract_reports, engine)
 
     # run until all children are finished

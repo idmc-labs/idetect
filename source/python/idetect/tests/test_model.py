@@ -50,7 +50,7 @@ class TestModel(TestCase):
     def test_create_new_version(self):
         article = Article(url='http://example.com',
                           url_id=123,
-                          status=Status.PROCESSING)
+                          status=Status.EXTRACTING)
         content = Content(content_type="text/html", content="Lorem ipsum")
         article.content = content
         report = Report(analysis_date=datetime.now())
@@ -59,7 +59,7 @@ class TestModel(TestCase):
         self.session.commit()
 
         old_id = article.id
-        article.create_new_version(Status.PROCESSED)
+        article.create_new_version(Status.EXTRACTED)
         self.assertNotEqual(old_id, article.id)
         self.assertEqual(article.content, content)
         self.assertEqual(article.reports, [report])
@@ -71,7 +71,7 @@ class TestModel(TestCase):
     def test_cascading_delete(self):
         article = Article(url='http://example.com',
                           url_id=123,
-                          status=Status.PROCESSING)
+                          status=Status.EXTRACTING)
         content = Content(content_type="text/html", content="Lorem ipsum")
         article.content = content
         report = Report(analysis_date=datetime.now())
@@ -80,7 +80,7 @@ class TestModel(TestCase):
         self.session.commit()
 
         old_id = article.id
-        article.create_new_version(Status.PROCESSED)
+        article.create_new_version(Status.EXTRACTED)
         new_id = article.id
         self.assertIsNotNone(new_id)
         self.assertNotEqual(old_id, new_id)
@@ -150,7 +150,7 @@ class TestModel(TestCase):
         old_article_id = article.id
         old_content_id = article.content.id
 
-        article.create_new_version(Status.PROCESSING)
+        article.create_new_version(Status.EXTRACTING)
         self.assertNotEqual(old_article_id, article.id)
         self.assertEqual(old_content_id, article.content.id)
 
