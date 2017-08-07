@@ -279,6 +279,22 @@ class Location(Base):
         'Report', secondary=report_location, back_populates='locations')
 
 
+class TermType:
+    PERSON_TERM = 'person_term'
+    PERSON_UNIT = 'person_unit'
+    STRUCTURE_TERM = 'structure_term'
+    STRUCTURE_UNIT = 'structure_unit'
+    ARTICLE_KEYWORD = 'article_keyword'
+
+
+class ReportTerm(Base):
+    __tablename__ = 'report_term'
+
+    id = Column(Integer, primary_key=True)
+    description = Column(String)
+    term_type = Column(String)
+
+
 def create_indexes(engine):
     url_id_status_index = Index('url_id_status', Article.url_id, Article.status, Article.updated)
     try:
