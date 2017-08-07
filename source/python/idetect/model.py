@@ -28,7 +28,7 @@ class Status:
     EXTRACTING = 'extracting'
     EXTRACTED = 'extracted'
     SCRAPING_FAILED = 'scraping failed'
-    PROCESSING_FAILED = 'processing failed'
+    CLASSIFYING_FAILED = 'classifying failed'
     EXTRACTING_FAILED = 'extracting failed'
 
 
