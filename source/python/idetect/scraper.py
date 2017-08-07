@@ -49,7 +49,7 @@ def get_pdf_url_simple(url):
         return url
 
     # Test based on headers
-    if requests.head(url).headers['Content-Type'] == 'application/pdf':
+    if requests.head(url).headers.get('Content-Type') == 'application/pdf':
         return url
 
     return None
@@ -64,7 +64,7 @@ def get_pdf_url_iframe(url):
     for frame in soup.find_all('iframe'):
         src = frame.attrs.get('src', '')
         if 'http' in src:
-            if pdf_url_simple(src):
+            if get_pdf_url_simple(src):
                 return src
     return None
 
