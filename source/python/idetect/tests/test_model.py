@@ -5,7 +5,7 @@ from unittest import TestCase
 from sqlalchemy import create_engine
 
 from idetect.model import Base, Session, Status, Article, CountryTerm, Location, \
-    LocationType, Country, Content, NotLatestException, Report
+    LocationType, Country, Content, NotLatestException, Report, create_indexes
 
 
 class TestModel(TestCase):
@@ -17,6 +17,7 @@ class TestModel(TestCase):
         Session.configure(bind=engine)
         Base.metadata.drop_all(engine)
         Base.metadata.create_all(engine)
+        create_indexes(engine)
         self.session = Session()
 
     def tearDown(self):

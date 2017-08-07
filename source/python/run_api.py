@@ -1,7 +1,7 @@
 from flask import Flask, render_template, abort, request, redirect, url_for
 from sqlalchemy import create_engine, desc
 
-from idetect.model import db_url, Base, Article, Session, Status
+from idetect.model import db_url, Base, Article, Session, Status, create_indexes
 from idetect.classifier import classify
 from idetect.scraper import scrape
 
@@ -15,6 +15,7 @@ app = Flask(__name__)
 engine = create_engine(db_url())
 Session.configure(bind=engine)
 Base.metadata.create_all(engine)
+create_indexes(engine)
 
 @app.route('/')
 def homepage():

@@ -7,7 +7,7 @@ from unittest import TestCase
 
 from sqlalchemy import create_engine
 
-from idetect.model import Base, Session, Status, Article
+from idetect.model import Base, Session, Status, Article, create_indexes
 from idetect.worker import Worker
 
 logger = logging.getLogger(__name__)
@@ -25,6 +25,7 @@ class TestWorker(TestCase):
         self.engine = create_engine(db_url)
         Session.configure(bind=self.engine)
         Base.metadata.create_all(self.engine)
+        create_indexes(self.engine)
         self.session = Session()
         self.processes = []
         logging.basicConfig()

@@ -6,7 +6,7 @@ from time import sleep
 
 from sqlalchemy import create_engine
 
-from idetect.model import db_url, Base, Session, Status
+from idetect.model import db_url, Base, Session, Status, create_indexes
 from idetect.worker import Worker
 
 from idetect.scraper import scrape
@@ -20,6 +20,7 @@ logger.root.addHandler(logging.StreamHandler(sys.stderr))
 engine = create_engine(db_url())
 Session.configure(bind=engine)
 Base.metadata.create_all(engine)
+create_indexes(engine)
 
 
 def do_nothing(article):
