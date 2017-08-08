@@ -7,36 +7,43 @@ from unittest import TestCase
 
 from sqlalchemy import create_engine
 
-from idetect.model import Base, Session, Status, Article, create_indexes
+from idetect.model import Base, Session, Status, Article
 from idetect.worker import Worker
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+logging.basicConfig(format="%(asctime)s %(message)s")
 
 
 class TestWorker(TestCase):
     def setUp(self):
+        logger.debug("setUp")
         worker_logger = logging.getLogger("idetect.worker")
         worker_logger.setLevel(logging.INFO)
 
+        logger.debug("Connecting to DB")
         db_host = os.environ.get('DB_HOST')
         db_url = 'postgresql://{user}:{passwd}@{db_host}/{db}'.format(
             user='tester', passwd='tester', db_host=db_host, db='idetect_test')
         self.engine = create_engine(db_url)
         Session.configure(bind=self.engine)
+        logger.debug("Creating")
         Base.metadata.create_all(self.engine)
-        create_indexes(self.engine)
         self.session = Session()
         self.processes = []
-        logging.basicConfig()
+        logger.debug("setUp complete")
 
     def tearDown(self):
+        logger.debug("tearDown")
         for process in self.processes:
             logger.debug("Terminating {}".format(process))
             process.terminate()
+        logger.debug("processes terminated")
         self.session.rollback()
+        logger.debug("sessions rolled back")
         if self.session.query(Article).filter(Article.url == 'http://example.com').delete() > 0:
             self.session.commit()
+        logger.debug("tearDown complete")
 
     @staticmethod
     def nap_fn(article):
@@ -52,6 +59,7 @@ class TestWorker(TestCase):
 
         article2 = article.get_updated_version()
         self.assertEqual(article2.status, Status.SCRAPED)
+        self.assertIsNotNone(article2.processing_time)
 
         self.assertFalse(worker.work(), "Worker found work")
 
@@ -69,6 +77,8 @@ class TestWorker(TestCase):
 
         article2 = article.get_updated_version()
         self.assertEqual(article2.status, Status.SCRAPING_FAILED)
+        self.assertIn("Nope", article2.error_msg)
+        self.assertIsNotNone(article2.processing_time)
 
         self.assertFalse(worker.work(), "Worker found work")
 
@@ -100,8 +110,8 @@ class TestWorker(TestCase):
             self.session.commit()
         self.assertEqual(worker.work_all(), 3)
 
-        self.assertEqual(Article.select_latest_version(self.session).filter(Article.status == Status.NEW).count(), 0)
-        self.assertEqual(Article.select_latest_version(self.session).filter(Article.status == Status.SCRAPED).count(), n)
+        self.assertEqual(self.session.query(Article).filter(Article.status == Status.NEW).count(), 0)
+        self.assertEqual(self.session.query(Article).filter(Article.status == Status.SCRAPED).count(), n)
 
     def test_work_parallel(self):
         n = 100
@@ -109,16 +119,16 @@ class TestWorker(TestCase):
             article = Article(url='http://example.com', url_id=i, status=Status.NEW)
             self.session.add(article)
             self.session.commit()
-        remaining = Article.select_latest_version(self.session).filter(Article.status == Status.NEW).count()
+        remaining = self.session.query(Article).filter(Article.status == Status.NEW).count()
         self.assertEqual(remaining, n)
         self.processes += Worker.start_processes(4, Status.NEW, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
-                                                 TestWorker.nap_fn, self.engine)
+                                                 TestWorker.nap_fn, self.engine, max_sleep=1)
         self.engine.dispose()
         self.session = Session()
         start = datetime.now()
         max_seconds = int(n / len(self.processes))  # shouldn't take longer than this...
         for i in range(max_seconds):
-            remaining = Article.select_latest_version(self.session).filter(Article.status == Status.NEW).count()
+            remaining = self.session.query(Article).filter(Article.status == Status.NEW).count()
             if remaining == 0:
                 logger.info("Processing took {}".format(datetime.now() - start))
                 break

@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from sqlalchemy import create_engine
 
-from idetect.model import Base, Session, Status, Article, create_indexes
+from idetect.model import Base, Session, Status, Article
 from idetect.scraper import scrape
 
 
@@ -16,7 +16,6 @@ class TestScraper(TestCase):
         Session.configure(bind=engine)
         Base.metadata.drop_all(engine)
         Base.metadata.create_all(engine)
-        create_indexes(engine)
         self.session = Session()
 
     def tearDown(self):

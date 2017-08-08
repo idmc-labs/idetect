@@ -5,7 +5,7 @@ from unittest import TestCase
 from sqlalchemy import create_engine
 
 from idetect.model import Base, Session, Status, Article, CountryTerm, Location, \
-    LocationType, Country, Content, NotLatestException, Report, create_indexes
+    LocationType, Country, Content, NotLatestException, Report, ArticleHistory
 
 
 class TestModel(TestCase):
@@ -17,7 +17,6 @@ class TestModel(TestCase):
         Session.configure(bind=engine)
         Base.metadata.drop_all(engine)
         Base.metadata.create_all(engine)
-        create_indexes(engine)
         self.session = Session()
 
     def tearDown(self):
@@ -39,7 +38,7 @@ class TestModel(TestCase):
         # meanwhile, some other process changed the status of this...
         session2 = Session()
         try:
-            other = Article.get_latest_version(session2, article.url_id)
+            other = session2.query(Article).get(article.id)
             other.create_new_version(Status.SCRAPING_FAILED)
         finally:
             session2.rollback()
@@ -47,112 +46,122 @@ class TestModel(TestCase):
         with self.assertRaises(NotLatestException):
             article.create_new_version(Status.SCRAPED)
 
-    def test_create_new_version(self):
+    def test_version_lifecycle(self):
         article = Article(url='http://example.com',
                           url_id=123,
-                          status=Status.EXTRACTING)
-        content = Content(content_type="text/html", content="Lorem ipsum")
-        article.content = content
-        report = Report(analysis_date=datetime.now())
-        article.reports = [report]
+                          status=Status.NEW)
         self.session.add(article)
         self.session.commit()
 
-        old_id = article.id
-        article.create_new_version(Status.EXTRACTED)
-        self.assertNotEqual(old_id, article.id)
-        self.assertEqual(article.content, content)
-        self.assertEqual(article.reports, [report])
+        article.create_new_version(Status.SCRAPING)
 
-        old_article = self.session.query(Article).get(old_id)
-        self.assertEqual(old_article.content, content)
-        self.assertEqual(old_article.reports, [report])
+        history = self.session.query(ArticleHistory).filter(ArticleHistory.article == article)
+        self.assertEqual(1, history.count())
+        self.assertEqual(1, history.filter(ArticleHistory.status == Status.NEW).count())
 
-    def test_cascading_delete(self):
-        article = Article(url='http://example.com',
-                          url_id=123,
-                          status=Status.EXTRACTING)
         content = Content(content_type="text/html", content="Lorem ipsum")
         article.content = content
+        article.create_new_version(Status.SCRAPED)
+
+        self.assertEqual(2, history.count())
+        self.assertEqual(1, history.filter(ArticleHistory.status == Status.NEW).count())
+        self.assertEqual(1, history.filter(ArticleHistory.status == Status.SCRAPING).count())
+
+        article.create_new_version(Status.EXTRACTING)
+
+        self.assertEqual(3, history.count())
+        self.assertEqual(1, history.filter(ArticleHistory.status == Status.NEW).count())
+        self.assertEqual(1, history.filter(ArticleHistory.status == Status.SCRAPING).count())
+        self.assertEqual(1, history.filter(ArticleHistory.status == Status.SCRAPED).count())
+
+        # content is preserved
+        scraped = history.filter(ArticleHistory.status == Status.SCRAPED).one_or_none()
+        self.assertEqual(article.content, scraped.content)
+
         report = Report(analysis_date=datetime.now())
         article.reports = [report]
-        self.session.add(article)
-        self.session.commit()
-
-        old_id = article.id
         article.create_new_version(Status.EXTRACTED)
-        new_id = article.id
-        self.assertIsNotNone(new_id)
-        self.assertNotEqual(old_id, new_id)
-        self.assertEqual(article.content, content)
-        self.assertEqual(article.reports, [report])
 
-        old_article = self.session.query(Article).get(old_id)
-        self.assertEqual(old_article.content, content)
-        self.assertEqual(old_article.reports, [report])
+        self.assertEqual(4, history.count())
+        self.assertEqual(1, history.filter(ArticleHistory.status == Status.NEW).count())
+        self.assertEqual(1, history.filter(ArticleHistory.status == Status.SCRAPING).count())
+        self.assertEqual(1, history.filter(ArticleHistory.status == Status.SCRAPED).count())
+        self.assertEqual(1, history.filter(ArticleHistory.status == Status.EXTRACTING).count())
 
-        self.assertEqual(self.session.query(Article).count(), 2)
-        self.assertEqual(self.session.query(Report).count(), 1)
-        self.assertEqual(self.session.query(Content).count(), 1)
+        # content still preserved
+        extracting = history.filter(ArticleHistory.status == Status.EXTRACTING).one_or_none()
+        self.assertEqual(article.content, extracting.content)
 
-        self.session.delete(article)
-        self.session.commit()
+        article.create_new_version(Status.EDITING)
+        article.content = Content(content_type="text/html", content="Lorem edited")
+        article.create_new_version(Status.EDITED)
 
-        self.assertEqual(self.session.query(Article).count(), 1)
-        self.assertEqual(self.session.query(Report).count(), 1)
-        self.assertEqual(self.session.query(Content).count(), 1)
+        self.assertEqual(6, history.count())
+        self.assertEqual(1, history.filter(ArticleHistory.status == Status.NEW).count())
+        self.assertEqual(1, history.filter(ArticleHistory.status == Status.SCRAPING).count())
+        self.assertEqual(1, history.filter(ArticleHistory.status == Status.SCRAPED).count())
+        self.assertEqual(1, history.filter(ArticleHistory.status == Status.EXTRACTING).count())
+        self.assertEqual(1, history.filter(ArticleHistory.status == Status.EXTRACTED).count())
+        self.assertEqual(1, history.filter(ArticleHistory.status == Status.EDITING).count())
 
-        self.assertIsNone(self.session.query(Article).get(new_id))
-        self.assertIsNotNone(self.session.query(Article).get(old_id))
+        # content has changed, but reports are preserved
+        extracted = history.filter(ArticleHistory.status == Status.EXTRACTED).one_or_none()
+        self.assertNotEqual(article.content.id, extracted.content.id)
+        self.assertCountEqual([r.id for r in article.reports], [r.id for r in extracted.reports])
 
-    def test_select_latest_version(self):
+        article.create_new_version(Status.EDITING)
+        report2 = Report(analysis_date=datetime.now())
+        article.reports.append(report2)
+        article.create_new_version(Status.EDITED)
+
+        self.assertEqual(8, history.count())
+        self.assertEqual(1, history.filter(ArticleHistory.status == Status.NEW).count())
+        self.assertEqual(1, history.filter(ArticleHistory.status == Status.SCRAPING).count())
+        self.assertEqual(1, history.filter(ArticleHistory.status == Status.SCRAPED).count())
+        self.assertEqual(1, history.filter(ArticleHistory.status == Status.EXTRACTING).count())
+        self.assertEqual(1, history.filter(ArticleHistory.status == Status.EXTRACTED).count())
+        self.assertEqual(2, history.filter(ArticleHistory.status == Status.EDITING).count())
+        self.assertEqual(1, history.filter(ArticleHistory.status == Status.EDITED).count())
+
+        edited = history.filter(ArticleHistory.status == Status.EDITED).one_or_none()
+        self.assertCountEqual([r.id for r in article.reports], [report.id, report2.id])
+        self.assertCountEqual([r.id for r in edited.reports], [report.id])
+
+    def test_status_counts(self):
         article1 = Article(url='http://example.com',
                            url_id=123,
                            status=Status.NEW)
         self.session.add(article1)
         self.session.commit()
+
+        self.assertEqual(Article.status_counts(self.session),
+                         {Status.NEW: 1})
+
         article1.create_new_version(Status.SCRAPING)
+
+        self.assertEqual(Article.status_counts(self.session),
+                         {Status.SCRAPING: 1})
+
         article2 = Article(url='http://example.com',
                            url_id=234,
                            status=Status.NEW)
         self.session.add(article2)
         self.session.commit()
+
+        self.assertEqual(Article.status_counts(self.session),
+                         {Status.NEW: 1,
+                          Status.SCRAPING: 1})
+
         article2.create_new_version(Status.SCRAPING)
+
+        self.assertEqual(Article.status_counts(self.session),
+                         {Status.SCRAPING: 2})
+
         article2.create_new_version(Status.SCRAPED)
 
-        new = Article.select_latest_version(self.session) \
-            .filter(Article.status == Status.NEW) \
-            .all()
-        self.assertCountEqual(new, [])
-
-        fetching = Article.select_latest_version(self.session) \
-            .filter(Article.status == Status.SCRAPING) \
-            .all()
-        self.assertCountEqual(fetching, [article1])
-
-        fetched = Article.select_latest_version(self.session) \
-            .filter(Article.status == Status.SCRAPED) \
-            .all()
-        self.assertCountEqual(fetched, [article2])
-
-        self.assertEqual(Article.status_counts(self.session), {'scraping': 1, 'scraped': 1})
-
-    def test_content_transfer(self):
-        article = Article(url='http://example.com',
-                          url_id=123,
-                          status=Status.SCRAPING)
-        self.session.add(article)
-        self.session.commit()
-
-        article.create_new_version(Status.SCRAPED)
-        article.content = Content(content_type="text", content="Lorem ipsum")
-        self.session.commit()
-        old_article_id = article.id
-        old_content_id = article.content.id
-
-        article.create_new_version(Status.EXTRACTING)
-        self.assertNotEqual(old_article_id, article.id)
-        self.assertEqual(old_content_id, article.content.id)
+        self.assertEqual(Article.status_counts(self.session),
+                         {Status.SCRAPED: 1,
+                          Status.SCRAPING: 1})
 
     def test_country_term(self):
         mmr = Country(code="MMR", preferred_term="Myanmar")
