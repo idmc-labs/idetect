@@ -279,7 +279,7 @@ class Location(Base):
         'Report', secondary=report_location, back_populates='locations')
 
 
-class TermType:
+class KeywordType:
     PERSON_TERM = 'person_term'
     PERSON_UNIT = 'person_unit'
     STRUCTURE_TERM = 'structure_term'

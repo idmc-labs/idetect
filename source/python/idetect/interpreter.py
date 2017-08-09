@@ -5,7 +5,7 @@ import parsedatetime
 import string
 from spacy.tokens import Token, Span
 from datetime import datetime, timedelta
-from idetect.model import ReportUnit, ReportTerm, TermType, ReportKeyword
+from idetect.model import ReportUnit, ReportTerm, KeywordType, ReportKeyword
 
 
 def get_absolute_date(relative_date_string, publication_date=None):
@@ -69,36 +69,32 @@ def get_absolute_date(relative_date_string, publication_date=None):
         return None
 
 
+def load_keywords(nlp, session, keyword_type):
+    keywords = [t.description for t in session.query(
+        ReportKeyword).filter_by(keyword_type=keyword_type).all()]
+    return [t.lemma_ for t in nlp(" ".join(keywords))]
+
+
 class Interpreter(object):
 
     def __init__(self, session, nlp):
         self.nlp = nlp
-        person_reporting_terms = [t.description for t in session.query(
-            ReportKeyword).filter_by(term_type=TermType.PERSON_TERM).all()]
-        self.person_term_lemmas = [t.lemma_ for t in self.nlp(
-            " ".join(person_reporting_terms))]
-        structure_reporting_terms = [t.description for t in session.query(
-            ReportKeyword).filter_by(term_type=TermType.STRUCTURE_TERM).all()]
-        self.structure_term_lemmas = [t.lemma_ for t in self.nlp(
-            " ".join(structure_reporting_terms))]
+        self.person_term_lemmas = load_keywords(
+            self.nlp, session, KeywordType.PERSON_TERM)
+        self.structure_term_lemmas = load_keywords(
+            self.nlp, session, KeywordType.STRUCTURE_TERM)
         self.joint_term_lemmas = list(
             set(self.structure_term_lemmas) & set(self.person_term_lemmas))
-        person_reporting_units = [t.description for t in session.query(
-            ReportKeyword).filter_by(term_type=TermType.PERSON_UNIT).all()]
-        self.person_unit_lemmas = [t.lemma_ for t in self.nlp(
-            " ".join(person_reporting_units))]
-        structure_reporting_units = [t.description for t in session.query(
-            ReportKeyword).filter_by(term_type=TermType.STRUCTURE_UNIT).all()]
-        self.structure_unit_lemmas = [t.lemma_ for t in self.nlp(
-            " ".join(structure_reporting_units))]
+        self.person_unit_lemmas = load_keywords(
+            self.nlp, session, KeywordType.PERSON_UNIT)
+        self.structure_unit_lemmas = load_keywords(
+            self.nlp, session, KeywordType.STRUCTURE_UNIT)
         self.household_lemmas = [t.lemma_ for t in self.nlp(
             " ".join(["families", "households"]))]
         self.reporting_term_lemmas = self.person_term_lemmas + self.structure_term_lemmas
         self.reporting_unit_lemmas = self.person_unit_lemmas + self.structure_unit_lemmas
-        relevant_article_terms = [t.description for t in session.query(
-            ReportKeyword).filter_by(term_type=TermType.ARTICLE_KEYWORD).all()]
-        self.relevant_article_lemmas = [t.lemma_ for t in self.nlp(
-            " ".join(relevant_article_terms))]
+        self.relevant_article_lemmas = load_keywords(
+            self.nlp, session, KeywordType.ARTICLE_KEYWORD)
 
     def check_if_collection_contains_token(self, token, collection):
         for c in collection:

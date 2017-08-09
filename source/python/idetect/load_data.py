@@ -1,4 +1,4 @@
-from idetect.model import Country, CountryTerm, Location, LocationType, TermType, ReportKeyword
+from idetect.model import Country, CountryTerm, Location, LocationType, KeywordType, ReportKeyword
 import csv
 
 
@@ -54,11 +54,11 @@ def load_terms(session):
     relevant_article_terms = ['Rainstorm', 'hurricane',
                               'tornado', 'rain', 'storm', 'earthquake']
 
-    for term_list, term_type in zip([person_reporting_terms, structure_reporting_terms,
+    for term_list, keyword_type in zip([person_reporting_terms, structure_reporting_terms,
                                      person_reporting_units, structure_reporting_units, relevant_article_terms],
-                                    [TermType.PERSON_TERM, TermType.STRUCTURE_TERM, TermType.PERSON_UNIT,
-                                     TermType.STRUCTURE_UNIT, TermType.ARTICLE_KEYWORD]):
+                                    [KeywordType.PERSON_TERM, KeywordType.STRUCTURE_TERM, KeywordType.PERSON_UNIT,
+                                     KeywordType.STRUCTURE_UNIT, KeywordType.ARTICLE_KEYWORD]):
         for term in term_list:
-            report_kw = ReportKeyword(description=term, term_type=term_type)
+            report_kw = ReportKeyword(description=term, keyword_type=keyword_type)
             session.add(report_kw)
             session.commit()
