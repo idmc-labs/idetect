@@ -65,9 +65,11 @@ class Worker:
                     pass  # another worker claimed this article before we could, try again
             try:
                 # actually run the work function on this article
+                start = time.time()
                 self.function(article)
-                logger.info("Worker {} processed Article {} {} -> {}".format(
-                    os.getpid(), article.id, self.status, self.success_status))
+                delta = time.time() - start
+                logger.info("Worker {} processed Article {} {} -> {} {}s".format(
+                    os.getpid(), article.id, self.status, self.success_status, delta))
                 article.create_new_version(self.success_status)
                 self.session.commit()
             except Exception as e:

@@ -1,6 +1,7 @@
 import os
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Numeric, ForeignKey, Table, desc
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Numeric, ForeignKey, Table, desc, Index
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, object_session, relationship, make_transient
 from sqlalchemy.sql import func
@@ -30,14 +31,17 @@ class Status:
     PROCESSING_FAILED = 'processing failed'
     CLASSIFYING_FAILED = 'classifying failed'
 
+
 class Category:
     OTHER = 'other'
     DISASTER = 'disaster'
     CONFLICT = 'conflict'
 
+
 class Relevance:
     DISPLACEMENT = 'displacement'
     NOT_DISPLACEMENT = 'not displacement'
+
 
 class NotLatestException(Exception):
     def __init__(self, ours, other):
@@ -65,7 +69,7 @@ class Article(Base):
     __tablename__ = 'article'
 
     id = Column(Integer, primary_key=True)
-    url_id = Column(Integer, nullable=False)
+    url_id = Column(String, nullable=False)
     url = Column(String, nullable=False)
     domain = Column(String)
     status = Column(String)
@@ -177,6 +181,14 @@ class Article(Base):
         query = session.query(Article).select_entity_from(sub).filter(sub.c.row_number == 1)
         return query
 
+    @classmethod
+    def status_counts(cls, session):
+        """Returns a dictonary of status to the count of the Articles that have that status as their latest value"""
+        sub = Article.select_latest_version(session).subquery()
+        status_counts = session.query(sub.columns.status, func.count(sub.columns.status)) \
+            .group_by(sub.columns.status).all()
+        return dict(status_counts)
+
 
 class Content(Base):
     __tablename__ = 'content'
@@ -265,3 +277,12 @@ class Location(Base):
     latlong = Column(String)
     reports = relationship(
         'Report', secondary=report_location, back_populates='locations')
+
+
+def create_indexes(engine):
+    url_id_status_index = Index('url_id_status', Article.url_id, Article.status, Article.updated)
+    try:
+        url_id_status_index.create(engine)
+    except ProgrammingError as exc:
+        if "already exists" not in str(exc):
+            raise

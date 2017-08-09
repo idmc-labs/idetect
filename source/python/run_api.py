@@ -1,7 +1,7 @@
 from flask import Flask, render_template, abort, request, redirect, url_for
 from sqlalchemy import create_engine, desc
 
-from idetect.model import db_url, Base, Article, Session, Status
+from idetect.model import db_url, Base, Article, Session, Status, create_indexes
 from idetect.classifier import classify
 from idetect.scraper import scrape
 
@@ -15,11 +15,14 @@ app = Flask(__name__)
 engine = create_engine(db_url())
 Session.configure(bind=engine)
 Base.metadata.create_all(engine)
+create_indexes(engine)
 
 @app.route('/')
 def homepage():
-    articles = Article.select_latest_version(Session()).order_by(desc(Article.updated)).limit(10).all()
-    return render_template('index.html', articles=articles)
+    session = Session()
+    articles = Article.select_latest_version(session).order_by(desc(Article.updated)).limit(10).all()
+    counts = Article.status_counts(session)
+    return render_template('index.html', articles=articles, counts=counts)
 
 @app.route('/add_url', methods=['POST'])
 def add_url():

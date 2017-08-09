@@ -1,5 +1,5 @@
-from idetect.nlp_models.category import CategoryModel
-from idetect.nlp_models.relevance import RelevanceModel
+from idetect.nlp_models.category.category import CategoryModel
+from idetect.nlp_models.relevance.relevance import RelevanceModel
 from sqlalchemy.orm import object_session
 
 '''Method(s) for running classifier on extracted content.

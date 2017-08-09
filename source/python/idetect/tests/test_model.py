@@ -5,7 +5,7 @@ from unittest import TestCase
 from sqlalchemy import create_engine
 
 from idetect.model import Base, Session, Status, Article, CountryTerm, Location, \
-    LocationType, Country, Content, NotLatestException, Report
+    LocationType, Country, Content, NotLatestException, Report, create_indexes
 
 
 class TestModel(TestCase):
@@ -17,6 +17,7 @@ class TestModel(TestCase):
         Session.configure(bind=engine)
         Base.metadata.drop_all(engine)
         Base.metadata.create_all(engine)
+        create_indexes(engine)
         self.session = Session()
 
     def tearDown(self):
@@ -134,14 +135,16 @@ class TestModel(TestCase):
             .all()
         self.assertCountEqual(fetched, [article2])
 
+        self.assertEqual(Article.status_counts(self.session), {'scraping': 1, 'scraped': 1})
+
     def test_content_transfer(self):
         article = Article(url='http://example.com',
                           url_id=123,
-                          status=Status.FETCHING)
+                          status=Status.SCRAPING)
         self.session.add(article)
         self.session.commit()
 
-        article.create_new_version(Status.FETCHED)
+        article.create_new_version(Status.SCRAPED)
         article.content = Content(content_type="text", content="Lorem ipsum")
         self.session.commit()
         old_article_id = article.id

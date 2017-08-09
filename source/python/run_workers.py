@@ -6,12 +6,12 @@ from time import sleep
 
 from sqlalchemy import create_engine
 
-from idetect.model import db_url, Base, Session, Status
+from idetect.model import db_url, Base, Session, Status, create_indexes
 from idetect.worker import Worker
 
 from idetect.scraper import scrape
 from idetect.classifier import classify
-from idetect.fact_extractor import extract_facts
+from idetect.fact_extractor import extract_reports
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -20,6 +20,7 @@ logger.root.addHandler(logging.StreamHandler(sys.stderr))
 engine = create_engine(db_url())
 Session.configure(bind=engine)
 Base.metadata.create_all(engine)
+create_indexes(engine)
 
 
 def do_nothing(article):
@@ -37,7 +38,7 @@ if __name__ == "__main__":
                            classify, engine)
 
     Worker.start_processes(n_workers, Status.CLASSIFIED, Status.PROCESSING, Status.PROCESSED, Status.PROCESSING_FAILED,
-                           extract_facts, engine)
+                           extract_reports, engine)
 
     # run until all children are finished
     for child in active_children():

@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from sqlalchemy import create_engine
 
-from idetect.model import Base, Session, Status, Article
+from idetect.model import Base, Session, Status, Article, create_indexes
 from idetect.scraper import scrape
 
 
@@ -16,6 +16,7 @@ class TestScraper(TestCase):
         Session.configure(bind=engine)
         Base.metadata.drop_all(engine)
         Base.metadata.create_all(engine)
+        create_indexes(engine)
         self.session = Session()
 
     def tearDown(self):
@@ -31,7 +32,7 @@ class TestScraper(TestCase):
         self.session.add(article)
         self.session.commit()
         scrape(article)
-        content = article.content[0]
+        content = article.content
         self.assertEqual("text", content.content_type)
         self.assertTrue("Katrina" in content.content)
         self.assertTrue("Louisiana" in content.content)
@@ -44,7 +45,7 @@ class TestScraper(TestCase):
         self.session.add(article)
         self.session.commit()
         scrape(article)
-        content = article.content[0]
+        content = article.content
         self.assertEqual("pdf", content.content_type)
         self.assertTrue("Katrina" in content.content)
         self.assertTrue("Louisiana" in content.content)
