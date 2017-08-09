@@ -292,7 +292,7 @@ class ReportKeyword(Base):
 
     id = Column(Integer, primary_key=True)
     description = Column(String)
-    term_type = Column(String)
+    keyword_type = Column(String)
 
 
 def create_indexes(engine):
