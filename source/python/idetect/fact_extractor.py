@@ -2,8 +2,7 @@
 
 How to ensure has access to pre-loaded models?
 '''
-from idetect.interpreter import Interpreter, person_reporting_terms, structure_reporting_terms, person_reporting_units, \
-    structure_reporting_units, relevant_article_terms
+from idetect.interpreter import Interpreter
 import spacy
 from sqlalchemy.orm import object_session
 from idetect.model import Report, Location, Country
@@ -19,10 +18,8 @@ def extract_reports(article):
     :params article: instance of Article
     :return: None
     '''
-
-    interpreter = Interpreter(nlp, person_reporting_terms, structure_reporting_terms, person_reporting_units,
-                              structure_reporting_units, relevant_article_terms)
     session = object_session(article)
+    interpreter = Interpreter(session, nlp)
     content = article.content.content
     reports = interpreter.process_article_new(content)
     if len(reports) > 0:

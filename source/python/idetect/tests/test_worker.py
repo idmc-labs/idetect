@@ -75,7 +75,7 @@ class TestWorker(TestCase):
     def test_work_chain(self):
         worker1 = Worker(Status.NEW, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
                          TestWorker.nap_fn, self.engine)
-        worker2 = Worker(Status.SCRAPED, Status.PROCESSING, Status.PROCESSED, Status.PROCESSING_FAILED,
+        worker2 = Worker(Status.SCRAPED, Status.EXTRACTING, Status.EXTRACTED, Status.EXTRACTING_FAILED,
                          TestWorker.nap_fn, self.engine)
         article = Article(url='http://example.com', url_id=1, status=Status.NEW)
         self.session.add(article)
@@ -85,7 +85,7 @@ class TestWorker(TestCase):
         self.assertTrue(worker2.work(), "Worker didn't find work")
 
         article2 = article.get_updated_version()
-        self.assertEqual(article2.status, Status.PROCESSED)
+        self.assertEqual(article2.status, Status.EXTRACTED)
 
         self.assertFalse(worker1.work(), "Worker1 found work")
         self.assertFalse(worker2.work(), "Worker2 found work")

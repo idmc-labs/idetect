@@ -25,11 +25,11 @@ class Status:
     SCRAPED = 'scraped'
     CLASSIFYING = 'classifying'
     CLASSIFIED = 'classified'
-    PROCESSING = 'processing'
-    PROCESSED = 'processed'
+    EXTRACTING = 'extracting'
+    EXTRACTED = 'extracted'
     SCRAPING_FAILED = 'scraping failed'
-    PROCESSING_FAILED = 'processing failed'
     CLASSIFYING_FAILED = 'classifying failed'
+    EXTRACTING_FAILED = 'extracting failed'
 
 
 class Category:
@@ -277,6 +277,22 @@ class Location(Base):
     latlong = Column(String)
     reports = relationship(
         'Report', secondary=report_location, back_populates='locations')
+
+
+class KeywordType:
+    PERSON_TERM = 'person_term'
+    PERSON_UNIT = 'person_unit'
+    STRUCTURE_TERM = 'structure_term'
+    STRUCTURE_UNIT = 'structure_unit'
+    ARTICLE_KEYWORD = 'article_keyword'
+
+
+class ReportKeyword(Base):
+    __tablename__ = 'report_keyword'
+
+    id = Column(Integer, primary_key=True)
+    description = Column(String)
+    keyword_type = Column(String)
 
 
 def create_indexes(engine):
