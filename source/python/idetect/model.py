@@ -3,11 +3,20 @@ import os
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Numeric, ForeignKey, Table, desc, Index
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, object_session, relationship, make_transient
+from sqlalchemy.orm import sessionmaker, object_session, relationship
+from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import func
 
 Base = declarative_base()
 Session = sessionmaker()
+
+from sqlalchemy.schema import DropTable
+from sqlalchemy.ext.compiler import compiles
+
+
+@compiles(DropTable, "postgresql")
+def _compile_drop_table(element, compiler, **kwargs):
+    return compiler.visit_drop_table(element) + " CASCADE"
 
 
 def db_url():
@@ -30,6 +39,8 @@ class Status:
     SCRAPING_FAILED = 'scraping failed'
     CLASSIFYING_FAILED = 'classifying failed'
     EXTRACTING_FAILED = 'extracting failed'
+    EDITING = 'editing'
+    EDITED = 'edited'
 
 
 class Category:
@@ -44,23 +55,18 @@ class Relevance:
 
 
 class NotLatestException(Exception):
-    def __init__(self, ours, other):
-        super(NotLatestException, self).__init__(
-            "Tried to update {} ({}), but {} ({}) was the latest".format(ours, ours.updated, other, other.updated)
-        )
-        self.ours = ours
-        self.other = other
+    pass
 
-
-article_content = Table(
-    'article_content', Base.metadata,
-    Column('article', ForeignKey('article.id', ondelete="CASCADE"), primary_key=True),
-    Column('content', ForeignKey('content.id', ondelete="CASCADE"), primary_key=True)
-)
 
 article_report = Table(
     'article_report', Base.metadata,
     Column('article', ForeignKey('article.id', ondelete="CASCADE"), primary_key=True),
+    Column('report', ForeignKey('report.id', ondelete="CASCADE"), primary_key=True)
+)
+
+article_history_report = Table(
+    'article_history_report', Base.metadata,
+    Column('article_history', ForeignKey('article_history.id', ondelete="CASCADE"), primary_key=True),
     Column('report', ForeignKey('report.id', ondelete="CASCADE"), primary_key=True)
 )
 
@@ -90,31 +96,15 @@ class Article(Base):
     reports = relationship('Report', secondary=article_report, back_populates='article')
     content_id = Column('content', Integer, ForeignKey('content.id'))
     content = relationship('Content', back_populates='article')
+    error_msg = Column(String)
+    processing_time = Column(Numeric)
 
     def __str__(self):
         return "<Article {} {} {}>".format(self.id, self.url_id, self.url)
 
     def get_updated_version(self):
-        """Return the most recent version of this article by updated timestamp"""
-        return Article.get_latest_version(object_session(self), self.url_id)
-
-    @classmethod
-    def get_latest_version(cls, session, url_id=None, url=None, lock=False):
-        """
-        Return the Article with the given url_id or url with the most recent updated timestamp.
-        If lock is True, uses FOR UPDATE locking, so that other calls to get_latest_version will
-        block until the transaction is committed or rolled back.
-        """
-        query = session.query(cls)
-        if url_id is not None:
-            query = query.filter(Article.url_id == url_id)
-        if url is not None:
-            query = query.filter(Article.url == url)
-        # if neither url_id nor url is provided, this returns the most recent article overall
-        if lock:
-            # This prevents this being run again until the transaction is committed or rolled back
-            query = query.with_for_update()
-        return query.order_by(desc(Article.updated)).limit(1).first()
+        """Return the most recent version of this article"""
+        return object_session(self).query(Article).filter(Article.id == self.id).one()
 
     def create_new_version(self, new_status):
         """
@@ -127,67 +117,65 @@ class Article(Base):
             if not session:
                 raise RuntimeError("Object has not been persisted in a session.")
 
-            # lock to prevent simultaneous updates
-            latest = Article.get_latest_version(session, self.url_id, lock=True)
-            if latest.id != self.id:
-                raise NotLatestException(self, latest)
+            try:
+                latest = session.query(Article) \
+                    .filter(Article.id == self.id) \
+                    .filter(Article.status == self.status) \
+                    .with_for_update().one()
+            except NoResultFound:
+                raise NotLatestException(self)
 
-            reports = self.reports
-            content = self.content
+            dict = {c.name: self.__getattribute__(c.name) for c in Article.__table__.columns}
+            dict['article_id'] = dict['id']
+            del dict['id']
+            history = ArticleHistory(**dict)
+            history.reports = self.reports
+            session.add(history)
 
-            make_transient(self)
-            self.id = None
-            self.updated = None
+            self.updated = None  # force the DB to update the updated timestamp
             self.status = new_status
-            session.add(self)
-            session.commit()
-            self.reports = reports
-            self.content = content
-            session.add(self)
             session.commit()
         finally:
             session.rollback()  # make sure we release the FOR UPDATE lock
 
     @classmethod
-    def select_latest_version(cls, session):
-        """
-        Returns a SELECT query that will only match the most recent versions of the articles it matches.
-        You can further filter/order/limit the query.
-        
-        The query returned is of the form:
-        
-        SELECT a.*
-        FROM (SELECT article.*,
-                     row_number() OVER (PARTITION BY article.url_id ORDER BY article.updated DESC) AS row_number 
-              FROM article) AS a 
-        WHERE a.row_number = 1
-        
-        You can add further clauses by applying filters, orders, and limits like
-            .filter(Article.status == Status.NEW)
-            .order_by(Article.updated)
-            .first()
-        adds
-            AND a.status = 'NEW'
-            ORDER BY a.updated
-            LIMIT 1
-        """
-        sub = session.query(
-            Article,
-            func.row_number().over(
-                partition_by=Article.url_id,
-                order_by=desc(Article.updated)
-            ).label("row_number")
-        ).subquery("a")
-        query = session.query(Article).select_entity_from(sub).filter(sub.c.row_number == 1)
-        return query
-
-    @classmethod
     def status_counts(cls, session):
         """Returns a dictonary of status to the count of the Articles that have that status as their latest value"""
-        sub = Article.select_latest_version(session).subquery()
-        status_counts = session.query(sub.columns.status, func.count(sub.columns.status)) \
-            .group_by(sub.columns.status).all()
+        status_counts = session.query(Article.status, func.count(Article.status)) \
+            .group_by(Article.status).all()
         return dict(status_counts)
+
+status_updated_index = Index('status_updated', Article.status, Article.updated)
+
+class ArticleHistory(Base):
+    __tablename__ = 'article_history'
+
+    id = Column(Integer, primary_key=True)
+    article_id = Column(Integer, ForeignKey(Article.id, ondelete="CASCADE"))
+    article = relationship(Article)
+    url_id = Column(String, nullable=False)
+    url = Column(String, nullable=False)
+    domain = Column(String)
+    status = Column(String)
+    title = Column(String)
+    authors = Column(String)
+    language = Column(String(2))
+    relevance = Column(Boolean)
+    category = Column(String)
+    accuracy = Column(Numeric)
+    analyzer = Column(String)
+    response_code = Column(Integer)
+    retrieval_attempts = Column(Integer, default=0)
+    completion = Column(Numeric)
+    publication_date = Column(DateTime(timezone=True))
+    retrieval_date = Column(DateTime(timezone=True))
+    created = Column(DateTime(timezone=True), server_default=func.now())
+    updated = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    reports = relationship('Report', secondary=article_history_report)
+    content_id = Column('content', Integer, ForeignKey('content.id'))
+    content = relationship('Content')
+    error_msg = Column(String)
+    processing_time = Column(Numeric)
 
 
 class Content(Base):

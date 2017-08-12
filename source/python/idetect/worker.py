@@ -5,14 +5,14 @@ import signal
 import time
 from multiprocessing import Process
 
-from idetect.model import Article, Session, NotLatestException
+from idetect.model import Article, Session
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
 class Worker:
-    def __init__(self, status, working_status, success_status, failure_status, function, engine):
+    def __init__(self, status, working_status, success_status, failure_status, function, engine, max_sleep=60):
         """
         Create a Worker that looks for Articles with a given status. When it finds one, it marks it with 
         working_status and runs a function. If the function returns without an exception, it advances the Article to 
@@ -24,8 +24,8 @@ class Worker:
         self.failure_status = failure_status
         self.function = function
         self.engine = engine
-        self.session = None
         self.terminated = False
+        self.max_sleep = max_sleep
         signal.signal(signal.SIGINT, self.terminate)
         signal.signal(signal.SIGTERM, self.terminate)
 
@@ -38,50 +38,52 @@ class Worker:
         Look for articles in the given session and run function on them
         if any are found, managing status appropriately. Return True iff some Articles were processed (successfully or not)
         """
+        # start a new session for each job
+        session = Session()
         try:
-            if self.session is None:
-                Session.configure(bind=self.engine)
-                self.session = Session()
-            claimed_one = False
-            article = None
-            while not claimed_one:
-                try:
-                    # Only consider the most recent article for each url_id
-                    # ... that has the right status
-                    # ... sort by updated date
-                    # ... pick the first (oldest)
-                    article = Article.select_latest_version(self.session) \
-                        .filter(Article.status == self.status) \
-                        .order_by(Article.updated) \
-                        .first()
-                    if article is None:
-                        return False  # no work to be done
-                    article.create_new_version(self.working_status)
-                    self.session.commit()
-                    logger.info("Worker {} claimed Article {} in status {}".format(
-                        os.getpid(), article.id, self.status))
-                    claimed_one = True
-                except NotLatestException:
-                    pass  # another worker claimed this article before we could, try again
-            try:
-                # actually run the work function on this article
-                start = time.time()
-                self.function(article)
-                delta = time.time() - start
-                logger.info("Worker {} processed Article {} {} -> {} {}s".format(
-                    os.getpid(), article.id, self.status, self.success_status, delta))
-                article.create_new_version(self.success_status)
-                self.session.commit()
-            except Exception as e:
-                logger.warning("Worker {} failed to process Article {} {} -> {}".format(
-                    os.getpid(), article.id, self.status, self.failure_status),
-                    exc_info=e)
-                article.create_new_version(self.failure_status)
-                self.session.commit()
-            return True
+            # Get an article
+            # ... and lock it for updates
+            # ... that has the right status
+            # ... sort by updated date
+            # ... pick the first (oldest)
+            article = session.query(Article) \
+                .with_for_update() \
+                .filter(Article.status == self.status) \
+                .order_by(Article.updated) \
+                .first()
+            if article is None:
+                return False  # no work to be done
+            article.create_new_version(self.working_status)
+            logger.info("Worker {} claimed Article {} in status {}".format(
+                os.getpid(), article.id, self.status))
         finally:
-            if self.session is not None:
-                self.session.rollback()
+            # make sure to release a FOR UPDATE lock, if we got one
+            session.rollback()
+
+        start = time.time()
+        try:
+            # actually run the work function on this article
+            self.function(article)
+            delta = time.time() - start
+            logger.info("Worker {} processed Article {} {} -> {} {}s".format(
+                os.getpid(), article.id, self.status, self.success_status, delta))
+            article.error_msg = None
+            article.processing_time = delta
+            article.create_new_version(self.success_status)
+        except Exception as e:
+            delta = time.time() - start
+            logger.warning("Worker {} failed to process Article {} {} -> {}".format(
+                os.getpid(), article.id, self.status, self.failure_status),
+                exc_info=e)
+            article.error_msg = str(e)
+            article.processing_time = delta
+            article.create_new_version(self.failure_status)
+            session.commit()
+        finally:
+            if session is not None:
+                session.rollback()
+                session.close()
+        return True
 
     def work_all(self):
         """Work repeatedly until there is no work to do. Return a count of the number of units of work done"""
@@ -90,24 +92,24 @@ class Worker:
             count += 1
         return count
 
-    def work_indefinitely(self, max_sleep=60):
+    def work_indefinitely(self):
         """While there is work to do, do it. If there's no work to do, take increasingly long naps until there is."""
         logger.info("Worker {} working indefinitely".format(os.getpid()))
-        time.sleep(random.randrange(max_sleep))  # stagger start times
+        time.sleep(random.randrange(self.max_sleep))  # stagger start times
         sleep = 1
         while not self.terminated:
             if self.work_all() > 0:
                 sleep = 1
             else:
                 time.sleep(sleep)
-                sleep = min(max_sleep, sleep * 2)
+                sleep = min(self.max_sleep, sleep * 2)
 
     @staticmethod
-    def start_processes(num, status, working_status, success_status, failure_status, function, engine):
+    def start_processes(num, status, working_status, success_status, failure_status, function, engine, max_sleep=60):
         processes = []
         engine.dispose()  # each Worker must have its own session, made in-Process
         for i in range(num):
-            worker = Worker(status, working_status, success_status, failure_status, function, engine)
+            worker = Worker(status, working_status, success_status, failure_status, function, engine, max_sleep)
             process = Process(target=worker.work_indefinitely, daemon=True)
             processes.append(process)
             process.start()
