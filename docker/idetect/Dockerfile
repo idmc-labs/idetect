@@ -27,7 +27,13 @@ RUN pip3 install "/spacy-data/en_core_web_md-1.2.1.tar.gz" && \
 COPY ./source/python/requirements.txt /tmp
 RUN pip3 install -r /tmp/requirements.txt
 
+RUN apt-get -y install supervisor && \
+    chmod 777 /var/log/supervisor && \
+    mkdir /var/log/workers && \
+    chmod 777 /var/log/workers
+
 RUN useradd -ms /bin/bash idetect
 USER idetect
 WORKDIR /home/idetect
 COPY ./source /home/idetect
+COPY ./config/supervisord.conf /etc/supervisord.conf

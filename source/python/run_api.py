@@ -10,7 +10,9 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-app = Flask(__name__)
+app = Flask(__name__,
+            static_folder="/home/idetect/web/static",
+            template_folder="/home/idetect/web/templates")
 
 engine = create_engine(db_url())
 Session.configure(bind=engine)

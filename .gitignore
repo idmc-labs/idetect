@@ -9,3 +9,4 @@ source/notebooks/.ipynb_checkpoints
 source/python/idetect/nlp_models/*.pkl
 
 __pycache__
+logs/workers/*.log

@@ -13,8 +13,6 @@ services:
     command: python3 /home/idetect/python/run_api.py
     volumes:
       - ./source:/home/idetect
-      - ./source/web/static:/home/idetect/python/static
-      - ./source/web/templates:/home/idetect/python/templates
     ports:
       - 5001:5001
     depends_on:
@@ -25,9 +23,11 @@ services:
       context: .
       dockerfile: ./docker/idetect/Dockerfile
     image: idetect
-    command: python3 /home/idetect/python/run_workers.py
+    command: /usr/bin/supervisord
     volumes:
       - ./source:/home/idetect
+      - ./logs:/var/log
+      - ./config/supervisord.conf:/etc/supervisord.conf
     depends_on:
       - localdb
     env_file: docker.env
