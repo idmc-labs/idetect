@@ -7,10 +7,11 @@ from idetect.classifier import classify
 from idetect.worker import Worker
 
 if __name__ == "__main__":
-    logging.basicConfig(format="%(asctime)s %(message)s")
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
-    logger.root.addHandler(logging.StreamHandler(sys.stderr))
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
+    logger.root.addHandler(handler)
 
     engine = create_engine(db_url())
     Session.configure(bind=engine)
