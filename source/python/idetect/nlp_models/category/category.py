@@ -7,7 +7,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.externals import joblib
 
-from idetect.model import Category
+from idetect.model import DisplacementType
 from idetect.nlp_models.base_model import DownloadableModel
 
 
@@ -17,11 +17,11 @@ class CategoryModel(DownloadableModel):
         try:
             category = self.model.predict(pd.Series(text))[0]
             if category == 'disaster':
-                return Category.DISASTER
+                return DisplacementType.DISASTER
             elif category == 'conflict':
-                return Category.CONFLICT
+                return DisplacementType.CONFLICT
             else:
-                return Category.OTHER
+                return DisplacementType.OTHER
         except ValueError:
             # error can occur if empty text is passed to model
             raise

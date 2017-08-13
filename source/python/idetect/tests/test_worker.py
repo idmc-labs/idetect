@@ -7,7 +7,7 @@ from unittest import TestCase
 
 from sqlalchemy import create_engine
 
-from idetect.model import Base, Session, Status, Article
+from idetect.model import Base, Session, Status, Document, Analysis, DocumentType
 from idetect.worker import Worker
 
 logger = logging.getLogger(__name__)
@@ -41,44 +41,52 @@ class TestWorker(TestCase):
         logger.debug("processes terminated")
         self.session.rollback()
         logger.debug("sessions rolled back")
-        if self.session.query(Article).filter(Article.url == 'http://example.com').delete() > 0:
+        if self.session.query(Document).delete() > 0:
             self.session.commit()
         logger.debug("tearDown complete")
 
     @staticmethod
-    def nap_fn(article):
+    def nap_fn(analysis):
         time.sleep(random.randrange(1))
 
     def test_work_one(self):
         worker = Worker(Status.NEW, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
                         TestWorker.nap_fn, self.engine)
-        article = Article(url='http://example.com', url_id=1, status=Status.NEW)
-        self.session.add(article)
+        document = Document(
+            type=DocumentType.WEB,
+            name="Hurricane Katrina Fast Facts",
+            url="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
+        analysis = Analysis(document=document, status=Status.NEW)
+        self.session.add(analysis)
         self.session.commit()
         self.assertTrue(worker.work(), "Worker didn't find work")
 
-        article2 = article.get_updated_version()
-        self.assertEqual(article2.status, Status.SCRAPED)
-        self.assertIsNotNone(article2.processing_time)
+        analysis2 = analysis.get_updated_version()
+        self.assertEqual(analysis2.status, Status.SCRAPED)
+        self.assertIsNotNone(analysis2.processing_time)
 
         self.assertFalse(worker.work(), "Worker found work")
 
     @staticmethod
-    def err_fn(article):
+    def err_fn(analysis):
         raise RuntimeError("Nope")
 
     def test_work_failure(self):
         worker = Worker(Status.NEW, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
                         TestWorker.err_fn, self.engine)
-        article = Article(url='http://example.com', url_id=1, status=Status.NEW)
-        self.session.add(article)
+        document = Document(
+            type=DocumentType.WEB,
+            name="Hurricane Katrina Fast Facts",
+            url="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
+        analysis = Analysis(document=document, status=Status.NEW)
+        self.session.add(analysis)
         self.session.commit()
         self.assertTrue(worker.work(), "Worker didn't find work")
 
-        article2 = article.get_updated_version()
-        self.assertEqual(article2.status, Status.SCRAPING_FAILED)
-        self.assertIn("Nope", article2.error_msg)
-        self.assertIsNotNone(article2.processing_time)
+        analysis2 = analysis.get_updated_version()
+        self.assertEqual(analysis2.status, Status.SCRAPING_FAILED)
+        self.assertIn("Nope", analysis2.error_msg)
+        self.assertIsNotNone(analysis2.processing_time)
 
         self.assertFalse(worker.work(), "Worker found work")
 
@@ -87,15 +95,19 @@ class TestWorker(TestCase):
                          TestWorker.nap_fn, self.engine)
         worker2 = Worker(Status.SCRAPED, Status.EXTRACTING, Status.EXTRACTED, Status.EXTRACTING_FAILED,
                          TestWorker.nap_fn, self.engine)
-        article = Article(url='http://example.com', url_id=1, status=Status.NEW)
-        self.session.add(article)
+        document = Document(
+            type=DocumentType.WEB,
+            name="Hurricane Katrina Fast Facts",
+            url="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
+        analysis = Analysis(document=document, status=Status.NEW)
+        self.session.add(analysis)
         self.session.commit()
         self.assertFalse(worker2.work(), "Worker2 found work")
         self.assertTrue(worker1.work(), "Worker didn't find work")
         self.assertTrue(worker2.work(), "Worker didn't find work")
 
-        article2 = article.get_updated_version()
-        self.assertEqual(article2.status, Status.EXTRACTED)
+        analysis2 = analysis.get_updated_version()
+        self.assertEqual(analysis2.status, Status.EXTRACTED)
 
         self.assertFalse(worker1.work(), "Worker1 found work")
         self.assertFalse(worker2.work(), "Worker2 found work")
@@ -105,21 +117,29 @@ class TestWorker(TestCase):
                         TestWorker.nap_fn, self.engine)
         n = 3
         for i in range(n):
-            article = Article(url='http://example.com', url_id=i, status=Status.NEW)
-            self.session.add(article)
+            document = Document(
+                type=DocumentType.WEB,
+                name="Hurricane Katrina Fast Facts",
+                url="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
+            analysis = Analysis(document=document, status=Status.NEW)
+            self.session.add(analysis)
             self.session.commit()
         self.assertEqual(worker.work_all(), 3)
 
-        self.assertEqual(self.session.query(Article).filter(Article.status == Status.NEW).count(), 0)
-        self.assertEqual(self.session.query(Article).filter(Article.status == Status.SCRAPED).count(), n)
+        self.assertEqual(self.session.query(Analysis).filter(Analysis.status == Status.NEW).count(), 0)
+        self.assertEqual(self.session.query(Analysis).filter(Analysis.status == Status.SCRAPED).count(), n)
 
     def test_work_parallel(self):
         n = 100
         for i in range(n):
-            article = Article(url='http://example.com', url_id=i, status=Status.NEW)
-            self.session.add(article)
+            document = Document(
+                type=DocumentType.WEB,
+                name="Hurricane Katrina Fast Facts",
+                url="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
+            analysis = Analysis(document=document, status=Status.NEW)
+            self.session.add(analysis)
             self.session.commit()
-        remaining = self.session.query(Article).filter(Article.status == Status.NEW).count()
+        remaining = self.session.query(Analysis).filter(Analysis.status == Status.NEW).count()
         self.assertEqual(remaining, n)
         self.processes += Worker.start_processes(4, Status.NEW, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
                                                  TestWorker.nap_fn, self.engine, max_sleep=1)
@@ -128,7 +148,7 @@ class TestWorker(TestCase):
         start = datetime.now()
         max_seconds = int(n / len(self.processes))  # shouldn't take longer than this...
         for i in range(max_seconds):
-            remaining = self.session.query(Article).filter(Article.status == Status.NEW).count()
+            remaining = self.session.query(Analysis).filter(Analysis.status == Status.NEW).count()
             if remaining == 0:
                 logger.info("Processing took {}".format(datetime.now() - start))
                 break

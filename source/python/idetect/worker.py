@@ -5,7 +5,7 @@ import signal
 import time
 from multiprocessing import Process
 
-from idetect.model import Article, Session
+from idetect.model import Analysis, Session
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -14,9 +14,9 @@ logger.setLevel(logging.INFO)
 class Worker:
     def __init__(self, status, working_status, success_status, failure_status, function, engine, max_sleep=60):
         """
-        Create a Worker that looks for Articles with a given status. When it finds one, it marks it with 
-        working_status and runs a function. If the function returns without an exception, it advances the Article to 
-        success_status. If the function raises an exception, it advances the Article to failure_status. 
+        Create a Worker that looks for Analyses with a given status. When it finds one, it marks it with
+        working_status and runs a function. If the function returns without an exception, it advances the Analysis to
+        success_status. If the function raises an exception, it advances the Analysis to failure_status.
         """
         self.status = status
         self.working_status = working_status
@@ -35,49 +35,49 @@ class Worker:
 
     def work(self):
         """
-        Look for articles in the given session and run function on them
-        if any are found, managing status appropriately. Return True iff some Articles were processed (successfully or not)
+        Look for analyses in the given session and run function on them
+        if any are found, managing status appropriately. Return True iff some Analyses were processed (successfully or not)
         """
         # start a new session for each job
         session = Session()
         try:
-            # Get an article
+            # Get an analysis
             # ... and lock it for updates
             # ... that has the right status
             # ... sort by updated date
             # ... pick the first (oldest)
-            article = session.query(Article) \
+            analysis = session.query(Analysis) \
                 .with_for_update() \
-                .filter(Article.status == self.status) \
-                .order_by(Article.updated) \
+                .filter(Analysis.status == self.status) \
+                .order_by(Analysis.updated) \
                 .first()
-            if article is None:
+            if analysis is None:
                 return False  # no work to be done
-            article.create_new_version(self.working_status)
-            logger.info("Worker {} claimed Article {} in status {}".format(
-                os.getpid(), article.id, self.status))
+            analysis.create_new_version(self.working_status)
+            logger.info("Worker {} claimed Analysis {} in status {}".format(
+                os.getpid(), analysis.document_id, self.status))
         finally:
             # make sure to release a FOR UPDATE lock, if we got one
             session.rollback()
 
         start = time.time()
         try:
-            # actually run the work function on this article
-            self.function(article)
+            # actually run the work function on this analysis
+            self.function(analysis)
             delta = time.time() - start
-            logger.info("Worker {} processed Article {} {} -> {} {}s".format(
-                os.getpid(), article.id, self.status, self.success_status, delta))
-            article.error_msg = None
-            article.processing_time = delta
-            article.create_new_version(self.success_status)
+            logger.info("Worker {} processed Analysis {} {} -> {} {}s".format(
+                os.getpid(), analysis.document_id, self.status, self.success_status, delta))
+            analysis.error_msg = None
+            analysis.processing_time = delta
+            analysis.create_new_version(self.success_status)
         except Exception as e:
             delta = time.time() - start
-            logger.warning("Worker {} failed to process Article {} {} -> {}".format(
-                os.getpid(), article.id, self.status, self.failure_status),
+            logger.warning("Worker {} failed to process Analysis {} {} -> {}".format(
+                os.getpid(), analysis.document_id, self.status, self.failure_status),
                 exc_info=e)
-            article.error_msg = str(e)
-            article.processing_time = delta
-            article.create_new_version(self.failure_status)
+            analysis.error_msg = str(e)
+            analysis.processing_time = delta
+            analysis.create_new_version(self.failure_status)
             session.commit()
         finally:
             if session is not None:

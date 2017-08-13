@@ -5,7 +5,7 @@ import parsedatetime
 import string
 from spacy.tokens import Token, Span
 from datetime import datetime, timedelta
-from idetect.model import ReportUnit, ReportTerm, KeywordType, ReportKeyword
+from idetect.model import FactUnit, FactTerm, KeywordType, FactKeyword
 
 
 def get_absolute_date(relative_date_string, publication_date=None):
@@ -71,7 +71,7 @@ def get_absolute_date(relative_date_string, publication_date=None):
 
 def load_keywords(nlp, session, keyword_type):
     keywords = [t.description for t in session.query(
-        ReportKeyword).filter_by(keyword_type=keyword_type).all()]
+        FactKeyword).filter_by(keyword_type=keyword_type).all()]
     return [t.lemma_ for t in nlp(" ".join(keywords))]
 
 
@@ -657,11 +657,11 @@ class Interpreter(object):
         return: An attribute of ReportUnit
         """
         if reporting_unit.lemma_ in self.structure_unit_lemmas:
-            return ReportUnit.HOUSEHOLDS
+            return FactUnit.HOUSEHOLDS
         elif reporting_unit.lemma_ in self.household_lemmas:
-            return ReportUnit.HOUSEHOLDS
+            return FactUnit.HOUSEHOLDS
         else:
-            return ReportUnit.PEOPLE
+            return FactUnit.PEOPLE
 
     def convert_term(self, reporting_term):
         """
@@ -672,27 +672,27 @@ class Interpreter(object):
         reporting_term = reporting_term.text.split(" ")
         reporting_term = [self.nlp(t)[0].lemma_ for t in reporting_term]
         if "displace" in reporting_term:
-            return ReportTerm.DISPLACED
+            return FactTerm.DISPLACED
         elif "evacuate" in reporting_term:
-            return ReportTerm.EVACUATED
+            return FactTerm.EVACUATED
         elif "flee" in reporting_term:
-            return ReportTerm.FLED
+            return FactTerm.FLED
         elif "homeless" in reporting_term:
-            return ReportTerm.HOMELESS
+            return FactTerm.HOMELESS
         elif "camp" in reporting_term:
-            return ReportTerm.CAMP
+            return FactTerm.CAMP
         elif len(set(reporting_term) & set(["shelter", "accommodate"])) > 0:
-            return ReportTerm.SHELTERED
+            return FactTerm.SHELTERED
         elif "relocate" in reporting_term:
-            return ReportTerm.RELOCATED
+            return FactTerm.RELOCATED
         elif "destroy" in reporting_term:
-            return ReportTerm.DESTROYED
+            return FactTerm.DESTROYED
         elif "damage" in reporting_term:
-            return ReportTerm.DAMAGED
+            return FactTerm.DAMAGED
         elif "uninhabitable" in reporting_term:
-            return ReportTerm.UNINHABITABLE
+            return FactTerm.UNINHABITABLE
         else:
-            return ReportTerm.DISPLACED
+            return FactTerm.DISPLACED
 
     def process_article_new(self, story):
         """

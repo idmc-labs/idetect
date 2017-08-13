@@ -1,7 +1,7 @@
 from flask import Flask, render_template, abort, request, redirect, url_for
 from sqlalchemy import create_engine, desc
 
-from idetect.model import db_url, Base, Article, Session, Status
+from idetect.model import db_url, Base, Document, Session, Status
 from idetect.classifier import classify
 from idetect.scraper import scrape
 
@@ -21,8 +21,8 @@ Base.metadata.create_all(engine)
 @app.route('/')
 def homepage():
     session = Session()
-    articles = session.query(Article).order_by(desc(Article.updated)).limit(10).all()
-    counts = Article.status_counts(session)
+    articles = session.query(Document).order_by(desc(Document.updated)).limit(10).all()
+    counts = Document.status_counts(session)
     return render_template('index.html', articles=articles, counts=counts)
 
 @app.route('/add_url', methods=['POST'])
@@ -32,7 +32,7 @@ def add_url():
     logger.info("Scraping by url: {url}".format(url=url))
     if url is None or url_id is None:
         return redirect(url_for('/'))
-    article = Article(url=url, url_id=url_id, status=Status.NEW)
+    article = Document(url=url, url_id=url_id, status=Status.NEW)
     session = Session()
     session.add(article)
     session.commit()
@@ -41,7 +41,7 @@ def add_url():
 @app.route('/scrape/<int:article_id>', methods=['GET'])
 def scrape(article_id):
     logger.info("Scraping by id: {article_id}".format(article_id=article_id))
-    article = Session().query(Article).get(article_id)
+    article = Session().query(Document).get(article_id)
     if article is None:
         abort(403)
     result = scrape(article.url)
@@ -49,7 +49,7 @@ def scrape(article_id):
 
 @app.route('/classify/<int:article_id>', methods=['GET'])
 def classify(article_id):
-    article = Session().query(Article).get(article_id)
+    article = Session().query(Document).get(article_id)
     if article is None:
         abort(404)
     result = classify(article)
