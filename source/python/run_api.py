@@ -1,11 +1,11 @@
+import logging
+
 from flask import Flask, render_template, abort, request, redirect, url_for
 from sqlalchemy import create_engine, desc
 
-from idetect.model import db_url, Base, Document, Session, Status
 from idetect.classifier import classify
+from idetect.model import db_url, Base, Analysis, Session, Status, Document, DocumentType
 from idetect.scraper import scrape
-
-import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -18,43 +18,26 @@ engine = create_engine(db_url())
 Session.configure(bind=engine)
 Base.metadata.create_all(engine)
 
+
 @app.route('/')
 def homepage():
     session = Session()
-    articles = session.query(Document).order_by(desc(Document.updated)).limit(10).all()
-    counts = Document.status_counts(session)
+    articles = session.query(Analysis).order_by(desc(Analysis.updated)).limit(10).all()
+    counts = Analysis.status_counts(session)
     return render_template('index.html', articles=articles, counts=counts)
+
 
 @app.route('/add_url', methods=['POST'])
 def add_url():
     url = request.form['url']
-    url_id = request.form['url_id']
     logger.info("Scraping by url: {url}".format(url=url))
-    if url is None or url_id is None:
+    if url is None:
         return redirect(url_for('/'))
-    article = Document(url=url, url_id=url_id, status=Status.NEW)
+    article = Document(url=url, name="New Document", type=DocumentType.WEB)
     session = Session()
     session.add(article)
     session.commit()
     return render_template('success.html', endpoint='add_url', article=article)
-
-@app.route('/scrape/<int:article_id>', methods=['GET'])
-def scrape(article_id):
-    logger.info("Scraping by id: {article_id}".format(article_id=article_id))
-    article = Session().query(Document).get(article_id)
-    if article is None:
-        abort(403)
-    result = scrape(article.url)
-    return render_template('success.html', endpoint='scrape', article=article, result=result)
-
-@app.route('/classify/<int:article_id>', methods=['GET'])
-def classify(article_id):
-    article = Session().query(Document).get(article_id)
-    if article is None:
-        abort(404)
-    result = classify(article)
-    return render_template('success.html', endpoint='classify', article=article, result=result)
-
 
 if __name__ == "__main__":
     # Start flask app
