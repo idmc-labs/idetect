@@ -5,7 +5,7 @@ import signal
 import time
 from multiprocessing import Process
 
-from idetect.model import Analysis, Session
+from idetect.model import Analysis, Session, Document, Status
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -114,3 +114,49 @@ class Worker:
             processes.append(process)
             process.start()
         return processes
+
+
+class Initiator(Worker):
+    def __init__(self, engine, max_sleep=60):
+        """
+        Create a Worker that looks for Documents that have no Analysis. When if finds one, it creates
+        an Analysis with Status.NEW
+        """
+        self.engine = engine
+        self.terminated = False
+        self.max_sleep = max_sleep
+        signal.signal(signal.SIGINT, self.terminate)
+        signal.signal(signal.SIGTERM, self.terminate)
+
+    def work(self):
+        """
+        Look for Documents in the given session Return for which no Analysis exists and
+        creates one with Status.New. Returns True iff some Analyses were created
+        """
+        # start a new session for each job
+        session = Session()
+        try:
+            # Get a Document
+            # ... for which no Analysis exists
+            # ... and lock it for updates
+            # ... sort by created date
+            # ... pick the first (oldest)
+            document = session.query(Document) \
+                .filter(~session.query(Analysis).filter(Document.id == Analysis.document_id).exists()) \
+                .with_for_update() \
+                .order_by(Document.created_at) \
+                .first()
+            if document is None:
+                return False  # no work to be done
+            analysis = Analysis(document=document, status=Status.NEW)
+            session.add(analysis)
+            session.commit()
+            logger.info("Worker {} created Analysis {} in status {}".format(
+                os.getpid(), analysis.document_id, analysis.status))
+        finally:
+            # make sure to release a FOR UPDATE lock, if we got one
+            if session is not None:
+                session.rollback()
+                session.close()
+
+        return True

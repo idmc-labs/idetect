@@ -8,7 +8,7 @@ from unittest import TestCase
 from sqlalchemy import create_engine
 
 from idetect.model import Base, Session, Status, Document, Analysis, DocumentType
-from idetect.worker import Worker
+from idetect.worker import Worker, Initiator
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -158,3 +158,18 @@ class TestWorker(TestCase):
             logger.info("Processing took {} seconds!.".format(datetime.now() - start))
             self.fail("Did not complete work after {} seconds".format(max_seconds))
         time.sleep(1)
+
+    def test_initiator(self):
+        n = 3
+        for i in range(n):
+            document = Document(
+                type=DocumentType.WEB,
+                name="Hurricane Katrina Fast Facts",
+                url="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
+            self.session.add(document)
+            self.session.commit()
+        initiator = Initiator(self.engine)
+
+        self.assertEqual(self.session.query(Analysis).count(), 0)
+        self.assertEqual(initiator.work_all(), 3)
+        self.assertEqual(self.session.query(Analysis).filter(Analysis.status == Status.NEW).count(), 3)
