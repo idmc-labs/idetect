@@ -1,10 +1,12 @@
-from textacy.spacy_utils import get_main_verbs_of_sent, get_objects_of_verb, get_subjects_of_verb
-from textacy.extract import pos_regex_matches
 import re
-import parsedatetime
 import string
-from spacy.tokens import Token, Span
 from datetime import datetime, timedelta
+
+import parsedatetime
+from spacy.tokens import Token, Span
+from textacy.extract import pos_regex_matches
+from textacy.spacy_utils import get_main_verbs_of_sent, get_objects_of_verb, get_subjects_of_verb
+
 from idetect.model import FactUnit, FactTerm, KeywordType, FactKeyword
 
 
@@ -59,7 +61,7 @@ def get_absolute_date(relative_date_string, publication_date=None):
                 num_weeks = int(delta.days / 7)
                 and_num_days_after = 7 if delta.days % 7 == 0 else delta.days % 7
                 return publication_date - timedelta(weeks=num_weeks) - \
-                    timedelta(7 - and_num_days_after)
+                       timedelta(7 - and_num_days_after)
         else:
             # Return if date is in the past already or no publication_date is
             # provided
@@ -76,7 +78,6 @@ def load_keywords(nlp, session, keyword_type):
 
 
 class Interpreter(object):
-
     def __init__(self, session, nlp):
         self.nlp = nlp
         self.person_term_lemmas = load_keywords(
@@ -360,10 +361,12 @@ class Interpreter(object):
                     obj_predicate = child
             if obj_predicate:
                 if obj_predicate.lemma_ in self.structure_term_lemmas:
-                    return self.structure_unit_lemmas, Fact(verb, article[verb.i: obj_predicate.i + 1], 'leave ' + obj_predicate.lemma_, "term")
+                    return self.structure_unit_lemmas, Fact(verb, article[verb.i: obj_predicate.i + 1],
+                                                            'leave ' + obj_predicate.lemma_, "term")
 
                 elif obj_predicate.lemma_ in self.person_term_lemmas:
-                    return self.person_unit_lemmas, Fact(verb, article[verb.i: obj_predicate.i + 1], 'leave ' + obj_predicate.lemma_, "term")
+                    return self.person_unit_lemmas, Fact(verb, article[verb.i: obj_predicate.i + 1],
+                                                         'leave ' + obj_predicate.lemma_, "term")
 
         elif verb.lemma_ == 'affect' and self.article_relevance(article):
             return self.structure_unit_lemmas + self.person_unit_lemmas, Fact(verb, verb, verb.lemma_, "term")
@@ -373,16 +376,19 @@ class Interpreter(object):
             if verb_objects:
                 verb_object = verb_objects[0]
                 if verb_object.lemma_ in self.person_term_lemmas:
-                    return self.person_unit_lemmas, Fact(verb, article[verb.i: verb_object.i + 1], verb.lemma_ + " " + verb_object.text, "term")
+                    return self.person_unit_lemmas, Fact(verb, article[verb.i: verb_object.i + 1],
+                                                         verb.lemma_ + " " + verb_object.text, "term")
 
                 elif verb_object.lemma_ in self.structure_term_lemmas:
-                    return self.structure_unit_lemmas, Fact(verb, article[verb.i: verb_object.i + 1], verb.lemma_ + " " + verb_object.text, "term")
+                    return self.structure_unit_lemmas, Fact(verb, article[verb.i: verb_object.i + 1],
+                                                            verb.lemma_ + " " + verb_object.text, "term")
 
         elif verb.lemma_ == 'claim':
             verb_objects = get_objects_of_verb(verb)
             for verb_object in verb_objects:
                 if verb_object.text == 'lives':
-                    return self.person_unit_lemmas, Fact(verb, article[verb.i: verb_object.i + 1], verb.lemma_ + " " + "lives", "term")
+                    return self.person_unit_lemmas, Fact(verb, article[verb.i: verb_object.i + 1],
+                                                         verb.lemma_ + " " + "lives", "term")
 
         return None, None
 
@@ -581,15 +587,16 @@ class Interpreter(object):
                 next_word = self.next_word(story, o)
                 if next_word:
                     if (next_word.i == verb.token.i or next_word.text == verb.lemma_.split(" ")[-1]
-                            or (next_word.dep_ == 'auxpass' and self.next_word(story, next_word).i == verb.token.i)
-                            or o.idx < verb.end_idx):
+                        or (next_word.dep_ == 'auxpass' and self.next_word(story, next_word).i == verb.token.i)
+                        or o.idx < verb.end_idx):
                         if search_type == self.structure_term_lemmas:
                             unit = 'Households'
                         else:
                             unit = 'People'
                         quantity = Fact(o, o, o.lemma_, 'quantity')
                         report = Report(unit, self.convert_term(verb), [p.text for p in possible_locations],
-                                        sentence.start_char, sentence.end_char, self.set_report_span([verb, quantity, possible_locations]), quantity)
+                                        sentence.start_char, sentence.end_char,
+                                        self.set_report_span([verb, quantity, possible_locations]), quantity)
                         reports.append(report)
                         break
             elif o.lemma_ in search_type:
@@ -605,8 +612,10 @@ class Interpreter(object):
                     quantity = self.get_quantity(sentence, o)
                 reporting_unit = Fact(
                     reporting_unit, reporting_unit, reporting_unit.lemma_, "unit")
-                report = Report(self.convert_unit(reporting_unit), self.convert_term(verb), [p.text for p in possible_locations],
-                                sentence.start_char, sentence.end_char, self.set_report_span([verb, quantity, possible_locations]), quantity)
+                report = Report(self.convert_unit(reporting_unit), self.convert_term(verb),
+                                [p.text for p in possible_locations],
+                                sentence.start_char, sentence.end_char,
+                                self.set_report_span([verb, quantity, possible_locations]), quantity)
                 reports.append(report)
                 break
         return reports
@@ -750,7 +759,8 @@ class Fact(object):
 class Report(object):
     '''Wrapper for reports extracted using rules'''
 
-    def __init__(self, reporting_unit, reporting_term, locations, sentence_start, sentence_end, tag_spans=[], quantity=None):
+    def __init__(self, reporting_unit, reporting_term, locations, sentence_start, sentence_end, tag_spans=[],
+                 quantity=None):
         self.reporting_unit = convert_tokens_to_strings(reporting_unit)
         self.reporting_term = convert_tokens_to_strings(reporting_term)
         if quantity:

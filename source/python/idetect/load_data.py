@@ -1,9 +1,9 @@
-from idetect.model import Country, CountryTerm, Location, LocationType, KeywordType, FactKeyword
 import csv
+
+from idetect.model import Country, CountryTerm, Location, LocationType, KeywordType, FactKeyword
 
 
 def load_countries(session):
-
     if len(session.query(Country).all()) == 0:
         with open('/home/idetect/data/all_countries.csv', encoding='utf-8') as f:
             reader = csv.DictReader(f)
@@ -55,9 +55,9 @@ def load_terms(session):
                               'tornado', 'rain', 'storm', 'earthquake']
 
     for term_list, keyword_type in zip([person_reporting_terms, structure_reporting_terms,
-                                     person_reporting_units, structure_reporting_units, relevant_article_terms],
-                                    [KeywordType.PERSON_TERM, KeywordType.STRUCTURE_TERM, KeywordType.PERSON_UNIT,
-                                     KeywordType.STRUCTURE_UNIT, KeywordType.ARTICLE_KEYWORD]):
+                                        person_reporting_units, structure_reporting_units, relevant_article_terms],
+                                       [KeywordType.PERSON_TERM, KeywordType.STRUCTURE_TERM, KeywordType.PERSON_UNIT,
+                                        KeywordType.STRUCTURE_UNIT, KeywordType.ARTICLE_KEYWORD]):
         for term in term_list:
             report_kw = FactKeyword(description=term, keyword_type=keyword_type)
             session.add(report_kw)

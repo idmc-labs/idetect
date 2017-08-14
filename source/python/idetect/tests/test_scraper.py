@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from sqlalchemy import create_engine
 
-from idetect.model import Base, Session, Status, Document, Analysis, DocumentContent, DocumentType
+from idetect.model import Base, Session, Status, Document, Analysis, DocumentType
 from idetect.scraper import scrape
 
 

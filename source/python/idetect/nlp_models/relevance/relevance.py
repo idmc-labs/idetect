@@ -1,18 +1,15 @@
 import gensim
-import pandas as pd
 import numpy as np
-from nltk.tokenize import WordPunctTokenizer
+import pandas as pd
 from nltk.stem import PorterStemmer
+from nltk.tokenize import WordPunctTokenizer
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.pipeline import Pipeline
-from sklearn.ensemble import RandomForestClassifier
 
 from idetect.model import Relevance
 from idetect.nlp_models.base_model import DownloadableModel
 
 
 class RelevanceModel(DownloadableModel):
-
     def predict(self, text):
         try:
             relevance = self.model.transform(pd.Series(text))[0]
@@ -126,8 +123,8 @@ class LsiTransformer(TransformerMixin):
     def set_lsi_model(self, texts):
         corpus_tfidf, dictionary = self.make_tfidf(texts)
         self.lsi_model = gensim.models.LsiModel(corpus_tfidf,
-                                            id2word=dictionary,
-                                            num_topics=self.n_dimensions)
+                                                id2word=dictionary,
+                                                num_topics=self.n_dimensions)
 
     def fit(self, texts, *args, **kwargs):
         self.set_lsi_model(texts)

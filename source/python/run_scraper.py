@@ -1,5 +1,6 @@
 import logging
 import sys
+
 from sqlalchemy import create_engine
 
 from idetect.model import db_url, Base, Session, Status

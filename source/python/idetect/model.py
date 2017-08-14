@@ -1,8 +1,7 @@
 import os
 
-from sqlalchemy import Column, BigInteger, Integer, String, Date, DateTime, Boolean, Numeric, ForeignKey, Table, desc, Index
+from sqlalchemy import Column, BigInteger, Integer, String, Date, DateTime, Boolean, Numeric, ForeignKey, Table, Index
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, object_session, relationship
 from sqlalchemy.orm.exc import NoResultFound
@@ -73,14 +72,14 @@ class Document(Base):
     legacy_id = Column(BigInteger)
     idx = Column(BigInteger)
     name = Column(String, nullable=False)  # Document title
-    serial_no = Column(String)             # eg. D2016-PDF-000005
+    serial_no = Column(String)  # eg. D2016-PDF-000005
     type = Column(String, nullable=False)  # DocumentType, eg. WEB
     publication_date = Column(Date)
     comment = Column(String)
     url = Column(String)
-    original_filename = Column(String)     # filename
-    filename = Column(String)              # uuid based filename
-    content_type = Column(String)          # eg. application/pdf
+    original_filename = Column(String)  # filename
+    filename = Column(String)  # uuid based filename
+    content_type = Column(String)  # eg. application/pdf
     displacement_types = Column(postgresql.ARRAY(String))  # eg. {Conflict, Disaster}
     countries = Column(postgresql.ARRAY(String))  # eg. {Haiti,Bahamas,"United States of America"}
     sources = Column(postgresql.ARRAY(String))  # eg. {IOM,"CCCM Cluster",WFP,"Local Authorities"}
@@ -139,7 +138,7 @@ class Analysis(Base):
     def get_updated_version(self):
         """Return the most recent version of this article"""
         # can't just use get() because that will use the cache instead of running a query
-        return object_session(self).query(Analysis)\
+        return object_session(self).query(Analysis) \
             .filter(Analysis.document_id == self.document_id).one()
 
     def create_new_version(self, new_status):
@@ -179,7 +178,9 @@ class Analysis(Base):
             .group_by(Analysis.status).all()
         return dict(status_counts)
 
+
 status_updated_index = Index('document_analyses_status_updated', Analysis.status, Analysis.updated)
+
 
 class AnalysisHistory(Base):
     __tablename__ = 'idetect_analysis_histories'
