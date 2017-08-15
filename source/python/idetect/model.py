@@ -132,7 +132,7 @@ class Article(Base):
             history.reports = self.reports
             session.add(history)
 
-            self.updated = None  # force the DB to update the updated timestamp
+            self.updated = func.now()
             self.status = new_status
             session.commit()
         finally:
