@@ -1,9 +1,10 @@
 import logging
 import sys
+
 from sqlalchemy import create_engine
 
-from idetect.model import db_url, Base, Session, Status
 from idetect.classifier import classify
+from idetect.model import db_url, Base, Session, Status
 from idetect.worker import Worker
 
 if __name__ == "__main__":

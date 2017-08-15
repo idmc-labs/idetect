@@ -1,27 +1,23 @@
 import gensim
-import pandas as pd
 import numpy as np
+import pandas as pd
 from nltk.tokenize import WordPunctTokenizer
-from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.pipeline import Pipeline
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.externals import joblib
+from sklearn.base import TransformerMixin
 
-from idetect.model import Category
+from idetect.model import DisplacementType
 from idetect.nlp_models.base_model import DownloadableModel
 
 
 class CategoryModel(DownloadableModel):
-
     def predict(self, text):
         try:
             category = self.model.predict(pd.Series(text))[0]
             if category == 'disaster':
-                return Category.DISASTER
+                return DisplacementType.DISASTER
             elif category == 'conflict':
-                return Category.CONFLICT
+                return DisplacementType.CONFLICT
             else:
-                return Category.OTHER
+                return DisplacementType.OTHER
         except ValueError:
             # error can occur if empty text is passed to model
             raise
@@ -105,8 +101,8 @@ class LsiTransformer(TransformerMixin):
     def set_lsi_model(self, texts):
         corpus_tfidf, dictionary = self.make_tfidf(texts)
         self.lsi_model = gensim.models.LsiModel(corpus_tfidf,
-                                            id2word=dictionary,
-                                            num_topics=self.n_dimensions)
+                                                id2word=dictionary,
+                                                num_topics=self.n_dimensions)
 
     def fit(self, texts, *args, **kwargs):
         self.set_lsi_model(texts)

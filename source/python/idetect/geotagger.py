@@ -2,8 +2,10 @@
 '''
 import json
 import unicodedata
+
 import pycountry
 import requests
+
 from idetect.model import LocationType
 
 with open('/home/idetect/data/cities_to_countries.json', "r") as f:
@@ -67,7 +69,7 @@ def common_names(place_name):
     '''Convert countries or places with commonly used names
     to their official names
     '''
-    return{
+    return {
         'Syria': 'Syrian Arab Republic',
         'Bosnia': 'Bosnia and Herzegovina'
     }.get(place_name, place_name)

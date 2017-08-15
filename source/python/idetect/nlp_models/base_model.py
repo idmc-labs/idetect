@@ -1,13 +1,13 @@
+import errno
 import fcntl
 import os
-import errno
-import requests
+
 import pandas as pd
+import requests
 from sklearn.externals import joblib
 
 
 class DownloadableModel(object):
-
     """A base class for loading pickeld scikit-learn models that may be stored
     locally or in online storage.
 
@@ -68,7 +68,6 @@ class DownloadableModel(object):
                 fcntl.flock(f, fcntl.LOCK_UN)
         model = joblib.load(model_path)
         return model
-
 
     def predict(self, text):
         """ This method should be overwritten to fit the specific case of the

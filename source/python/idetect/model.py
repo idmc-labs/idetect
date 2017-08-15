@@ -1,7 +1,7 @@
 import os
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Numeric, ForeignKey, Table, desc, Index
-from sqlalchemy.exc import ProgrammingError
+from sqlalchemy import Column, BigInteger, Integer, String, Date, DateTime, Boolean, Numeric, ForeignKey, Table, Index
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, object_session, relationship
 from sqlalchemy.orm.exc import NoResultFound
@@ -43,10 +43,10 @@ class Status:
     EDITED = 'edited'
 
 
-class Category:
-    OTHER = 'other'
-    DISASTER = 'disaster'
-    CONFLICT = 'conflict'
+class DisplacementType:
+    OTHER = 'Other'
+    DISASTER = 'Disaster'
+    CONFLICT = 'Conflict'
 
 
 class Relevance:
@@ -58,28 +58,62 @@ class NotLatestException(Exception):
     pass
 
 
-article_report = Table(
-    'article_report', Base.metadata,
-    Column('article', ForeignKey('article.id', ondelete="CASCADE"), primary_key=True),
-    Column('report', ForeignKey('report.id', ondelete="CASCADE"), primary_key=True)
-)
-
-article_history_report = Table(
-    'article_history_report', Base.metadata,
-    Column('article_history', ForeignKey('article_history.id', ondelete="CASCADE"), primary_key=True),
-    Column('report', ForeignKey('report.id', ondelete="CASCADE"), primary_key=True)
-)
+class DocumentType:
+    WEB = 'WEB'
+    EML = 'EML'
+    PDF = 'PDF'
+    EXL = 'EXL'
 
 
-class Article(Base):
-    __tablename__ = 'article'
+class Document(Base):
+    __tablename__ = 'documents'
 
     id = Column(Integer, primary_key=True)
-    url_id = Column(String, nullable=False)
-    url = Column(String, nullable=False)
-    domain = Column(String)
-    status = Column(String)
+    legacy_id = Column(BigInteger)
+    idx = Column(BigInteger)
+    name = Column(String, nullable=False)  # Document title
+    serial_no = Column(String)  # eg. D2016-PDF-000005
+    type = Column(String, nullable=False)  # DocumentType, eg. WEB
+    publication_date = Column(Date)
+    comment = Column(String)
+    url = Column(String)
+    original_filename = Column(String)  # filename
+    filename = Column(String)  # uuid based filename
+    content_type = Column(String)  # eg. application/pdf
+    displacement_types = Column(postgresql.ARRAY(String))  # eg. {Conflict, Disaster}
+    countries = Column(postgresql.ARRAY(String))  # eg. {Haiti,Bahamas,"United States of America"}
+    sources = Column(postgresql.ARRAY(String))  # eg. {IOM,"CCCM Cluster",WFP,"Local Authorities"}
+    publishers = Column(postgresql.ARRAY(String))  # eg. {REDLAC,"Radio La Primerísima"}
+    confidential = Column(Boolean)
+    created_by = Column(String)  # eg. First.Last
+    created_at = Column(DateTime(timezone=False), server_default=func.now())
+    modified_by = Column(String)  # eg. First.Last
+    modified_at = Column(DateTime(timezone=False), server_default=func.now())
+
+
+analysis_fact = Table(
+    'idetect_analysis_facts', Base.metadata,
+    Column('analysis', ForeignKey('idetect_analyses.document_id', ondelete="CASCADE"), primary_key=True),
+    Column('fact', ForeignKey('idetect_facts.id', ondelete="CASCADE"), primary_key=True)
+)
+
+analysis_history_fact = Table(
+    'idetect_analysis_history_facts', Base.metadata,
+    Column('analysis_history', ForeignKey('idetect_analysis_histories.id', ondelete="CASCADE"), primary_key=True),
+    Column('fact', ForeignKey('idetect_facts.id', ondelete="CASCADE"), primary_key=True)
+)
+
+
+class Analysis(Base):
+    __tablename__ = 'idetect_analyses'
+
+    document_id = Column(Integer,
+                         ForeignKey('documents.id', ondelete="CASCADE"),
+                         primary_key=True)
+    document = relationship('Document')
+    status = Column(String, nullable=False)
     title = Column(String)
+    publication_date = Column(DateTime(timezone=True))
     authors = Column(String)
     language = Column(String(2))
     relevance = Column(Boolean)
@@ -89,22 +123,23 @@ class Article(Base):
     response_code = Column(Integer)
     retrieval_attempts = Column(Integer, default=0)
     completion = Column(Numeric)
-    publication_date = Column(DateTime(timezone=True))
     retrieval_date = Column(DateTime(timezone=True))
     created = Column(DateTime(timezone=True), server_default=func.now())
     updated = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    reports = relationship('Report', secondary=article_report, back_populates='article')
-    content_id = Column('content', Integer, ForeignKey('content.id'))
-    content = relationship('Content', back_populates='article')
+    facts = relationship('Fact', secondary=analysis_fact, back_populates='analysis')
+    content_id = Column(Integer, ForeignKey('idetect_document_contents.id'))
+    content = relationship('DocumentContent', back_populates='analysis')
     error_msg = Column(String)
-    processing_time = Column(Numeric)
+    processing_time = Column(Numeric)  # time it took to process to bring it to the current status
 
     def __str__(self):
-        return "<Article {} {} {}>".format(self.id, self.url_id, self.url)
+        return "<DocumentAnalysis {} {} {}>".format(self.document_id, self.document.url)
 
     def get_updated_version(self):
         """Return the most recent version of this article"""
-        return object_session(self).query(Article).filter(Article.id == self.id).one()
+        # can't just use get() because that will use the cache instead of running a query
+        return object_session(self).query(Analysis) \
+            .filter(Analysis.document_id == self.document_id).one()
 
     def create_new_version(self, new_status):
         """
@@ -118,18 +153,16 @@ class Article(Base):
                 raise RuntimeError("Object has not been persisted in a session.")
 
             try:
-                latest = session.query(Article) \
-                    .filter(Article.id == self.id) \
-                    .filter(Article.status == self.status) \
+                latest = session.query(Analysis) \
+                    .filter(Analysis.document_id == self.document_id) \
+                    .filter(Analysis.status == self.status) \
                     .with_for_update().one()
             except NoResultFound:
                 raise NotLatestException(self)
 
-            dict = {c.name: self.__getattribute__(c.name) for c in Article.__table__.columns}
-            dict['article_id'] = dict['id']
-            del dict['id']
-            history = ArticleHistory(**dict)
-            history.reports = self.reports
+            dict = {c.name: self.__getattribute__(c.name) for c in Analysis.__table__.columns}
+            history = AnalysisHistory(**dict)
+            history.facts = self.facts
             session.add(history)
 
             self.updated = func.now()
@@ -141,23 +174,23 @@ class Article(Base):
     @classmethod
     def status_counts(cls, session):
         """Returns a dictonary of status to the count of the Articles that have that status as their latest value"""
-        status_counts = session.query(Article.status, func.count(Article.status)) \
-            .group_by(Article.status).all()
+        status_counts = session.query(Analysis.status, func.count(Analysis.status)) \
+            .group_by(Analysis.status).all()
         return dict(status_counts)
 
-status_updated_index = Index('status_updated', Article.status, Article.updated)
 
-class ArticleHistory(Base):
-    __tablename__ = 'article_history'
+status_updated_index = Index('document_analyses_status_updated', Analysis.status, Analysis.updated)
+
+
+class AnalysisHistory(Base):
+    __tablename__ = 'idetect_analysis_histories'
 
     id = Column(Integer, primary_key=True)
-    article_id = Column(Integer, ForeignKey(Article.id, ondelete="CASCADE"))
-    article = relationship(Article)
-    url_id = Column(String, nullable=False)
-    url = Column(String, nullable=False)
-    domain = Column(String)
-    status = Column(String)
+    document_id = Column(Integer, ForeignKey('documents.id', ondelete="CASCADE"))
+    document = relationship('Document')
+    status = Column(String, nullable=False)
     title = Column(String)
+    publication_date = Column(DateTime(timezone=True))
     authors = Column(String)
     language = Column(String(2))
     relevance = Column(Boolean)
@@ -167,32 +200,31 @@ class ArticleHistory(Base):
     response_code = Column(Integer)
     retrieval_attempts = Column(Integer, default=0)
     completion = Column(Numeric)
-    publication_date = Column(DateTime(timezone=True))
     retrieval_date = Column(DateTime(timezone=True))
     created = Column(DateTime(timezone=True), server_default=func.now())
     updated = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    reports = relationship('Report', secondary=article_history_report)
-    content_id = Column('content', Integer, ForeignKey('content.id'))
-    content = relationship('Content')
+    facts = relationship('Fact', secondary=analysis_history_fact)
+    content_id = Column(Integer, ForeignKey('idetect_document_contents.id'))
+    content = relationship('DocumentContent')
     error_msg = Column(String)
-    processing_time = Column(Numeric)
+    processing_time = Column(Numeric)  # time it took to process to bring it to the current status
 
 
-class Content(Base):
-    __tablename__ = 'content'
+class DocumentContent(Base):
+    __tablename__ = 'idetect_document_contents'
 
     id = Column(Integer, primary_key=True)
-    article = relationship('Article', back_populates='content')
+    analysis = relationship('Analysis', back_populates='content')
     content = Column(String)
     content_type = Column(String)
 
 
-class ReportUnit:
+class FactUnit:
     PEOPLE = 'people'
     HOUSEHOLDS = 'households'
 
 
-class ReportTerm:
+class FactTerm:
     DISPLACED = 'displaced'
     EVACUATED = 'evacuated'
     FLED = 'forced to flee'
@@ -205,18 +237,18 @@ class ReportTerm:
     UNINHABITABLE = 'uninhabitable housing'
 
 
-report_location = Table(
-    'report_location', Base.metadata,
-    Column('report', Integer, ForeignKey('report.id')),
-    Column('location', Integer, ForeignKey('location.id'))
+fact_location = Table(
+    'idetect_fact_locations', Base.metadata,
+    Column('fact', Integer, ForeignKey('idetect_facts.id')),
+    Column('location', Integer, ForeignKey('idetect_locations.id'))
 )
 
 
-class Report(Base):
-    __tablename__ = 'report'
+class Fact(Base):
+    __tablename__ = 'idetect_facts'
 
     id = Column(Integer, primary_key=True, unique=True)
-    article = relationship('Article', secondary=article_report, back_populates='reports')
+    analysis = relationship('Analysis', secondary=analysis_fact, back_populates='facts')
     sentence_start = Column(Integer)
     sentence_end = Column(Integer)
     reporting_unit = Column(String)
@@ -227,19 +259,18 @@ class Report(Base):
     analyzer = Column(String)
     accuracy = Column(Numeric)
     analysis_date = Column(DateTime(timezone=True), server_default=func.now())
-    locations = relationship(
-        'Location', secondary=report_location, back_populates='reports')
+    locations = relationship('Location', secondary=fact_location, back_populates='facts')
 
 
 class Country(Base):
-    __tablename__ = 'country'
+    __tablename__ = 'idetect_countries'
 
     code = Column(String(3), primary_key=True)
     preferred_term = Column(String)
 
 
 class CountryTerm(Base):
-    __tablename__ = 'country_term'
+    __tablename__ = 'idetect_country_terms'
 
     term = Column(String, primary_key=True)
     country = Column(String(3), ForeignKey(Country.code))
@@ -255,7 +286,7 @@ class LocationType:
 
 
 class Location(Base):
-    __tablename__ = 'location'
+    __tablename__ = 'idetect_locations'
 
     id = Column(Integer, primary_key=True, unique=True)
     description = Column(String)
@@ -263,8 +294,7 @@ class Location(Base):
     country_code = Column('country', ForeignKey(Country.code))
     country = relationship(Country)
     latlong = Column(String)
-    reports = relationship(
-        'Report', secondary=report_location, back_populates='locations')
+    facts = relationship('Fact', secondary=fact_location, back_populates='locations')
 
 
 class KeywordType:
@@ -275,18 +305,9 @@ class KeywordType:
     ARTICLE_KEYWORD = 'article_keyword'
 
 
-class ReportKeyword(Base):
-    __tablename__ = 'report_keyword'
+class FactKeyword(Base):
+    __tablename__ = 'idetect_fact_keywords'
 
     id = Column(Integer, primary_key=True)
     description = Column(String)
     keyword_type = Column(String)
-
-
-def create_indexes(engine):
-    url_id_status_index = Index('url_id_status', Article.url_id, Article.status, Article.updated)
-    try:
-        url_id_status_index.create(engine)
-    except ProgrammingError as exc:
-        if "already exists" not in str(exc):
-            raise

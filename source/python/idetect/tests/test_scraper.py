@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from sqlalchemy import create_engine
 
-from idetect.model import Base, Session, Status, Article
+from idetect.model import Base, Session, Status, Document, Analysis, DocumentType
 from idetect.scraper import scrape
 
 
@@ -20,31 +20,35 @@ class TestScraper(TestCase):
 
     def tearDown(self):
         self.session.rollback()
-        for article in self.session.query(Article).all():
+        for article in self.session.query(Document).all():
             self.session.delete(article)
         self.session.commit()
 
     def test_scrape_html(self):
-        article = Article(url="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html",
-                          url_id=1,
-                          status=Status.NEW)
-        self.session.add(article)
+        document = Document(
+            type=DocumentType.WEB,
+            name="Hurricane Katrina Fast Facts",
+            url="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
+        analysis = Analysis(document=document, status=Status.NEW)
+        self.session.add(analysis)
         self.session.commit()
-        scrape(article)
-        content = article.content
+        scrape(analysis)
+        content = analysis.content
         self.assertEqual("text", content.content_type)
         self.assertTrue("Katrina" in content.content)
         self.assertTrue("Louisiana" in content.content)
         self.assertTrue("\n" not in content.content)
 
     def test_scrape_pdf(self):
-        article = Article(url="https://www1.ncdc.noaa.gov/pub/data/extremeevents/specialreports/Hurricane-Katrina.pdf",
-                          url_id=2,
-                          status=Status.NEW)
-        self.session.add(article)
+        document = Document(
+            type=DocumentType.PDF,
+            name="Hurricane Katrina Special Report",
+            url="https://www1.ncdc.noaa.gov/pub/data/extremeevents/specialreports/Hurricane-Katrina.pdf")
+        analysis = Analysis(document=document, status=Status.NEW)
+        self.session.add(analysis)
         self.session.commit()
-        scrape(article)
-        content = article.content
+        scrape(analysis)
+        content = analysis.content
         self.assertEqual("pdf", content.content_type)
         self.assertTrue("Katrina" in content.content)
         self.assertTrue("Louisiana" in content.content)
