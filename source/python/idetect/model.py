@@ -258,6 +258,7 @@ class Fact(Base):
     end_date = Column(DateTime(timezone=True))
     specific_reported_figure = Column(Integer)
     vague_reported_figure = Column(String)
+    iso3 = Column(String(3))
     qualifier = Column(String)
     tag_locations = Column(String)
     analyzer = Column(String)

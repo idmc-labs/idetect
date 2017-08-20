@@ -5,6 +5,7 @@ How to ensure has access to pre-loaded models?
 import json
 
 import spacy
+from itertools import groupby
 from sqlalchemy.orm import object_session
 
 from idetect.geotagger import get_geo_info
@@ -39,18 +40,19 @@ def save_facts(analysis, facts, session):
         # First geolocate locations; split into countries and create one fact per country
         country_locations = []
         for location in f.locations:
-            country_locations.append((process_location(location, session)))
+            country_locations.extend((process_location(location, session)))
 
-        country_locations.sort(key=lambda x: x.country)
-        for key, group in groupby(country_locations, lambda x: x.country):
+        country_locations.sort(key=lambda x: x.country.iso3)
+        for key, group in groupby(country_locations, lambda x: x.country.iso3):
 
-            fact = Fact(article_id=analysis.document_id, unit=f.reporting_unit, term=f.reporting_term,
+            fact = Fact(unit=f.reporting_unit, term=f.reporting_term,
                     excerpt_start=f.sentence_start, excerpt_end=f.sentence_end,
                     specific_reported_figure=f.quantity[0],
-                    vague_reported_figure=f.quantity[1],
-                    tag_locations=json.dumps(r.tag_spans))
+                    vague_reported_figure=f.quantity[1], iso3=key,
+                    tag_locations=json.dumps(f.tag_spans))
             session.add(fact)
             session.commit()
+            analysis.facts.append(fact)
             fact.locations.extend([location for location in group])
 
 
@@ -63,16 +65,16 @@ def process_location(location_name, session):
     '''
     locations = []
     location = session.query(Location).filter_by(
-        description=location_name).one_or_none()
+        location_name=location_name).one_or_none()
     if location:
         locations.append(location)
     else:
-        loc_info = get_geo_info(location)
+        loc_info = get_geo_info(location_name)
         if loc_info['flag'] != 'no-results':
             country = session.query(Country).filter_by(
-                code=loc_info['country_code']).one_or_none()
-            location = Location(description=loc_info['place_name'], location_type=loc_info['type'],
-                                country_code=country.code,
+                iso3=loc_info['country_code']).one_or_none()
+            location = Location(location_name=loc_info['place_name'], location_type=loc_info['type'],
+                                country_iso3=country.iso3,
                                 country=country, latlong=loc_info['coordinates'])
             session.add(location)
             session.commit()
