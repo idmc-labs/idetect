@@ -220,21 +220,22 @@ class DocumentContent(Base):
 
 
 class FactUnit:
-    PEOPLE = 'people'
-    HOUSEHOLDS = 'households'
+    PEOPLE = 'Person'
+    HOUSEHOLDS = 'Household'
 
 
 class FactTerm:
-    DISPLACED = 'displaced'
-    EVACUATED = 'evacuated'
-    FLED = 'forced to flee'
-    HOMELESS = 'homeless'
-    CAMP = 'in relief camp'
-    SHELTERED = 'sheltered'
-    RELOCATED = 'relocated'
-    DESTROYED = 'destroyed housing'
-    DAMAGED = 'partially destroyed housing'
-    UNINHABITABLE = 'uninhabitable housing'
+    DISPLACED = 'Displaced'
+    EVACUATED = 'Evacuated'
+    FLED = 'Forced to Flee'
+    HOMELESS = 'Homeless'
+    CAMP = 'In Relief Camp'
+    SHELTERED = 'Sheltered'
+    RELOCATED = 'Relocated'
+    DESTROYED = 'Destroyed Housing'
+    DAMAGED = 'Partially Destroyed Housing'
+    UNINHABITABLE = 'Uninhabitable Housing'
+    OTHER = 'Multiple/Other'
 
 
 fact_location = Table(
@@ -249,15 +250,19 @@ class Fact(Base):
 
     id = Column(Integer, primary_key=True, unique=True)
     analysis = relationship('Analysis', secondary=analysis_fact, back_populates='facts')
-    sentence_start = Column(Integer)
-    sentence_end = Column(Integer)
-    reporting_unit = Column(String)
-    reporting_term = Column(String)
-    specific_displacement_figure = Column(Integer)
-    vague_displacement_figure = Column(String)
+    excerpt_start = Column(Integer)
+    excerpt_end = Column(Integer)
+    unit = Column(String)
+    term = Column(String)
+    start_date = Column(DateTime(timezone=True))
+    end_date = Column(DateTime(timezone=True))
+    specific_reported_figure = Column(Integer)
+    vague_reported_figure = Column(String)
+    iso3 = Column(String(3))
+    qualifier = Column(String)
     tag_locations = Column(String)
     analyzer = Column(String)
-    accuracy = Column(Numeric)
+    confidence_assessment = Column(Numeric)
     analysis_date = Column(DateTime(timezone=True), server_default=func.now())
     locations = relationship('Location', secondary=fact_location, back_populates='facts')
 
@@ -265,7 +270,7 @@ class Fact(Base):
 class Country(Base):
     __tablename__ = 'idetect_countries'
 
-    code = Column(String(3), primary_key=True)
+    iso3 = Column(String(3), primary_key=True)
     preferred_term = Column(String)
 
 
@@ -273,7 +278,7 @@ class CountryTerm(Base):
     __tablename__ = 'idetect_country_terms'
 
     term = Column(String, primary_key=True)
-    country = Column(String(3), ForeignKey(Country.code))
+    country = Column(String(3), ForeignKey(Country.iso3))
 
 
 class LocationType:
@@ -289,9 +294,9 @@ class Location(Base):
     __tablename__ = 'idetect_locations'
 
     id = Column(Integer, primary_key=True, unique=True)
-    description = Column(String)
+    location_name = Column(String)
     location_type = Column(String)
-    country_code = Column('country', ForeignKey(Country.code))
+    country_iso3 = Column('country', ForeignKey(Country.iso3))
     country = relationship(Country)
     latlong = Column(String)
     facts = relationship('Fact', secondary=fact_location, back_populates='locations')

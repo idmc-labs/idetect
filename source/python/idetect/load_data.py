@@ -8,7 +8,7 @@ def load_countries(session):
         with open('/home/idetect/data/all_countries.csv', encoding='utf-8') as f:
             reader = csv.DictReader(f)
             for row in reader:
-                country = Country(code=row['code_3'],
+                country = Country(iso3=row['code_3'],
                                   preferred_term=row['country_name'])
                 session.add(country)
                 session.commit()
@@ -27,8 +27,8 @@ def load_countries(session):
                         term=row['official_name'], country=row['code_3'])
                     session.add(official_name)
 
-                location = Location(description=row['country_name'], location_type=LocationType.COUNTRY,
-                                    latlong=row['latlong'], country_code=row['code_3'])
+                location = Location(location_name=row['country_name'], location_type=LocationType.COUNTRY,
+                                    latlong=row['latlong'], country_iso3=row['code_3'])
                 session.add(location)
                 session.commit()
 
