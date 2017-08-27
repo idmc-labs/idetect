@@ -24,7 +24,7 @@ if __name__ == "__main__":
     r_m = RelevanceModel()
 
     worker = Worker(Status.SCRAPED, Status.CLASSIFYING, Status.CLASSIFIED, Status.CLASSIFYING_FAILED,
-                    lambda article: classify(article, c_m, r_m, engine)
+                    lambda article: classify(article, c_m, r_m, engine))
     logger.info("Starting worker...")
     worker.work_indefinitely()
     logger.info("Worker stopped.")
