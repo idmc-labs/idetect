@@ -11,3 +11,4 @@ newspaper3k
 pdfminer.six
 jupyter
 nltk
+langdetect

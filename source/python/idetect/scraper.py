@@ -13,31 +13,32 @@ from pdfminer.layout import LAParams
 from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
 from pdfminer.pdfpage import PDFPage
 from sqlalchemy.orm import object_session
+from langdetect import detect
 
-from idetect.model import Content
+from idetect.model import DocumentContent
 
 
-def scrape(article, scrape_pdfs=True):
+def scrape(analysis, scrape_pdfs=True):
     """
     Scrapes content and metadata from an url
     Parameters
     ----------
-    article: the article object to be scraped
+    analysis: the anlysis object to be scraped
     scrape_pdfs: determines whether pdf files will be scraped or not
                  default: True
 
     """
 
     # Update the retrieval date and retrieval_attempts
-    article.retrieval_date = datetime.datetime.now()
-    article.retrieval_attempts += 1
-    session = object_session(article)
+    analysis.retrieval_date = datetime.datetime.now()
+    analysis.retrieval_attempts += 1
+    session = object_session(analysis)
     session.commit()
     if scrape_pdfs:
-        pdf_url = get_pdf_url(article.url)
+        pdf_url = get_pdf_url(analysis.document.url)
         if pdf_url:
-            return scrape_pdf(pdf_url, article)
-    return scrape_html(article)
+            return scrape_pdf(pdf_url, analysis)
+    return scrape_html(analysis)
 
 
 def get_pdf_url_simple(url):
@@ -76,33 +77,33 @@ def get_pdf_url(url):
     return get_pdf_url_simple(url) or get_pdf_url_iframe(url)
 
 
-def scrape_html(article):
+def scrape_html(analysis):
     """Downloads and extracts content plus metadata for html page
     Parameters
     ----------
-    article: article object to be scraped
-    session: the article session
+    analysis: analysis object to be scraped
+    session: the analysis session
 
     Returns
     -------
-    article: The updated article object
+    analysis: The updated analysis object
     """
 
-    a = newspaper.Article(article.url)
+    a = newspaper.Article(analysis.document.url)
     a.download()
     if a.download_state == 2:
         a.parse()
-        article.domain = a.source_url
-        article.title = a.title
-        article.authors = a.authors
-        article.publication_date = a.publish_date
+        analysis.title = a.title
+        analysis.authors = a.authors
+        analysis.publication_date = a.publish_date
 
         text = re.sub('\s+', ' ', a.text)  # collapse all whitespace
-        content = Content(article=[article], content=text, content_type='text')
-        session = object_session(article)
+        analysis.language = detect(text)
+        content = DocumentContent(analysis=[analysis], content=text, content_type='text')
+        session = object_session(analysis)
         session.add(content)
         session.commit()
-        return article
+        return analysis
     else:  # Temporary fix to deal with https://github.com/codelucas/newspaper/issues/280
         raise Exception("Retrieval Failed")
 
@@ -128,19 +129,20 @@ def extract_pdf_text(pdf_file_path, codec='utf-8'):
     return response
 
 
-def scrape_pdf(url, article):
+def scrape_pdf(url, analysis):
     pdf_file_path, last_modified = download_pdf(url)
     try:
         text = extract_pdf_text(pdf_file_path)
         if not text:
             raise Exception("No text extracted from PDF at {}".format(url))
         text = re.sub('\s+', ' ', text)  # collapse all whitespace
-        article.domain = urlparse(url).hostname
-        article.publication_date = last_modified
-        content = Content(article=[article], content=text, content_type='pdf')
-        session = object_session(article)
+        analysis.domain = urlparse(url).hostname
+        analysis.publication_date = last_modified
+        analysis.language = detect(text)
+        content = DocumentContent(analysis=[analysis], content=text, content_type='pdf')
+        session = object_session(analysis)
         session.add(content)
         session.commit()
-        return article
+        return analysis
     finally:
         os.unlink(pdf_file_path)

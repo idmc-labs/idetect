@@ -1,5 +1,6 @@
 from sqlalchemy.orm import object_session
 
+
 '''Method(s) for running classifier on extracted content.
 '''
 
