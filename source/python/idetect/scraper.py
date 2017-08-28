@@ -14,6 +14,7 @@ from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
 from pdfminer.pdfpage import PDFPage
 from sqlalchemy.orm import object_session
 from langdetect import detect
+from langdetect.lang_detect_exception import LangDetectException
 
 from idetect.model import DocumentContent
 
@@ -98,7 +99,10 @@ def scrape_html(analysis):
         analysis.publication_date = a.publish_date
 
         text = re.sub('\s+', ' ', a.text)  # collapse all whitespace
-        analysis.language = detect(text)
+        try:
+            analysis.language = detect(text)
+        except LangDetectException:
+            pass
         content = DocumentContent(analysis=[analysis], content=text, content_type='text')
         session = object_session(analysis)
         session.add(content)
@@ -138,7 +142,10 @@ def scrape_pdf(url, analysis):
         text = re.sub('\s+', ' ', text)  # collapse all whitespace
         analysis.domain = urlparse(url).hostname
         analysis.publication_date = last_modified
-        analysis.language = detect(text)
+        try:
+            analysis.language = detect(text)
+        except LangDetectException:
+            pass
         content = DocumentContent(analysis=[analysis], content=text, content_type='pdf')
         session = object_session(analysis)
         session.add(content)
