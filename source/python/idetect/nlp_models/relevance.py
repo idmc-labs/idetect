@@ -13,7 +13,7 @@ class RelevanceModel(DownloadableModel):
     def __init__(self, model_path='relevance.pkl', 
                  model_url='https://s3-us-west-2.amazonaws.com'
                            '/idmc-idetect/relevance_models/relevance.pkl'):
-        self.model = self.load_model(model_path, model_url)
+        self.model = self.load_model(model_url, model_path)
    
     def predict(self, text):
         try:
