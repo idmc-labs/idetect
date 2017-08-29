@@ -5,7 +5,7 @@ from sqlalchemy import create_engine
 
 from idetect.classifier import classify
 from idetect.nlp_models.category import CategoryModel
-# from idetect.nlp_models.relevance import RelevanceModel
+from idetect.nlp_models.relevance import RelevanceModel
 from idetect.model import db_url, Base, Session, Status
 from idetect.worker import Worker
 
@@ -21,8 +21,7 @@ if __name__ == "__main__":
     Base.metadata.create_all(engine)
 
     c_m = CategoryModel()
-    # r_m = RelevanceModel()
-    r_m = None
+    r_m = RelevanceModel()
 
     worker = Worker(Status.SCRAPED, Status.CLASSIFYING, Status.CLASSIFIED, Status.CLASSIFYING_FAILED,
                     lambda article: classify(article, c_m, r_m, engine))
