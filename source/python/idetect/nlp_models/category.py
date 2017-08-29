@@ -12,8 +12,8 @@ class CategoryModel(DownloadableModel):
 
     def __init__(self, model_path='category.pkl', 
                  model_url='https://s3-us-west-2.amazonaws.com'
-                           '/idmc-idetect/category_models/category.pkl')
-        self.model = self.load_model(model_path, model_url)
+                           '/idmc-idetect/category_models/category.pkl'):
+        self.model = self.load_model(model_url, model_path)
 
     def predict(self, text):
         try:
