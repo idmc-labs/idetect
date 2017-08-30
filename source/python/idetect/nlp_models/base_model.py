@@ -16,10 +16,10 @@ class DownloadableModel(object):
             Pipeline, which has the "predict" method.
     """
 
-    def __init__(self, model_path, model_url):
-        self.model = self.load_model(model_url, model_path)
+#    def __init__(self, model_path, model_url):
+#        self.model = self.load_model(model_path, model_url)
 
-    def load_model(self, model_url, model_path):
+    def load_model(self, model_path, model_url):
         """Obtains and loads a pickled scikit-learn model. Checks to see if
         the model exists at the specified directory and if not, downloads it
         from a URL.
@@ -54,6 +54,9 @@ class DownloadableModel(object):
         except FileExistsError:
             if not os.path.isdir(os.path.dirname(model_path)):
                 raise
+        except FileNotFoundError:
+            if os.path.dirname(model_path) == '':
+                pass
         with open(model_path, 'wb+') as f:
             try:
                 fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)

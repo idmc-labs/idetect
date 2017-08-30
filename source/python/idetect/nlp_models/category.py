@@ -11,9 +11,8 @@ from idetect.nlp_models.base_model import DownloadableModel
 class CategoryModel(DownloadableModel):
 
     def __init__(self, model_path='category.pkl', 
-                 model_url='https://s3-us-west-2.amazonaws.com'
-                           '/idmc-idetect/category_models/category.pkl'):
-        self.model = self.load_model(model_url, model_path)
+                 model_url='https://s3-us-west-2.amazonaws.com/idmc-idetect/category_models/category.pkl'):
+        self.model = self.load_model(model_path, model_url)
 
     def predict(self, text):
         try:
