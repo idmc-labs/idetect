@@ -13,7 +13,7 @@ class RelevanceModel(DownloadableModel):
     def __init__(self, model_path='relevance.pkl',
             model_url='https://s3-us-west-2.amazonaws.com/idmc-idetect/relevance_models/relevance.pkl'):
         self.model = self.load_model(model_path, model_url)
-   
+
     def predict(self, text):
         try:
             relevance = self.model.transform(pd.Series(text))[0]
@@ -139,6 +139,40 @@ class LsiTransformer(TransformerMixin):
         corpus_tfidf, _dictionary = self.make_tfidf(texts)
         corpus_lsi = self.make_corpus(corpus_tfidf)
         return self.lsi_to_vecs(corpus_lsi)
+
+
+class RelevanceKeyWordClassifier(BaseEstimator):
+    def __init__(self):
+        self.stemmer = PorterStemmer()
+        self.create_keywords()
+
+    def create_keywords(self):
+        displacement_tokens = ['evacuated', 'evacuee', 'displaced', 'displacement', 'fled', 'stranded', 'homeless',
+                  'flee', 'rescued', 'trapped', 'shelter', 'camp', 'escape', 'forced', 'migrant', 'run', 'ran']
+        self.displacement_stems = [self.stemmer.stem(token) for token in displacement_tokens]
+        return self
+
+    def tag_by_stem(self, texts, displacement_stems):
+        is_displacement = []
+        for text in texts:
+            mentions = 0
+            for stem in self.displacement_stems:
+                mentions += text.count(stem)
+            if mentions > 0:
+                is_displacement.append('yes')
+            else:
+                is_displacement.append('no')
+        return is_displacement
+
+    def fit(self, *args):
+        return self
+
+    def transform(self, X, *args):
+        y = self.tag_by_stem(X, self.displacement_stems)
+        return y
+
+    def predict(self, X, y=None):
+        y = self.tag_by_stem(X, self.displacement_stems)
 
 
 class Combiner(BaseEstimator, TransformerMixin):
