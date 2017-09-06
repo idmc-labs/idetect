@@ -12,3 +12,4 @@ pdfminer.six
 jupyter
 nltk
 langdetect
+
