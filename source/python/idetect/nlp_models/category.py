@@ -115,6 +115,6 @@ class LsiTransformer(TransformerMixin):
         return self
 
     def transform(self, texts):
-        corpus_tfidf, _dictionary = self.make_tfidf(texts)
+        corpus_tfidf = self.tfidf_transformer.transform(texts)
         corpus_lsi = self.make_corpus(corpus_tfidf)
         return self.lsi_to_vecs(corpus_lsi)
