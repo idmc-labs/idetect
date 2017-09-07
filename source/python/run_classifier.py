@@ -23,8 +23,8 @@ if __name__ == "__main__":
     c_m = CategoryModel()
     r_m = RelevanceModel()
 
-    worker = Worker(Status.SCRAPED, Status.CLASSIFYING, Status.CLASSIFIED,
-                    Status.CLASSIFYING_FAILED,
+    worker = Worker(lambda query: query.filter(Analysis.status == Status.SCRAPED), Status.CLASSIFYING,
+                    Status.CLASSIFIED, Status.CLASSIFYING_FAILED,
                     lambda article: classify(article, c_m, r_m), engine)
     logger.info("Starting worker...")
     worker.work_indefinitely()

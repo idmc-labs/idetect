@@ -18,7 +18,8 @@ if __name__ == "__main__":
     Session.configure(bind=engine)
     Base.metadata.create_all(engine)
 
-    worker = Worker(Status.CLASSIFIED, Status.EXTRACTING, Status.EXTRACTED, Status.EXTRACTING_FAILED,
+    worker = Worker(lambda query: query.filter(Analysis.status == Status.CLASSIFIED),
+                    Status.EXTRACTING, Status.EXTRACTED, Status.EXTRACTING_FAILED,
                     extract_facts, engine)
     logger.info("Starting worker...")
     worker.work_indefinitely()
