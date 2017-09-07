@@ -12,13 +12,13 @@ logger.setLevel(logging.INFO)
 
 
 class Worker:
-    def __init__(self, status, working_status, success_status, failure_status, function, engine, max_sleep=60):
+    def __init__(self, filter_function, working_status, success_status, failure_status, function, engine, max_sleep=60):
         """
         Create a Worker that looks for Analyses with a given status. When it finds one, it marks it with
         working_status and runs a function. If the function returns without an exception, it advances the Analysis to
         success_status. If the function raises an exception, it advances the Analysis to failure_status.
         """
-        self.status = status
+        self.filter_function = filter_function
         self.working_status = working_status
         self.success_status = success_status
         self.failure_status = failure_status
@@ -43,12 +43,11 @@ class Worker:
         try:
             # Get an analysis
             # ... and lock it for updates
-            # ... that has the right status
+            # ... that meets the conditions specified in the filter function
             # ... sort by updated date
             # ... pick the first (oldest)
-            analysis = session.query(Analysis) \
+            analysis = self.filter_function(session.query(Analysis)) \
                 .with_for_update() \
-                .filter(Analysis.status == self.status) \
                 .order_by(Analysis.updated) \
                 .first()
             if analysis is None:
