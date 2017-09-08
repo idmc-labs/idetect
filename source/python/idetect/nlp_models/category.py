@@ -65,7 +65,7 @@ class TfidfTransformer(TransformerMixin):
         return corpus
 
     def set_tfidf_model(self, corpus):
-        self.tfidf_model = gensim.models.TfidfModel(corpus)
+        self.tfidf_model = gensim.models.TfidfModel(corpus, normalize=True)
 
     def fit(self, texts, y=None):
         self.set_dictionary(texts)
@@ -115,6 +115,6 @@ class LsiTransformer(TransformerMixin):
         return self
 
     def transform(self, texts):
-        corpus_tfidf, _dictionary = self.make_tfidf(texts)
+        corpus_tfidf = self.tfidf_transformer.transform(texts)
         corpus_lsi = self.make_corpus(corpus_tfidf)
         return self.lsi_to_vecs(corpus_lsi)

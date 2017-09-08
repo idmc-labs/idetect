@@ -50,8 +50,8 @@ class DisplacementType:
 
 
 class Relevance:
-    DISPLACEMENT = 'displacement'
-    NOT_DISPLACEMENT = 'not displacement'
+    DISPLACEMENT = True
+    NOT_DISPLACEMENT = False
 
 
 class NotLatestException(Exception):

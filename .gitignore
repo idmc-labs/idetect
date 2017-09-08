@@ -4,6 +4,8 @@ source/.ipython
 source/.jupyter
 source/.local
 source/notebooks/.ipynb_checkpoints
+source/data/input_urls.csv
+source/.bash_history
 
 *.swp
 *.swo

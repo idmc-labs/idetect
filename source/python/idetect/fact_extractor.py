@@ -42,18 +42,29 @@ def save_facts(analysis, facts, session):
         for location in f.locations:
             country_locations.extend((process_location(location, session)))
 
-        country_locations.sort(key=lambda x: x.country.iso3)
-        for key, group in groupby(country_locations, lambda x: x.country.iso3):
+        if len(country_locations) > 0:
+            country_locations.sort(key=lambda x: x.country.iso3)
+            for key, group in groupby(country_locations, lambda x: x.country.iso3):
 
+                fact = Fact(unit=f.reporting_unit, term=f.reporting_term,
+                        excerpt_start=f.sentence_start, excerpt_end=f.sentence_end,
+                        specific_reported_figure=f.quantity[0],
+                        vague_reported_figure=f.quantity[1], iso3=key,
+                        tag_locations=json.dumps(f.tag_spans))
+                session.add(fact)
+                analysis.facts.append(fact)
+                fact.locations.extend([location for location in group])
+                session.commit()
+        else:
             fact = Fact(unit=f.reporting_unit, term=f.reporting_term,
-                    excerpt_start=f.sentence_start, excerpt_end=f.sentence_end,
-                    specific_reported_figure=f.quantity[0],
-                    vague_reported_figure=f.quantity[1], iso3=key,
-                    tag_locations=json.dumps(f.tag_spans))
+                        excerpt_start=f.sentence_start, excerpt_end=f.sentence_end,
+                        specific_reported_figure=f.quantity[0],
+                        vague_reported_figure=f.quantity[1], iso3=None,
+                        tag_locations=json.dumps(f.tag_spans))
             session.add(fact)
-            session.commit()
             analysis.facts.append(fact)
-            fact.locations.extend([location for location in group])
+            session.commit()
+
 
 
 def process_location(location_name, session):
@@ -77,6 +88,6 @@ def process_location(location_name, session):
                                 country_iso3=country.iso3,
                                 country=country, latlong=loc_info['coordinates'])
             session.add(location)
-            session.commit()
             locations.append(location)
+            session.commit()
     return locations
