@@ -86,7 +86,7 @@ class TfidfTransformer(TransformerMixin):
         return corpus
 
     def set_tfidf_model(self, corpus):
-        self.tfidf_model = gensim.models.TfidfModel(corpus)
+        self.tfidf_model = gensim.models.TfidfModel(corpus, normalize=True)
 
     def fit(self, texts, y=None):
         self.set_dictionary(texts)
