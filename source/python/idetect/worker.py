@@ -52,9 +52,10 @@ class Worker:
                 .first()
             if analysis is None:
                 return False  # no work to be done
+            analysis_status = analysis.status
             analysis.create_new_version(self.working_status)
             logger.info("Worker {} claimed Analysis {} in status {}".format(
-                os.getpid(), analysis.document_id, self.status))
+                os.getpid(), analysis.document_id, analysis_status))
         finally:
             # make sure to release a FOR UPDATE lock, if we got one
             session.rollback()
@@ -65,14 +66,14 @@ class Worker:
             self.function(analysis)
             delta = time.time() - start
             logger.info("Worker {} processed Analysis {} {} -> {} {}s".format(
-                os.getpid(), analysis.document_id, self.status, self.success_status, delta))
+                os.getpid(), analysis.document_id, analysis_status, self.success_status, delta))
             analysis.error_msg = None
             analysis.processing_time = delta
             analysis.create_new_version(self.success_status)
         except Exception as e:
             delta = time.time() - start
             logger.warning("Worker {} failed to process Analysis {} {} -> {}".format(
-                os.getpid(), analysis.document_id, self.status, self.failure_status),
+                os.getpid(), analysis.document_id, analysis_status, self.failure_status),
                 exc_info=e)
             analysis.error_msg = str(e)
             analysis.processing_time = delta

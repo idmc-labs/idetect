@@ -8,7 +8,7 @@ from unittest import TestCase
 from sqlalchemy import create_engine, func
 
 from idetect.model import Base, Session, Status, Document, Analysis, DocumentType
-from idetect.worker import Worker, Initiator, 
+from idetect.worker import Worker, Initiator
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
