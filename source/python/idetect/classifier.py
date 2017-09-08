@@ -13,7 +13,7 @@ def classify(analysis, category_model, relevance_model):
     session = object_session(analysis)
     content = analysis.content.content
     category = category_model.predict(content)
-    relevance = relevance_model.transform(content)
+    relevance = relevance_model.predict(content)
     analysis.category = category
     analysis.relevance = relevance
     session.commit()
