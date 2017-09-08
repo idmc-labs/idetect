@@ -75,6 +75,31 @@ class TestWorker(TestCase):
 
         self.assertFalse(worker.work(), "Worker found work")
 
+    def test_rework(self):
+        worker = Worker(scraping_filter, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
+                        TestWorker.nap_fn, self.engine)
+        document = Document(
+            type=DocumentType.WEB,
+            name="Hurricane Katrina Fast Facts",
+            url="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
+        analysis = Analysis(document=document, status=Status.SCRAPING_FAILED, retrieval_attempts=1,
+                            retrieval_date=func.now() - timedelta(hours=13))
+        self.session.add(analysis)
+        self.session.commit()
+        self.assertTrue(worker.work(), "Worker didn't find work")
+
+        analysis2 = Analysis(document=document, status=Status.SCRAPING_FAILED, retrieval_attempts=4,
+                            retrieval_date=func.now() - timedelta(hours=13))
+        self.session.add(analysis)
+        self.session.commit()
+        self.assertFalse(worker.work(), "Worker found work")
+
+        analysis3 = Analysis(document=document, status=Status.SCRAPING_FAILED, retrieval_attempts=1,
+                            retrieval_date=func.now() - timedelta(hours=8))
+        self.session.add(analysis)
+        self.session.commit()
+        self.assertFalse(worker.work(), "Worker found work")
+
     @staticmethod
     def err_fn(analysis):
         raise RuntimeError("Nope")
