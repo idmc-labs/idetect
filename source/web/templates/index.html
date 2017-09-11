@@ -1,48 +1,91 @@
-<!doctype html>
-<title>idetect</title>
-<link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+{% extends "base.html" %}
+
+{% block content %}
+
 <div class=page>
-  <h1>idetect</h1>
-  Welcome to the idetect API
+  <div class="container">
+    <div class="row">
+      <div class="col">
+        <h3>idetect</h3>
+        Welcome to the idetect API
 
-  <form action="add_url" method="POST">
-    Scrape URL: <input name="url"> <input type="submit">
-  </form>
+        <form action="add_url" method="POST">
+          Scrape URL: <input name="url"> <input type="submit" role="button" class="btn btn-primary">
+        </form>
+      </div>
+    </div>
+  </div>
 
-  <h2> Arcticle Counts </h2>
+  <div class="container">
+    <div class="row">
+      <div class="col">
 
-  <table>
-    <tr>
-      <th>Status</th>
-      <th>Count</th>
-    </tr>
-    {% for status in counts.keys() %}
-    <tr>
-      <td>{{ status }}</td>
-      <td>{{ counts[status] }}</td>
-    </tr>
-    {% endfor %}
-  </table>
+        <h3> Arcticle Counts </h3>
 
-  <h2> Recently Updated Articles </h2>
+        <table class="table table-bordered">
+          <thead class="thead-default">
+            <tr>
+              <th>Status</th>
+              <th>Count</th>
+            </tr>
+          </thead>
+          {% for status in counts.keys() %}
+          <tr>
+            <td>{{ status }}</td>
+            <td>{{ counts[status] }}</td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+      <div class="col">
 
-  <table>
-    <tr>
-      <th>URL ID</th>
-      <th>URL</th>
-      <th>Status</th>
-      <th>Last Updated</th>
-      <th>Content</th>
-    </tr>
-    {% for article in articles %}
-    <tr>
-      <td>{{ article.url_id }}</td>
-      <td>{{ article.url }}</td>
-      <td>{{ article.status }}</td>
-      <td>{{ article.updated }}</td>
-      <td>{{ article.content.content[:100] if article.content else "None" }}</td>
-    </tr>
-    {% endfor %}
-  </table>
+        <h3> Arcticle Categories </h3>
+
+        <table class="table table-bordered">
+          <thead class="thead-default">
+            <tr>
+              <th>Category</th>
+              <th>Count</th>
+            </tr>
+          </thead>
+          {% for status in counts.keys() %}
+          <tr>
+            <td>{{ status }}</td>
+            <td>{{ counts[status] }}</td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="row">
+      <div class="col">
+
+        <h2> Recently Updated Articles </h2>
+
+        <table class="table table-striped">
+          <thead class="thead-inverse">
+            <tr>
+              <th>URL</th>
+              <th>Status</th>
+              <th>Last Updated</th>
+              <th>Content</th>
+            </tr>
+          </thead>
+          {% for article in articles %}
+          <tr>
+            <td>{{ article.document.url[:40] if article.document.url else "" }}</td>
+            <td>{{ article.status }}</td>
+            <td>{{ format_date(article.updated) }}</td>
+            <td>{{ article.content.content[:100] if article.content else "None" }}</td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </div>
 
 </div>
+{% endblock %}

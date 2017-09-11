@@ -3,9 +3,7 @@ import logging
 from flask import Flask, render_template, abort, request, redirect, url_for
 from sqlalchemy import create_engine, desc
 
-from idetect.classifier import classify
 from idetect.model import db_url, Base, Analysis, Session, Status, Document, DocumentType
-from idetect.scraper import scrape
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -38,6 +36,13 @@ def add_url():
     session.add(article)
     session.commit()
     return render_template('success.html', endpoint='add_url', article=article)
+
+@app.context_processor
+def utility_processor():
+    def format_date(dt):
+        return dt.strftime("%Y-%m-%d %H:%M")
+
+    return dict(format_date=format_date)
 
 if __name__ == "__main__":
     # Start flask app
