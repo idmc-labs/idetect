@@ -1,4 +1,7 @@
 import os
+import ast
+import re
+import string
 
 from sqlalchemy import Column, BigInteger, Integer, String, Date, DateTime, Boolean, Numeric, ForeignKey, Table, Index
 from sqlalchemy.dialects import postgresql
@@ -6,6 +9,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, object_session, relationship
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import func
+
 
 Base = declarative_base()
 Session = sessionmaker()
@@ -104,6 +108,29 @@ analysis_history_fact = Table(
 )
 
 
+def cleanup(text):
+    """
+    Cleanup text based on commonly encountered errors.
+    param: text     A string
+    return: A cleaned string
+    """
+    text = re.sub(r'([a-zA-Z0-9])(IMPACT)', r'\1. \2', text)
+    text = re.sub(r'([a-zA-Z0-9])(RESPONSE)', r'\1. \2', text)
+    text = re.sub(r'(IMPACT)([a-zA-Z0-9])', r'\1. \2', text)
+    text = re.sub(r'(RESPONSE)([a-zA-Z0-9])', r'\1. \2', text)
+    text = re.sub(r'([a-zA-Z])(\d)', r'\1. \2', text)
+    text = re.sub(r'(\d)\s(\d)', r'\1\2', text)
+    text = text.replace('\r', ' ')
+    text = text.replace('  ', ' ')
+    text = text.replace('\n', ' ')
+    text = text.replace("peole", "people")
+    output = ''
+    for char in text:
+        if char in string.printable:
+            output += char
+    return output
+
+
 class Analysis(Base):
     __tablename__ = 'idetect_analyses'
 
@@ -170,6 +197,57 @@ class Analysis(Base):
             session.commit()
         finally:
             session.rollback()  # make sure we release the FOR UPDATE lock
+
+    def tagged_text(self):
+        # Add tags to article content for display purposes
+        spans = self.get_unique_tag_spans()
+        text = cleanup(self.content.content)
+        text_blocks = []
+        text_start_point = 0
+        for span in spans:
+                text_blocks.append(text[text_start_point : span['start']])
+
+                tagged_text = '<mark data-entity="{}">'.format(span['type'].lower())
+                tagged_text += text[span['start'] : span['end']]
+                tagged_text += '</mark>'
+                text_blocks.append(tagged_text)
+                text_start_point = span['end']
+        text_blocks.append(text[text_start_point : ])
+        return("".join(text_blocks))
+
+    def get_unique_tag_spans(self):
+        '''Get a list of unique token spans
+        for visualizing a complete article along
+        with all extracted facts.
+        Each extracted report has its own list of spans
+        which may in some cases overlap, particularly
+        for date and location tags.
+        '''
+        ### need to deal with overlapping spans
+        all_spans = []
+        for fact in self.facts:
+            all_spans.extend(ast.literal_eval(fact.tag_locations))
+        unique_spans = list({v['start']: v for v in all_spans}.values())
+        unique_spans = sorted(unique_spans, key=lambda k: k['start'])
+        ### Check for no overlap
+        non_overlapping_spans = []
+        current_start = -1
+        current_end = -1
+        for span in unique_spans:
+            if span['start'] > current_end:
+                non_overlapping_spans.append(span)
+                current_start, current_end = span['start'], span['end']
+            else:
+                # Create a new merged span and add it to the end of the result
+                current_last_span = non_overlapping_spans[-1]
+                new_span = {}
+                new_span['type'] = ", ".join([current_last_span['type'], span['type']])
+                new_span['start'] = current_last_span['start']
+                new_span['end'] = max(current_last_span['end'], span['end'])
+                non_overlapping_spans[-1] = new_span
+                current_end = new_span['end']
+
+        return non_overlapping_spans
 
     @classmethod
     def status_counts(cls, session):

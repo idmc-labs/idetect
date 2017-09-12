@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class=page>
+
+	<div class="container">
+		<div class="row">
+			<div class="col">
+				<div id="mapid"></div>
+			</div>
+			<div class="col">
+				<table class="table">
+					<tr>
+						<td>URL:</td>
+						<td>{{ article.document.url[:40] if article.document.url else "" }}</td>
+					</tr>
+					<tr>
+						<td>Status:</td>
+						<td>{{ article.status.title() }}</td>
+					</tr>
+					<tr>
+						<td>Displacement-related?</td>
+						<td>{{ "Yes" if article.relevance else "No" }}</td>
+					</tr>
+					<tr>
+						<td>Category:</td>
+						<td>{{ article.category }}</td>
+					</tr>
+					<tr>
+						<td>Number of Facts:</td>
+						<td>{{ article.facts|length }}</td>
+					</tr>
+				</table>
+			</div>
+		</div>
+	</div>
+
+	{% if article.facts|length > 0 %}
+		<div class="container">
+			<div class="row">
+				<div class="col">
+					<h3>Article Content with Extracted Facts</h3>
+					<div class="entities">
+						{{ article.tagged_text()|safe }}
+					</div>
+				</div>
+			</div>
+		</div>
+	{% endif %}
+
+
+</div>
+
+<script type="text/javascript">
+	coords = {{coords|tojson}};
+</script>
+
+{% endblock %}

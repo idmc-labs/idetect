@@ -37,7 +37,7 @@ services:
       dockerfile: ./docker/idetect/Dockerfile
     image: idetect
     # command: jupyter notebook --no-browser --ip=0.0.0.0 --port 5002 /home/idetect/notebooks
-    # volumes:
+    volumes:
       - ./source:/home/idetect
     ports:
       - 5002:5002

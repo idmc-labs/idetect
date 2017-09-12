@@ -37,6 +37,15 @@ def add_url():
     session.commit()
     return render_template('success.html', endpoint='add_url', article=article)
 
+@app.route('/article/<int:doc_id>', methods=['GET'])
+def article(doc_id):
+    session = Session()
+    analysis = session.query(Analysis) \
+            .filter(Analysis.document_id == doc_id).one()
+    coords = [l.latlong.split(",")[::-1] for f in analysis.facts for l in f.locations]
+    return render_template('article.html', article=analysis, coords=coords)
+
+
 @app.context_processor
 def utility_processor():
     def format_date(dt):

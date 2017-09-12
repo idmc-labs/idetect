@@ -71,6 +71,29 @@ def get_absolute_date(relative_date_string, publication_date=None):
         return None
 
 
+def cleanup(text):
+    """
+    Cleanup text based on commonly encountered errors.
+    param: text     A string
+    return: A cleaned string
+    """
+    text = re.sub(r'([a-zA-Z0-9])(IMPACT)', r'\1. \2', text)
+    text = re.sub(r'([a-zA-Z0-9])(RESPONSE)', r'\1. \2', text)
+    text = re.sub(r'(IMPACT)([a-zA-Z0-9])', r'\1. \2', text)
+    text = re.sub(r'(RESPONSE)([a-zA-Z0-9])', r'\1. \2', text)
+    text = re.sub(r'([a-zA-Z])(\d)', r'\1. \2', text)
+    text = re.sub(r'(\d)\s(\d)', r'\1\2', text)
+    text = text.replace('\r', ' ')
+    text = text.replace('  ', ' ')
+    text = text.replace('\n', ' ')
+    text = text.replace("peole", "people")
+    output = ''
+    for char in text:
+        if char in string.printable:
+            output += char
+    return output
+
+
 def load_keywords(nlp, session, keyword_type):
     keywords = [t.description for t in session.query(
         FactKeyword).filter_by(keyword_type=keyword_type).all()]
@@ -620,27 +643,6 @@ class Interpreter(object):
                 break
         return reports
 
-    def cleanup(self, text):
-        """
-        Cleanup text based on commonly encountered errors.
-        param: text     A string
-        return: A cleaned string
-        """
-        text = re.sub(r'([a-zA-Z0-9])(IMPACT)', r'\1. \2', text)
-        text = re.sub(r'([a-zA-Z0-9])(RESPONSE)', r'\1. \2', text)
-        text = re.sub(r'(IMPACT)([a-zA-Z0-9])', r'\1. \2', text)
-        text = re.sub(r'(RESPONSE)([a-zA-Z0-9])', r'\1. \2', text)
-        text = re.sub(r'([a-zA-Z])(\d)', r'\1. \2', text)
-        text = re.sub(r'(\d)\s(\d)', r'\1\2', text)
-        text = text.replace('\r', ' ')
-        text = text.replace('  ', ' ')
-        text = text.replace('\n', ' ')
-        text = text.replace("peole", "people")
-        output = ''
-        for char in text:
-            if char in string.printable:
-                output += char
-        return output
 
     def extract_all_dates(self, story, publication_date=None):
         """
@@ -650,7 +652,7 @@ class Interpreter(object):
         return: A list of dates
         """
         date_times = []
-        story = self.cleanup(story)
+        story = cleanup(story)
         story = self.nlp(story)
         date_entities = [e for e in story.ents if e.label_ == "DATE"]
         for ent in date_entities:
@@ -712,7 +714,7 @@ class Interpreter(object):
         ----------
         story:      the article content:String
         """
-        story = self.cleanup(story)
+        story = cleanup(story)
         processed_reports = []
         story = self.nlp(story)
         sentences = list(story.sents)  # Split into sentences

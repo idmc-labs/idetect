@@ -3,3 +3,65 @@ body            { font-family: sans-serif; background: #eee; }
 .menu{
 	
 }
+
+#mapid { height: 360px; }
+
+.entities {
+    line-height: 2;
+}
+
+[data-entity] {
+    padding: 0.25em 0.35em;
+     margin: 0px 0.25em;
+     line-height: 1;
+     display: inline-block;
+     border-radius: 0.25em;
+     border: 1px solid;
+}
+[data-entity]::after {
+    box-sizing: border-box;
+    content: attr(data-entity);
+    font-size: 0.6em;
+    line-height: 1;
+    padding: 0.35em;
+    border-radius: 0.35em;
+    text-transform: uppercase;
+    display: inline-block;
+    vertical-align: middle;
+    margin: 0px 0px 0.1rem 0.5rem;
+}
+[data-entity][data-entity="term"] {
+    background: rgba(166, 226, 45, 0.2);
+    border-color: rgb(166, 226, 45);
+}
+[data-entity][data-entity="term"]::after {
+    background: rgb(166, 226, 45);
+}
+[data-entity][data-entity="unit"] {
+    background: rgba(67, 198, 252, 0.2);
+    border-color: rgb(67, 198, 252);
+}
+[data-entity][data-entity="unit"]::after {
+    background: rgb(67, 198, 252);
+}
+[data-entity][data-entity="date"] {
+    background: rgba(47, 187, 171, 0.2);
+    border-color: rgb(47, 187, 171);
+}
+[data-entity][data-entity="date"]::after {
+    background: rgb(47, 187, 171);
+}
+[data-entity][data-entity="num"] {
+    background: rgba(203, 24, 29, 0.2);
+    border-color: rgb(203, 24, 29);
+}
+[data-entity][data-entity="num"]::after {
+    background: rgb(203, 24, 29);
+}
+[data-entity][data-entity="loc"] {
+    background: rgba(136, 65, 157, 0.2);
+    border-color: rgb(136, 65, 157);
+}
+[data-entity][data-entity="loc"]::after {
+    background: rgb(136,65,157);
+}
