@@ -3,14 +3,18 @@
 {% block content %}
 
 <div class=page>
+<div class="container">
+    <div class="row">
+      <div class="col">
+        <h3>Welcome to the idetect API</h3>
+      </div>
+    </div>
+  </div>
   <div class="container">
     <div class="row">
       <div class="col">
-        <h3>idetect</h3>
-        Welcome to the idetect API
-
         <form action="add_url" method="POST">
-          Scrape URL: <input name="url"> <input type="submit" role="button" class="btn btn-primary">
+          <strong><h5>Scrape URL:</h5></strong> <input name="url" size="60"> <input type="submit" role="button" class="btn btn-primary">
         </form>
       </div>
     </div>
@@ -20,10 +24,10 @@
     <div class="row">
       <div class="col">
 
-        <h3> Arcticle Counts </h3>
+        <h4> Arcticle Counts </h4>
 
-        <table class="table table-bordered">
-          <thead class="thead-default">
+        <table class="table table-bordered summary">
+          <thead class="thead-inverse">
             <tr>
               <th>Status</th>
               <th>Count</th>
@@ -39,10 +43,10 @@
       </div>
       <div class="col">
 
-        <h3> Arcticle Categories </h3>
+        <h4> Arcticle Categories </h4>
 
-        <table class="table table-bordered">
-          <thead class="thead-default">
+        <table class="table table-bordered summary">
+          <thead class="thead-inverse">
             <tr>
               <th>Category</th>
               <th>Count</th>
@@ -62,8 +66,18 @@
   <div class="container">
     <div class="row">
       <div class="col">
+        <form action="search_url" method="GET">
+          <strong><h5>Search for URL:</h5></strong> <input name="url" size="60"> <input type="submit" role="button" class="btn btn-primary">
+        </form>
+      </div>
+    </div>
+  </div>
 
-        <h2> Recently Updated Articles </h2>
+  <div class="container">
+    <div class="row">
+      <div class="col">
+
+        <h4> Recently Updated Articles </h4>
 
         <table class="table table-striped">
           <thead class="thead-inverse">

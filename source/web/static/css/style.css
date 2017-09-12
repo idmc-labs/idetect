@@ -4,10 +4,19 @@ body            { font-family: sans-serif; background: #eee; }
 	
 }
 
+.row{
+    margin-bottom: 30px;
+}
+
 #mapid { height: 360px; }
 
 .entities {
     line-height: 2;
+    font-size: 17px;
+}
+
+.summary{
+    font-size: 18px;
 }
 
 [data-entity] {

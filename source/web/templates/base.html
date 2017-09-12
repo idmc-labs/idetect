@@ -14,7 +14,6 @@
            integrity="sha512-M2wvCLH6DSRazYeZRIm1JnYyh22purTM+FDB5CsyxtQJYeKq83arPe5wgbNmcFXGqiSH2XR8dT/fJISVA1r/zQ=="
            crossorigin=""/>
     <link href="{{ url_for('static', filename = 'css/style.css') }}" rel="stylesheet" media="screen">
-    <script src="{{ url_for('static', filename = 'js/displacy.js') }}"></script>
     {% endblock %}
   </head>
   <body>
@@ -24,10 +23,6 @@
     {% block footer %}
     <script src="http://code.jquery.com/jquery.js"></script>
     <script src="{{ url_for('static', filename = 'js/bootstrap.min.js') }}"></script>
-    <script src="https://unpkg.com/leaflet@1.2.0/dist/leaflet.js"
-           integrity="sha512-lInM/apFSqyy1o6s89K4iQUKg6ppXEgsVxT35HbzUupEVRh2Eu9Wdl4tHj7dZO0s1uvplcYGmt3498TtHq+log=="
-           crossorigin=""></script>
-    <script src="{{ url_for('static', filename = 'js/article.js') }}"></script>
     {% endblock %}
   </body>
 </html>
