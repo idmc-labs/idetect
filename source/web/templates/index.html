@@ -13,8 +13,9 @@
   <div class="container">
     <div class="row">
       <div class="col">
-        <form action="add_url" method="POST">
-          <strong><h5>Scrape URL:</h5></strong> <input name="url" size="60"> <input type="submit" role="button" class="btn btn-primary">
+        <form action="add_url" method="POST" name="add_url">
+          <strong><h5>Scrape URL:</h5></strong> <input name="url" size="60" id="add_url_field">
+          <input type="submit" role="button" class="btn btn-primary" name="add_url" value="Submit">
         </form>
       </div>
     </div>
@@ -66,8 +67,9 @@
   <div class="container">
     <div class="row">
       <div class="col">
-        <form action="search_url" method="GET">
-          <strong><h5>Search for URL:</h5></strong> <input name="url" size="60"> <input type="submit" role="button" class="btn btn-primary">
+        <form action="search_url" method="GET" name="search_url">
+          <strong><h5>Search for URL:</h5></strong> <input name="url" size="60">
+          <input type="submit" role="button" class="btn btn-primary" name="search_url" value="Submit">
         </form>
       </div>
     </div>
@@ -104,4 +106,10 @@
   </div>
 
 </div>
+{% endblock %}
+
+{% block footer %}
+<script src="http://code.jquery.com/jquery.js"></script>
+<script src="{{ url_for('static', filename = 'js/bootstrap.min.js') }}"></script>
+<script src="{{ url_for('static', filename = 'js/index.js') }}"></script>
 {% endblock %}

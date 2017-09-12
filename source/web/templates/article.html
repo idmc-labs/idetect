@@ -16,23 +16,23 @@
 			<div class="col">
 				<table class="table">
 					<tr>
-						<td class="h5">URL:</td>
+						<td><strong>URL:</strong></td>
 						<td>{{ article.document.url[:40] if article.document.url else "" }}</td>
 					</tr>
 					<tr>
-						<td class="h5">Status:</td>
+						<td><strong>Status:</strong></td>
 						<td>{{ article.status.title() }}</td>
 					</tr>
 					<tr>
-						<td class="h5">Displacement-related?</td>
+						<td><strong>Displacement-related?</strong></td>
 						<td>{{ "Yes" if article.relevance else "No" }}</td>
 					</tr>
 					<tr>
-						<td class="h5">Category:</td>
+						<td><strong>Category:</strong></td>
 						<td>{{ article.category }}</td>
 					</tr>
 					<tr>
-						<td class="h5">Number of Facts:</td>
+						<td><strong>Number of Facts:</strong></td>
 						<td>{{ article.facts|length }}</td>
 					</tr>
 				</table>
@@ -59,7 +59,6 @@
 {% endblock %}
 
 {% block footer %}
-
 <script src="http://code.jquery.com/jquery.js"></script>
 <script src="{{ url_for('static', filename = 'js/bootstrap.min.js') }}"></script>
 <script type="text/javascript">
@@ -69,6 +68,4 @@
            integrity="sha512-lInM/apFSqyy1o6s89K4iQUKg6ppXEgsVxT35HbzUupEVRh2Eu9Wdl4tHj7dZO0s1uvplcYGmt3498TtHq+log=="
            crossorigin=""></script>
 <script src="{{ url_for('static', filename = 'js/article.js') }}"></script>
-
-
 {% endblock %}

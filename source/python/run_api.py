@@ -1,6 +1,7 @@
 import logging
+import json
 
-from flask import Flask, render_template, abort, request, redirect, url_for
+from flask import Flask, render_template, abort, request, redirect, url_for, jsonify, Response
 from sqlalchemy import create_engine, desc
 
 from idetect.model import db_url, Base, Analysis, Session, Status, Document, DocumentType
@@ -20,7 +21,8 @@ Base.metadata.create_all(engine)
 @app.route('/')
 def homepage():
     session = Session()
-    articles = session.query(Analysis).order_by(desc(Analysis.updated)).limit(10).all()
+    articles = session.query(Analysis).order_by(
+        desc(Analysis.updated)).limit(10).all()
     counts = Analysis.status_counts(session)
     return render_template('index.html', articles=articles, counts=counts)
 
@@ -30,20 +32,38 @@ def add_url():
     url = request.form['url']
     logger.info("Scraping by url: {url}".format(url=url))
     if url is None:
-        return redirect(url_for('/'))
+        return json.dumps({'success':False}), 422, {'ContentType':'application/json'} 
     article = Document(url=url, name="New Document", type=DocumentType.WEB)
     session = Session()
     session.add(article)
     session.commit()
-    return render_template('success.html', endpoint='add_url', article=article)
+    return json.dumps({'success':True}), 200, {'ContentType':'application/json'} 
+
 
 @app.route('/article/<int:doc_id>', methods=['GET'])
 def article(doc_id):
     session = Session()
     analysis = session.query(Analysis) \
-            .filter(Analysis.document_id == doc_id).one()
-    coords = [l.latlong.split(",")[::-1] for f in analysis.facts for l in f.locations]
+        .filter(Analysis.document_id == doc_id).one()
+    coords = [l.latlong.split(",")[::-1]
+              for f in analysis.facts for l in f.locations]
     return render_template('article.html', article=analysis, coords=coords)
+
+
+@app.route('/search_url', methods=['GET'])
+def search_url():
+    url = request.args.get('url')
+    if url is None:
+        return json.dumps({'success':False}), 422, {'ContentType':'application/json'} 
+    session = Session()
+    doc = session.query(Document).filter(
+        Document.url.like("%" + url + "%")).first()
+    if doc:
+        resp = jsonify({'doc_id': doc.id})
+        resp.status_code = 200
+        return resp
+    else:
+        return json.dumps({'success':False}), 422, {'ContentType':'application/json'} 
 
 
 @app.context_processor

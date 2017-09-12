@@ -1,11 +1,16 @@
-<!doctype html>
-<title>idetect success</title>
-<link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
-<div class="menu">
-	<a href="/">Home</a>
-</div>
+{% extends "base.html" %}
+
+{% block content %}
 
 <div class=page>
-  <h1>idetect</h1>
-  Successfully ran {{ endpoint }} for {{ article }}.
+
+	<div class="container">
+		<div class="row">
+			<div class="col">
+
+			  Successfully ran {{ endpoint }} for {{ article }}.
+			
+			</div>
+		</div>
+	</div>
 </div>
