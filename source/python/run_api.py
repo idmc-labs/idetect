@@ -1,7 +1,7 @@
 import logging
 import json
 
-from flask import Flask, render_template, abort, request, redirect, url_for, jsonify, Response
+from flask import Flask, render_template, abort, request, redirect, url_for, jsonify, Response, flash
 from sqlalchemy import create_engine, desc
 
 from idetect.model import db_url, Base, Analysis, Session, Status, Document, DocumentType
@@ -12,6 +12,7 @@ logger.setLevel(logging.INFO)
 app = Flask(__name__,
             static_folder="/home/idetect/web/static",
             template_folder="/home/idetect/web/templates")
+app.secret_key = 'my unobvious secret key'
 
 engine = create_engine(db_url())
 Session.configure(bind=engine)
@@ -32,12 +33,14 @@ def add_url():
     url = request.form['url']
     logger.info("Scraping by url: {url}".format(url=url))
     if url is None:
-        return json.dumps({'success':False}), 422, {'ContentType':'application/json'} 
+        flash(u'Something went wrong. Please try again.', 'danger')
+        return redirect(url_for('/'))
     article = Document(url=url, name="New Document", type=DocumentType.WEB)
     session = Session()
     session.add(article)
     session.commit()
-    return json.dumps({'success':True}), 200, {'ContentType':'application/json'} 
+    flash(u"{} was successfully added".format(url), 'success')
+    return redirect('/')
 
 
 @app.route('/article/<int:doc_id>', methods=['GET'])
@@ -56,8 +59,8 @@ def search_url():
     if url is None:
         return json.dumps({'success':False}), 422, {'ContentType':'application/json'} 
     session = Session()
-    doc = session.query(Document).filter(
-        Document.url.like("%" + url + "%")).first()
+    docs = session.query(Document).filter(
+        Document.url.like("%" + url + "%")).order_by(Document.created_at.desc()).first()
     if doc:
         resp = jsonify({'doc_id': doc.id})
         resp.status_code = 200

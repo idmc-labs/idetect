@@ -40,18 +40,20 @@
 		</div>
 	</div>
 
-	{% if article.facts|length > 0 %}
 		<div class="container">
 			<div class="row">
 				<div class="col">
 					<h3>Article Content with Extracted Facts</h3>
 					<div class="entities">
-						{{ article.tagged_text()|safe }}
+						{% if article.facts|length > 0 %}
+							{{ article.tagged_text()|safe }}
+						{% else %}
+							{{ article.content.content }}
+						{% endif %}
 					</div>
 				</div>
 			</div>
 		</div>
-	{% endif %}
 
 
 </div>

@@ -13,6 +13,17 @@
   <div class="container">
     <div class="row">
       <div class="col">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}" role="alert">
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
         <form action="add_url" method="POST" name="add_url">
           <strong><h5>Scrape URL:</h5></strong> <input name="url" size="60" id="add_url_field">
           <input type="submit" role="button" class="btn btn-primary" name="add_url" value="Submit">
