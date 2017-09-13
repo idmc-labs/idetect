@@ -64,10 +64,10 @@
               <th>Count</th>
             </tr>
           </thead>
-          {% for status in counts.keys() %}
+          {% for status in cat_counts.keys() %}
           <tr>
             <td>{{ status }}</td>
-            <td>{{ counts[status] }}</td>
+            <td>{{ cat_counts[status] }}</td>
           </tr>
           {% endfor %}
         </table>

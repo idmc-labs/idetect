@@ -25,7 +25,8 @@ def homepage():
     articles = session.query(Analysis).order_by(
         desc(Analysis.updated)).limit(10).all()
     counts = Analysis.status_counts(session)
-    return render_template('index.html', articles=articles, counts=counts)
+    cat_counts = Analysis.category_counts(session)
+    return render_template('index.html', articles=articles, counts=counts, cat_counts=cat_counts)
 
 
 @app.route('/add_url', methods=['POST'])

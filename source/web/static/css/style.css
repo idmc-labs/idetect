@@ -8,7 +8,7 @@ body            { font-family: sans-serif; background: #eee; }
     margin-bottom: 30px;
 }
 
-#mapid { height: 360px; }
+#mapid { height: 400px; }
 
 .entities {
     line-height: 2;
@@ -17,6 +17,11 @@ body            { font-family: sans-serif; background: #eee; }
 
 .summary{
     font-size: 18px;
+}
+
+.locations_error{
+    padding-top: 60px;
+    font-size: 30px;
 }
 
 [data-entity] {

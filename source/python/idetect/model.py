@@ -256,6 +256,19 @@ class Analysis(Base):
             .group_by(Analysis.status).all()
         return dict(status_counts)
 
+    @classmethod
+    def category_counts(cls, session):
+        cat_counts = session.query(Analysis)\
+                .filter(Analysis.relevance == True)\
+                .with_entities(Analysis.category, func.count(Analysis.document_id))\
+                .group_by(Analysis.category).all()
+        cat_counts = dict(cat_counts)
+        cat_counts['Not Relevant'] = session.query(Analysis)\
+                .filter(Analysis.relevance == False)\
+                .with_entities(func.count(Analysis.document_id)).first()[0]
+        return cat_counts
+
+
 
 status_updated_index = Index('document_analyses_status_updated', Analysis.status, Analysis.updated)
 

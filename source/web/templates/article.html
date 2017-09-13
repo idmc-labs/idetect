@@ -10,7 +10,7 @@
 				{% if coords|length > 0 %}
 					<div id="mapid"></div>
 				{% else %}
-					<div>No Locations Encountered</div>
+					<div class="locations_error text-center">No Locations Encountered</div>
 				{% endif %}
 			</div>
 			<div class="col">
@@ -43,11 +43,13 @@
 		<div class="container">
 			<div class="row">
 				<div class="col">
-					<h3>Article Content with Extracted Facts</h3>
-					<div class="entities">
 						{% if article.facts|length > 0 %}
+							<h3>Article Content with Extracted Facts</h3>
+							<div class="entities">
 							{{ article.tagged_text()|safe }}
 						{% else %}
+							<h3>Article Content</h3>
+							<div class="entities">
 							{{ article.content.content }}
 						{% endif %}
 					</div>
