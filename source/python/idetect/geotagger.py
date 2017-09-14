@@ -8,9 +8,9 @@ import requests
 
 from idetect.model import LocationType
 
-with open('/home/idetect/data/cities_to_countries.json', "r") as f:
-    cities_to_countries = json.load(f)
-print("Loaded cities_to_countries dictionary.")
+# with open('/home/idetect/data/cities_to_countries.json', "r") as f:
+#     cities_to_countries = json.load(f)
+# print("Loaded cities_to_countries dictionary.")
 
 
 def get_geo_info(place_name):
@@ -123,12 +123,12 @@ def city_subdivision_country(place_name):
     if country_code:
         return {'place_name': place_name, 'country_code': country_code, 'type': 'subdivision'}
 
-    # Try getting the country code using a city name
-    country_code = cities_to_countries.get(
-        strip_accents(place_name), None)
-    if country_code:
-        country = pycountry.countries.get(alpha_2=country_code)
-        return {'place_name': place_name, 'country_code': country.alpha_3, 'type': 'city'}
+    # # Try getting the country code using a city name
+    # country_code = cities_to_countries.get(
+    #     strip_accents(place_name), None)
+    # if country_code:
+    #     country = pycountry.countries.get(alpha_2=country_code)
+    #     return {'place_name': place_name, 'country_code': country.alpha_3, 'type': 'city'}
     return None
 
 
