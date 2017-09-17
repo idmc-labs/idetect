@@ -55,3 +55,16 @@ services:
     depends_on:
       - localdb
     env_file: docker.env
+  dashboard:
+    build:
+      context: .
+      dockerfile: ./docker/idetect/Dockerfile
+    image: idetect
+    command: bokeh serve /home/idetect/python/run_dashboard.py
+    volumes:
+      - ./source:/home/idetect
+    ports:
+      - 5006:5006
+    depends_on:
+      - localdb
+    env_file: docker.env

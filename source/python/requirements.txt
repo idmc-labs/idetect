@@ -12,4 +12,4 @@ pdfminer.six
 jupyter
 nltk
 langdetect
-
+bokeh
