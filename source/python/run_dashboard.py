@@ -1,5 +1,3 @@
-from idetect.model import db_url, Session, Status
-
 import inspect
 import pandas as pd
 from bokeh.plotting import figure, curdoc
@@ -7,46 +5,31 @@ from bokeh.models import ColumnDataSource
 from bokeh.layouts import row, column, widgetbox
 from sqlalchemy import create_engine
 
-def db_connect():
-    engine = create_engine(db_url())
-    conn = engine.connect()
-    return conn, engine
-
-
-def mysql_query_to_df(query):
-    conn, engine = db_connect()
-    with engine.connect() as conn, conn.begin():
-        df = pd.read_sql(query, conn)
-    return df
+from idetect.model import db_url, Session, Status, Analysis
+from dashboard.plotting import status_plot
+from dashboard.plot_data import db_connect, fetch_statuses, fetch_model_categories
 
 
 def update():
-    query = 'select status from article'
-    data = mysql_query_to_df(query)
+    data = fetch_statuses(session)
     data = data['status'].value_counts()
     status = data.index.values
     values = data.values
-    source.data = dict(status=status,
-                       value=values)
-
-def get_categories(model):
-    attributes = inspect.getmembers(model, lambda a:not(inspect.isroutine(a)))
-    attrs = [a[1] for a in attributes if not(a[0].startswith('__') and 
-                                             a[0].endswith('__'))]
-    return attrs
+    data = dict(status=status, value=values)
+    source.data = data
 
 
 c = curdoc()
 
+Session.configure(bind=db_connect())
+session = Session()
+
 source = ColumnDataSource(data=dict(status=[],
                                     value=[]))
-
-possible_statuses = get_categories(Status)
-
-plot = figure(x_range=possible_statuses)
-plot.vbar(x='status', top='value', source=source,
-          width=0.9, color='navy')
+status_categories = fetch_model_categories(Status)
+plot = status_plot(source, status_categories)
 
 update() # initial load of data and plots
 
 curdoc().add_root(plot)
+curdoc().add_periodic_callback(update, 200)
