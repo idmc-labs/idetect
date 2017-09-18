@@ -44,17 +44,17 @@ services:
     depends_on:
       - localdb
     env_file: docker.env
-  unittests:
-    build:
-      context: .
-      dockerfile: ./docker/idetect/Dockerfile
-    image: idetect
-    command: sh -c 'python3 -m unittest /home/idetect/python/idetect/tests/test_*.py'
-    volumes:
-      - ./source:/home/idetect
-    depends_on:
-      - localdb
-    env_file: docker.env
+#  unittests:
+#    build:
+#      context: .
+#      dockerfile: ./docker/idetect/Dockerfile
+#    image: idetect
+#    command: sh -c 'python3 -m unittest /home/idetect/python/idetect/tests/test_*.py'
+#    volumes:
+#      - ./source:/home/idetect
+#    depends_on:
+#      - localdb
+#    env_file: docker.env
   dashboard:
     build:
       context: .
