@@ -114,20 +114,13 @@ def cleanup(text):
     param: text     A string
     return: A cleaned string
     """
-    text = re.sub(r'([a-zA-Z0-9])(IMPACT)', r'\1. \2', text)
-    text = re.sub(r'([a-zA-Z0-9])(RESPONSE)', r'\1. \2', text)
-    text = re.sub(r'(IMPACT)([a-zA-Z0-9])', r'\1. \2', text)
-    text = re.sub(r'(RESPONSE)([a-zA-Z0-9])', r'\1. \2', text)
-    text = re.sub(r'([a-zA-Z])(\d)', r'\1. \2', text)
+    text = re.sub(r'([a-zA-Z0-9])(IMPACT|RESPONSE)', r'\1. \2', text)
+    text = re.sub(r'(IMPACT|RESPONSE)([a-zA-Z0-9])', r'\1. \2', text)
+    text = re.sub(r'([a-zA-Z])(\d)', r'\1. \2', text) 
     text = re.sub(r'(\d)\s(\d)', r'\1\2', text)
-    text = text.replace('\r', ' ')
-    text = text.replace('  ', ' ')
-    text = text.replace('\n', ' ')
+    text = text.replace('\s+', ' ')
     text = text.replace("peole", "people")
-    output = ''
-    for char in text:
-        if char in string.printable:
-            output += char
+    output = ''.join([c for c in text if c in string.printable])
     return output
 
 
