@@ -7,7 +7,7 @@ from spacy.tokens import Token, Span
 from textacy.extract import pos_regex_matches
 from textacy.spacy_utils import get_main_verbs_of_sent, get_objects_of_verb, get_subjects_of_verb
 
-from idetect.model import FactUnit, FactTerm, KeywordType, FactKeyword
+from idetect.model import FactUnit, FactTerm, KeywordType, FactKeyword, cleanup
 
 
 def get_absolute_date(relative_date_string, publication_date=None):
@@ -69,29 +69,6 @@ def get_absolute_date(relative_date_string, publication_date=None):
     else:
         # Parse unsucessful
         return None
-
-
-def cleanup(text):
-    """
-    Cleanup text based on commonly encountered errors.
-    param: text     A string
-    return: A cleaned string
-    """
-    text = re.sub(r'([a-zA-Z0-9])(IMPACT)', r'\1. \2', text)
-    text = re.sub(r'([a-zA-Z0-9])(RESPONSE)', r'\1. \2', text)
-    text = re.sub(r'(IMPACT)([a-zA-Z0-9])', r'\1. \2', text)
-    text = re.sub(r'(RESPONSE)([a-zA-Z0-9])', r'\1. \2', text)
-    text = re.sub(r'([a-zA-Z])(\d)', r'\1. \2', text)
-    text = re.sub(r'(\d)\s(\d)', r'\1\2', text)
-    text = text.replace('\r', ' ')
-    text = text.replace('  ', ' ')
-    text = text.replace('\n', ' ')
-    text = text.replace("peole", "people")
-    output = ''
-    for char in text:
-        if char in string.printable:
-            output += char
-    return output
 
 
 def load_keywords(nlp, session, keyword_type):
