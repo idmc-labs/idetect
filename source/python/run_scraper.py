@@ -9,6 +9,10 @@ from idetect.scraper import scrape
 from idetect.worker import Worker
 
 
+MAX_RETRIEVAL_ATTEMPTS = 3
+TIME_BETWEEN_ATTEMPTS = 12
+
+
 # Filter function for identifying analyses to scrape
 def scraping_filter(query):
     # Choose either New analyses OR
@@ -17,8 +21,8 @@ def scraping_filter(query):
     # last scraping attempt greater than 12 hours ago
     return query.filter((Analysis.status == Status.NEW) |
                         ((Analysis.status == Status.SCRAPING_FAILED) &
-                         (Analysis.retrieval_attempts < 3) &
-                         (func.now() > Analysis.retrieval_date + timedelta(hours=12))))
+                         (Analysis.retrieval_attempts < MAX_RETRIEVAL_ATTEMPTS) &
+                         (func.now() > Analysis.retrieval_date + timedelta(hours=TIME_BETWEEN_ATTEMPTS))))
 
 
 if __name__ == "__main__":
