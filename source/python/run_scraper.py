@@ -10,7 +10,7 @@ from idetect.worker import Worker
 
 
 MAX_RETRIEVAL_ATTEMPTS = 3
-TIME_BETWEEN_ATTEMPTS = 12
+HOURS_BETWEEN_ATTEMPTS = 12
 
 
 # Filter function for identifying analyses to scrape
@@ -22,7 +22,7 @@ def scraping_filter(query):
     return query.filter((Analysis.status == Status.NEW) |
                         ((Analysis.status == Status.SCRAPING_FAILED) &
                          (Analysis.retrieval_attempts < MAX_RETRIEVAL_ATTEMPTS) &
-                         (func.now() > Analysis.retrieval_date + timedelta(hours=TIME_BETWEEN_ATTEMPTS))))
+                         (func.now() > Analysis.retrieval_date + timedelta(hours=HOURS_BETWEEN_ATTEMPTS))))
 
 
 if __name__ == "__main__":
