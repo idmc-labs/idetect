@@ -590,9 +590,9 @@ class Interpreter(object):
                         or (next_word.dep_ == 'auxpass' and self.next_word(story, next_word).i == verb.token.i)
                         or o.idx < verb.end_idx):
                         if search_type == self.structure_term_lemmas:
-                            unit = 'Households'
+                            unit = FactUnit.HOUSEHOLDS
                         else:
-                            unit = 'People'
+                            unit = FactUnit.PEOPLE
                         quantity = Fact(o, o, o.lemma_, 'quantity')
                         report = Report(unit, self.convert_term(verb), [p.text for p in possible_locations],
                                         sentence.start_char, sentence.end_char,

@@ -69,7 +69,6 @@ def save_facts(analysis, facts, session):
 
 def process_location(location_name, session):
     '''Get geo info for a given location and add the location to database
-    :params fact: instance of Fact
     :params location: location name, a String
     :params session: session object corresponding to location
     :return: None

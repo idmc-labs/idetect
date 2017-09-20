@@ -203,10 +203,10 @@ class TestModel(TestCase):
                           Status.SCRAPING: 1})
 
     def test_country_term(self):
-        mmr = Country(code="MMR", preferred_term="Myanmar")
+        mmr = Country(iso3="MMR", preferred_term="Myanmar")
         myanmar = CountryTerm(term="Myanmar", country=mmr)
         burma = CountryTerm(term="Burma", country=mmr)
-        yangon = Location(description="Yangon",
+        yangon = Location(location_name="Yangon",
                           location_type=LocationType.CITY,
                           country=mmr,
                           latlong="16°51′N 96°11′E")
