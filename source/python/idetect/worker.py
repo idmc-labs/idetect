@@ -12,13 +12,13 @@ logger.setLevel(logging.INFO)
 
 
 class Worker:
-    def __init__(self, status, working_status, success_status, failure_status, function, engine, max_sleep=60):
+    def __init__(self, filter_function, working_status, success_status, failure_status, function, engine, max_sleep=60):
         """
         Create a Worker that looks for Analyses with a given status. When it finds one, it marks it with
         working_status and runs a function. If the function returns without an exception, it advances the Analysis to
         success_status. If the function raises an exception, it advances the Analysis to failure_status.
         """
-        self.status = status
+        self.filter_function = filter_function
         self.working_status = working_status
         self.success_status = success_status
         self.failure_status = failure_status
@@ -43,19 +43,19 @@ class Worker:
         try:
             # Get an analysis
             # ... and lock it for updates
-            # ... that has the right status
+            # ... that meets the conditions specified in the filter function
             # ... sort by updated date
             # ... pick the first (oldest)
-            analysis = session.query(Analysis) \
+            analysis = self.filter_function(session.query(Analysis)) \
                 .with_for_update() \
-                .filter(Analysis.status == self.status) \
                 .order_by(Analysis.updated) \
                 .first()
             if analysis is None:
                 return False  # no work to be done
+            analysis_status = analysis.status
             analysis.create_new_version(self.working_status)
             logger.info("Worker {} claimed Analysis {} in status {}".format(
-                os.getpid(), analysis.document_id, self.status))
+                os.getpid(), analysis.document_id, analysis_status))
         finally:
             # make sure to release a FOR UPDATE lock, if we got one
             session.rollback()
@@ -66,14 +66,14 @@ class Worker:
             self.function(analysis)
             delta = time.time() - start
             logger.info("Worker {} processed Analysis {} {} -> {} {}s".format(
-                os.getpid(), analysis.document_id, self.status, self.success_status, delta))
+                os.getpid(), analysis.document_id, analysis_status, self.success_status, delta))
             analysis.error_msg = None
             analysis.processing_time = delta
             analysis.create_new_version(self.success_status)
         except Exception as e:
             delta = time.time() - start
             logger.warning("Worker {} failed to process Analysis {} {} -> {}".format(
-                os.getpid(), analysis.document_id, self.status, self.failure_status),
+                os.getpid(), analysis.document_id, analysis_status, self.failure_status),
                 exc_info=e)
             analysis.error_msg = str(e)
             analysis.processing_time = delta

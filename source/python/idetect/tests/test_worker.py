@@ -2,10 +2,10 @@ import logging
 import os
 import random
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest import TestCase
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func
 
 from idetect.model import Base, Session, Status, Document, Analysis, DocumentType
 from idetect.worker import Worker, Initiator
@@ -13,6 +13,14 @@ from idetect.worker import Worker, Initiator
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 logging.basicConfig(format="%(asctime)s %(message)s")
+
+
+# Filter function for identifying analyses to scrape
+def scraping_filter(query):
+    return query.filter((Analysis.status == Status.NEW) |
+                        ((Analysis.status == Status.SCRAPING_FAILED) &
+                         (Analysis.retrieval_attempts < 3) &
+                         (func.now() > Analysis.retrieval_date + timedelta(hours=12))))
 
 
 class TestWorker(TestCase):
@@ -50,7 +58,7 @@ class TestWorker(TestCase):
         time.sleep(random.randrange(1))
 
     def test_work_one(self):
-        worker = Worker(Status.NEW, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
+        worker = Worker(scraping_filter, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
                         TestWorker.nap_fn, self.engine)
         document = Document(
             type=DocumentType.WEB,
@@ -67,12 +75,37 @@ class TestWorker(TestCase):
 
         self.assertFalse(worker.work(), "Worker found work")
 
+    def test_rework(self):
+        worker = Worker(scraping_filter, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
+                        TestWorker.nap_fn, self.engine)
+        document = Document(
+            type=DocumentType.WEB,
+            name="Hurricane Katrina Fast Facts",
+            url="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
+        analysis = Analysis(document=document, status=Status.SCRAPING_FAILED, retrieval_attempts=1,
+                            retrieval_date=func.now() - timedelta(hours=13))
+        self.session.add(analysis)
+        self.session.commit()
+        self.assertTrue(worker.work(), "Worker didn't find work")
+
+        analysis2 = Analysis(document=document, status=Status.SCRAPING_FAILED, retrieval_attempts=4,
+                            retrieval_date=func.now() - timedelta(hours=13))
+        self.session.add(analysis)
+        self.session.commit()
+        self.assertFalse(worker.work(), "Worker found work")
+
+        analysis3 = Analysis(document=document, status=Status.SCRAPING_FAILED, retrieval_attempts=1,
+                            retrieval_date=func.now() - timedelta(hours=8))
+        self.session.add(analysis)
+        self.session.commit()
+        self.assertFalse(worker.work(), "Worker found work")
+
     @staticmethod
     def err_fn(analysis):
         raise RuntimeError("Nope")
 
     def test_work_failure(self):
-        worker = Worker(Status.NEW, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
+        worker = Worker(scraping_filter, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
                         TestWorker.err_fn, self.engine)
         document = Document(
             type=DocumentType.WEB,
@@ -91,7 +124,7 @@ class TestWorker(TestCase):
         self.assertFalse(worker.work(), "Worker found work")
 
     def test_work_chain(self):
-        worker1 = Worker(Status.NEW, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
+        worker1 = Worker(scraping_filter, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
                          TestWorker.nap_fn, self.engine)
         worker2 = Worker(Status.SCRAPED, Status.EXTRACTING, Status.EXTRACTED, Status.EXTRACTING_FAILED,
                          TestWorker.nap_fn, self.engine)
@@ -113,7 +146,7 @@ class TestWorker(TestCase):
         self.assertFalse(worker2.work(), "Worker2 found work")
 
     def test_work_all(self):
-        worker = Worker(Status.NEW, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
+        worker = Worker(scraping_filter, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
                         TestWorker.nap_fn, self.engine)
         n = 3
         for i in range(n):
@@ -141,7 +174,7 @@ class TestWorker(TestCase):
             self.session.commit()
         remaining = self.session.query(Analysis).filter(Analysis.status == Status.NEW).count()
         self.assertEqual(remaining, n)
-        self.processes += Worker.start_processes(4, Status.NEW, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
+        self.processes += Worker.start_processes(4, scraping_filter, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
                                                  TestWorker.nap_fn, self.engine, max_sleep=1)
         self.engine.dispose()
         self.session = Session()
