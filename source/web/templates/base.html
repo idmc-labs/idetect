@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    {% if title %}
+    <title>{{ title }}</title>
+    {% else %}
+    <title>IDETECT API</title>
+    {% endif %}
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% block head %}
+    <!-- Bootstrap -->
+    <link href="{{ url_for('static', filename = 'css/bootstrap.min.css') }}" rel="stylesheet" media="screen">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.2.0/dist/leaflet.css"
+           integrity="sha512-M2wvCLH6DSRazYeZRIm1JnYyh22purTM+FDB5CsyxtQJYeKq83arPe5wgbNmcFXGqiSH2XR8dT/fJISVA1r/zQ=="
+           crossorigin=""/>
+    <link href="{{ url_for('static', filename = 'css/style.css') }}" rel="stylesheet" media="screen">
+    {% endblock %}
+  </head>
+  <body>
+    <div>Home: <a href="/">Home</a></div>
+    <hr>
+    {% block content %}{% endblock %}
+    {% block footer %}
+    {% endblock %}
+  </body>
+</html>

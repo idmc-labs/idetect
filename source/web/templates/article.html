@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class=page>
+
+	<div class="container">
+		<div class="row">
+			<div class="col">
+				{% if coords|length > 0 %}
+					<div id="mapid"></div>
+				{% else %}
+					<div class="locations_error text-center">No Locations Encountered</div>
+				{% endif %}
+			</div>
+			<div class="col">
+				<table class="table">
+					<tr>
+						<td><strong>URL:</strong></td>
+						<td>{{ article.document.url[:40] if article.document.url else "" }}</td>
+					</tr>
+					<tr>
+						<td><strong>Status:</strong></td>
+						<td>{{ article.status.title() }}</td>
+					</tr>
+					<tr>
+						<td><strong>Displacement-related?</strong></td>
+						<td>{{ "Yes" if article.relevance else "No" }}</td>
+					</tr>
+					<tr>
+						<td><strong>Category:</strong></td>
+						<td>{{ article.category }}</td>
+					</tr>
+					<tr>
+						<td><strong>Number of Facts:</strong></td>
+						<td>{{ article.facts|length }}</td>
+					</tr>
+				</table>
+			</div>
+		</div>
+	</div>
+
+		<div class="container">
+			<div class="row">
+				<div class="col">
+						{% if article.facts|length > 0 %}
+							<h3>Article Content with Extracted Facts</h3>
+							<div class="entities">
+							{{ article.tagged_text()|safe }}
+						{% else %}
+							<h3>Article Content</h3>
+							<div class="entities">
+							{{ article.content.content }}
+						{% endif %}
+					</div>
+				</div>
+			</div>
+		</div>
+
+
+</div>
+
+{% endblock %}
+
+{% block footer %}
+<script src="http://code.jquery.com/jquery.js"></script>
+<script src="{{ url_for('static', filename = 'js/bootstrap.min.js') }}"></script>
+<script type="text/javascript">
+	coords = {{coords|tojson}};
+</script>
+<script src="https://unpkg.com/leaflet@1.2.0/dist/leaflet.js"
+           integrity="sha512-lInM/apFSqyy1o6s89K4iQUKg6ppXEgsVxT35HbzUupEVRh2Eu9Wdl4tHj7dZO0s1uvplcYGmt3498TtHq+log=="
+           crossorigin=""></script>
+<script src="{{ url_for('static', filename = 'js/article.js') }}"></script>
+{% endblock %}
