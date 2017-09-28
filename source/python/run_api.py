@@ -49,9 +49,9 @@ def article(doc_id):
     session = Session()
     analysis = session.query(Analysis) \
         .filter(Analysis.document_id == doc_id).one()
-    coords = [l.latlong.split(",")[::-1]
+    coords = [tuple(l.latlong.split(",")[::-1])
               for f in analysis.facts for l in f.locations]
-    return render_template('article.html', article=analysis, coords=coords)
+    return render_template('article.html', article=analysis, coords=list(set(coords)))
 
 
 @app.route('/search_url', methods=['GET'])
