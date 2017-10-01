@@ -27,14 +27,14 @@ $(document).ready(function(){
 			}).addTo(mymap);
 
 	var markers = new Array();
-	var cleanCoords = new Array();
+	var validCoords = new Array();
 	for (var i = 0; i < coords.length; i++) {
 		if (validateCoords(coords[i])){
 			markers[i] = L.marker(coords[i]).addTo(mymap);
-			cleanCoords[i] = coords[i];
+			validCoords[i] = coords[i];
 		}
 	}
 
-	mymap.fitBounds(cleanCoords, {maxZoom: 5});
+	mymap.fitBounds(validCoords, {maxZoom: 5});
 
 });
