@@ -41,7 +41,7 @@ class TestGeoTagger(TestCase):
         results = get_geo_info("Beijing")
         self.assertEqual(results['country_code'], 'CHN')
         self.assertEqual(results['coordinates'],
-                         "116.417592,39.937967")
+                         "39.937967,116.417592")
 
     def test_location_types(self):
         """Corectly distinguishes between Countries, Cities and Subdivisions"""
