@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 
 import parsedatetime
 from spacy.tokens import Token, Span
+from spacy.symbols import ORTH, LEMMA, POS
 from textacy.extract import pos_regex_matches
 from textacy.spacy_utils import get_main_verbs_of_sent, get_objects_of_verb, get_subjects_of_verb
 
@@ -61,7 +62,7 @@ def get_absolute_date(relative_date_string, publication_date=None):
                 num_weeks = int(delta.days / 7)
                 and_num_days_after = 7 if delta.days % 7 == 0 else delta.days % 7
                 return publication_date - timedelta(weeks=num_weeks) - \
-                       timedelta(7 - and_num_days_after)
+                    timedelta(7 - and_num_days_after)
         else:
             # Return if date is in the past already or no publication_date is
             # provided
@@ -71,6 +72,22 @@ def get_absolute_date(relative_date_string, publication_date=None):
         return None
 
 
+def tokenizer_add_hyphened_numbers(nlp, pre, post):
+    for p1, p2 in [(pre, post), (pre.capitalize(), post), (pre.capitalize(), post.capitalize())]:
+        nlp.tokenizer.add_special_case(u'{}-{}'.format(p1, p2),
+                                       [{
+                                           ORTH: u'{}-{}'.format(p1, p2),
+                                           LEMMA: u'{}'.format(pre, post),
+                                           POS: u'NUM'
+                                       }])
+
+
+def load_custom_tokenizer_cases(nlp):
+    for pre in ['twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety']:
+        for post in ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']:
+            tokenizer_add_hyphened_numbers(nlp, pre, post)
+
+
 def load_keywords(nlp, session, keyword_type):
     keywords = [t.description for t in session.query(
         FactKeyword).filter_by(keyword_type=keyword_type).all()]
@@ -78,6 +95,7 @@ def load_keywords(nlp, session, keyword_type):
 
 
 class Interpreter(object):
+
     def __init__(self, session, nlp):
         self.nlp = nlp
         self.person_term_lemmas = load_keywords(
@@ -96,6 +114,8 @@ class Interpreter(object):
         self.reporting_unit_lemmas = self.person_unit_lemmas + self.structure_unit_lemmas
         self.relevant_article_lemmas = load_keywords(
             self.nlp, session, KeywordType.ARTICLE_KEYWORD)
+        load_custom_tokenizer_cases(self.nlp)
+
 
     def check_if_collection_contains_token(self, token, collection):
         for c in collection:
@@ -310,6 +330,8 @@ class Interpreter(object):
             return True
         if token.like_num:
             return True
+        if token.pos_ == u'NUM':
+            return True
         else:
             return False
 
@@ -412,21 +434,27 @@ class Interpreter(object):
         If the noun phrase is part of a conjunction, then
         search for quantity within preceding noun phrase
         """
+        quantity = Fact(None)
         noun_phrases = list(self.nlp(sentence.text).noun_chunks)
         # Case one - if the unit is a conjugated noun phrase,
         # look for numeric tokens descending from the root of the phrase.
         for i, np in enumerate(noun_phrases):
             if self.check_if_collection_contains_token(unit, np):
-                if unit.dep_ == 'conj':
-                    return self.get_quantity_from_phrase(noun_phrases[i - 1], offset=sentence[0].idx)
-                else:
-                    return self.get_quantity_from_phrase(np, offset=sentence[0].idx)
+                ## Try getting quantity from current noun phrase
+                quantity = self.get_quantity_from_phrase(
+                        np, offset=sentence[0].idx)
+                ## If that fails, look in the preceding noun phrase
+                if not quantity.token:
+                    quantity = self.get_quantity_from_phrase(
+                        noun_phrases[i - 1], offset=sentence[0].idx)
         # Case two - get any numeric child of the unit noun.
-        for child in unit.children:
-            if self.basic_number(child):
-                return Fact(child, child, child.lemma_, "quantity")
+        if quantity.token:
+            return quantity
         else:
-            return Fact(None)
+            for child in unit.children:
+                if self.basic_number(child):
+                    return Fact(child, child, child.lemma_, "quantity")
+        return quantity
 
     def simple_subjects_and_objects(self, verb):
         """
@@ -587,8 +615,8 @@ class Interpreter(object):
                 next_word = self.next_word(story, o)
                 if next_word:
                     if (next_word.i == verb.token.i or next_word.text == verb.lemma_.split(" ")[-1]
-                        or (next_word.dep_ == 'auxpass' and self.next_word(story, next_word).i == verb.token.i)
-                        or o.idx < verb.end_idx):
+                            or (next_word.dep_ == 'auxpass' and self.next_word(story, next_word).i == verb.token.i)
+                            or o.idx < verb.end_idx):
                         if search_type == self.structure_term_lemmas:
                             unit = FactUnit.HOUSEHOLDS
                         else:
@@ -619,7 +647,6 @@ class Interpreter(object):
                 reports.append(report)
                 break
         return reports
-
 
     def extract_all_dates(self, story, publication_date=None):
         """
