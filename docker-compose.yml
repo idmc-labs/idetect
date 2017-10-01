@@ -49,7 +49,7 @@ services:
       context: .
       dockerfile: ./docker/idetect/Dockerfile
     image: idetect
-    command: sh -c 'python3 -m unittest /home/idetect/python/idetect/tests/test_*.py'
+    # command: sh -c 'python3 -m unittest /home/idetect/python/idetect/tests/test_*.py'
     volumes:
       - ./source:/home/idetect
     depends_on:
