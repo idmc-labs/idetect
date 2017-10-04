@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from sqlalchemy import create_engine, func
 
-from idetect.model import db_url, Base, Session, Status
+from idetect.model import db_url, Base, Session, Status, Analysis
 from idetect.scraper import scrape
 from idetect.worker import Worker
 

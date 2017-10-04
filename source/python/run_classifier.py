@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from idetect.classifier import classify
 from idetect.nlp_models.category import CategoryModel, Tokenizer, TfidfTransformer, LsiTransformer
 from idetect.nlp_models.relevance import RelevanceModel, Stemmer, Combiner, RelevanceKeyWordClassifier
-from idetect.model import db_url, Base, Session, Status
+from idetect.model import db_url, Base, Session, Status, Analysis
 from idetect.worker import Worker
 
 if __name__ == "__main__":

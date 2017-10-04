@@ -4,7 +4,7 @@ import sys
 from sqlalchemy import create_engine
 
 from idetect.fact_extractor import extract_facts
-from idetect.model import db_url, Base, Session, Status
+from idetect.model import db_url, Base, Session, Status, Analysis
 from idetect.worker import Worker
 
 if __name__ == "__main__":

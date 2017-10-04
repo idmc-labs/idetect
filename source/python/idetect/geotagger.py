@@ -57,7 +57,7 @@ def strip_words(place_name):
 
 
 def coords_tostring(coords_list, separator=','):
-    return separator.join(map(str, coords_list))
+    return separator.join(map(str, coords_list[::-1]))
 
 
 def common_names(place_name):

@@ -1,5 +1,16 @@
 $(document).ready(function(){
 
+	function validateCoords(coords) {
+		var lat = coords[0];
+		var long = coords[1];
+		if (lat >= -90 && lat <= 90 && long >= -180 && long <= 180) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+
 	if (coords.length > 0){
 		var mymap = L.map('mapid').setView(coords[0], 3);
 	}
@@ -16,11 +27,14 @@ $(document).ready(function(){
 			}).addTo(mymap);
 
 	var markers = new Array();
-
+	var validCoords = new Array();
 	for (var i = 0; i < coords.length; i++) {
-	    markers[i] = L.marker(coords[i]).addTo(mymap);
+		if (validateCoords(coords[i])){
+			markers[i] = L.marker(coords[i]).addTo(mymap);
+			validCoords[i] = coords[i];
+		}
 	}
 
-	mymap.fitBounds(coords, {maxZoom: 5});
+	mymap.fitBounds(validCoords, {maxZoom: 5});
 
 });
