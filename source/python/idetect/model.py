@@ -25,10 +25,11 @@ def _compile_drop_table(element, compiler, **kwargs):
 
 def db_url():
     """Return the database URL based on environment variables"""
-    return 'postgresql://{user}:{passwd}@{db_host}/{db}'.format(
+    return 'postgresql://{user}:{passwd}@{db_host}:{db_port}/{db}'.format(
         user=os.environ.get('DB_USER'),
         passwd=os.environ.get('DB_PASSWORD'),
         db_host=os.environ.get('DB_HOST'),
+        db_port=os.environ.get('DB_PORT'),
         db=os.environ.get('DB_NAME'))
 
 

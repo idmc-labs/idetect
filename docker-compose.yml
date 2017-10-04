@@ -18,7 +18,7 @@ services:
     depends_on:
       - localdb
     env_file: docker.env
-    user: $UID:$UID
+    user: 1001:1001
   workers:
     build:
       context: .
@@ -32,7 +32,7 @@ services:
     depends_on:
       - localdb
     env_file: docker.env
-    user: $UID:$UID
+    user: 1001:1001
   notebooks:
     build:
       context: .
@@ -46,7 +46,7 @@ services:
     depends_on:
       - localdb
     env_file: docker.env
-    user: $UID:$UID
+    user: 1001:1001
   unittests:
     build:
       context: .
@@ -58,4 +58,4 @@ services:
     depends_on:
       - localdb
     env_file: docker.env
-    user: $UID:$UID
+    user: 1001:1001
