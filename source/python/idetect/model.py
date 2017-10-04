@@ -87,7 +87,7 @@ class Document(Base):
     displacement_types = Column(postgresql.ARRAY(String))  # eg. {Conflict, Disaster}
     countries = Column(postgresql.ARRAY(String))  # eg. {Haiti,Bahamas,"United States of America"}
     sources = Column(postgresql.ARRAY(String))  # eg. {IOM,"CCCM Cluster",WFP,"Local Authorities"}
-    publishers = Column(postgresql.ARRAY(String))  # eg. {REDLAC,"Radio La Primerísima"}
+    publishers = Column(postgresql.ARRAY(String))  # eg. {REDLAC,"Radio La Primerisima"}
     confidential = Column(Boolean)
     created_by = Column(String)  # eg. First.Last
     created_at = Column(DateTime(timezone=False), server_default=func.now())
