@@ -1,11 +1,20 @@
 import errno
 import fcntl
 import os
+import re
 
 import pandas as pd
 import requests
+import spacy
 from sklearn.externals import joblib
+from sklearn.base import TransformerMixin, BaseEstimator
+from scipy import sparse
+from gensim import matutils, models
+from gensim.sklearn_integration.sklearn_wrapper_gensim_lsimodel import SklLsiModel
 
+from idetect.geotagger import strip_accents, compare_strings, strip_words, common_names, LocationType, subdivision_country_code, match_country_name, city_subdivision_country
+
+nlp = spacy.load('en_default')
 
 class DownloadableModel(object):
     """A base class for loading pickeld scikit-learn models that may be stored
@@ -79,3 +88,146 @@ class DownloadableModel(object):
             return self.model.transform(pd.Series(text))[0]
         except ValueError:
             raise
+
+class CleaningProcessor(BaseEstimator, TransformerMixin):
+    """Transformer that turns documents in string form
+    into token lists, with various processing steps applied.
+
+    Parameters
+    ----------
+    pos_tags : bool, required
+        Whether to tag words with their part of speech labels.
+    lemmatize : bool, required
+        Whether to lemmatize tokens.
+    stop_words : book, required
+        Whether to remove stop words.
+    """
+
+    def cleanup(self, text):
+        """
+        Cleanup text based on commonly encountered errors.
+        param: text     A string
+        return: A cleaned string
+        """
+        text = re.sub(r'([a-zA-Z0-9])(IMPACT)', r'\1. \2', text)
+        text = re.sub(r'([a-zA-Z0-9])(RESPONSE)', r'\1. \2', text)
+        text = re.sub(r'(IMPACT)([a-zA-Z0-9])', r'\1. \2', text)
+        text = re.sub(r'(RESPONSE)([a-zA-Z0-9])', r'\1. \2', text)
+        text = re.sub(r'([a-z])([A-Z]{2,})', r'\1 \2', text)
+        text = re.sub(r'([a-zA-Z])(\d)', r'\1. \2', text)
+        text = re.sub(r'(\d)\s(\d)', r'\1\2', text)
+        text = text.replace('\r', ' ')
+        text = text.replace('  ', ' ')
+        text = text.replace('\n', ' ')
+        text = text.replace("peole", "people")
+
+        output = ''
+        for char in text:
+            if char in string.printable:
+                output += char
+        return output
+
+    def tag_entities(self, text):
+        tokens = []
+        for token in text:
+            if token.ent_type_ == 'GPE':
+                if match_country_name(token.text)[0]:
+                    tokens.append('Switzerland')
+                elif city_subdivision_country(token.text):
+                    tokens.append('Zurich')
+                else:
+                    tokens.append('Zurich')
+            elif token.like_num:
+                tokens.append('1000')
+            elif token.like_url:
+                continue
+            elif token.like_email:
+                continue
+            else:
+                tokens.append(token.text)
+        return tokens
+
+    def join_phrases(self, phrases):
+        joined = []
+        for phrase in phrases:
+            tokens = []
+            for token in phrase:
+                if isinstance(token, spacy.tokens.token.Token):
+                    tokens.append(token.lemma_)
+                else:
+                    tokens.append(token)
+            if len(tokens) < 2:
+                continue
+            joined.append('_'.join(tokens))
+        return joined
+
+    def single_string(self, texts):
+        strings = [' '.join(t) for t in texts]
+        return strings
+
+    def fit(self, texts, *args):
+        return self
+
+    def transform(self, texts, *args):
+        texts = [self.cleanup(t) for t in texts]
+        texts = [nlp(t) for t in texts]
+        texts = [self.tag_entities(t) for t in texts]
+        texts = self.single_string(texts)
+        return texts
+
+class CustomSklLsiModel(SklLsiModel):
+    """Gensim's Lsi model with sklearn wrapper, modified to handle sparse matrices
+    for both fit and transform. Makes the class compatible with sklearn's Tfidf and
+    Count vectorizers.
+    """
+
+    def sparse_2_tupes(self, sparse):
+        """Converts sparse matrix into manageable tuple format."""
+        for t in t_skltfidf:
+            cx = t.tocoo()
+            tups = []
+            for i, j in zip(cx.col, cx.data):
+                tups.append((i, j))
+        return tups
+
+    def fit(self, X, y=None):
+        """
+        Fit the model according to the given training data.
+        Calls gensim.models.LsiModel
+        """
+        if sparse.issparse(X):
+            corpus = matutils.Sparse2Corpus(X, documents_columns=False)
+        else:
+            corpus = X
+
+        self.gensim_model = models.LsiModel(corpus=corpus, num_topics=self.num_topics, id2word=self.id2word, chunksize=self.chunksize,
+            decay=self.decay, onepass=self.onepass, power_iters=self.power_iters, extra_samples=self.extra_samples)
+        return self
+
+    def transform(self, docs):
+        """
+        Takes a list of documents as input ('docs').
+        Returns a matrix of topic distribution for the given document bow, where a_ij
+        indicates (topic_i, topic_probability_j).
+        The input `docs` should be in BOW format and can be a list of documents like : [ [(4, 1), (7, 1)], [(9, 1), (13, 1)], [(2, 1), (6, 1)] ]
+        or a single document like : [(4, 1), (7, 1)]
+        """
+        if self.gensim_model is None:
+            raise NotFittedError("This model has not been fitted yet. Call 'fit' with appropriate arguments before using this method.")
+
+        # The input as array of array
+        # import pdb; pdb.set_trace()
+        # check = lambda x: [x] if isinstance(x[0], tuple) else x
+        # docs = check(docs)
+        if sparse.issparse(docs):
+            docs = matutils.Sparse2Corpus(docs, documents_columns=False)
+        X = [[] for i in range(0, len(docs))];
+        for k,v in enumerate(docs):
+            doc_topics = self.gensim_model[v]
+            probs_docs = list(map(lambda x: x[1], doc_topics))
+            # Everything should be equal in length
+            if len(probs_docs) != self.num_topics:
+                probs_docs.extend([1e-12]*(self.num_topics - len(probs_docs)))
+            X[k] = probs_docs
+            probs_docs = []
+        return np.reshape(np.array(X), (len(docs), self.num_topics))
