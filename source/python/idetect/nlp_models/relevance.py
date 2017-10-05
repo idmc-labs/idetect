@@ -18,7 +18,7 @@ class RelevanceModel(DownloadableModel):
     def predict(self, text):
         try:
             relevance = self.model.transform(pd.Series(text))[0]
-            if relevance == 'yes':
+            if relevance == 1:
                 return Relevance.DISPLACEMENT
             else:
                 return Relevance.NOT_DISPLACEMENT
