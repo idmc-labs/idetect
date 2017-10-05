@@ -11,7 +11,7 @@ from idetect.model import Relevance
 from idetect.nlp_models.base_model import nlp, DownloadableModel, CleaningProcessor, CustomSklLsiModel
 
 class RelevanceModel(DownloadableModel):
-    def __init__(self, model_path='relevance.pkl',
+    def __init__(self, model_path='/home/idetect/python/idetect/nlp_models/relevance_classifier_svm_10052017',
             model_url='https://s3-us-west-2.amazonaws.com/idmc-idetect/relevance_models/relevance_classifier_svm_10052017'):
         self.model = self.load_model(model_path, model_url)
 

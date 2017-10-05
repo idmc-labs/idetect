@@ -10,7 +10,7 @@ from idetect.nlp_models.base_model import DownloadableModel
 
 class CategoryModel(DownloadableModel):
 
-    def __init__(self, model_path='category.pkl', 
+    def __init__(self, model_path='/home/idetect/python/idetect/nlp_models/category.pkl',
                  model_url='https://s3-us-west-2.amazonaws.com/idmc-idetect/category_models/category.pkl'):
         self.model = self.load_model(model_path, model_url)
 
