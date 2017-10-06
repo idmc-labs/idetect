@@ -9,9 +9,8 @@ from sklearn.svm import LinearSVC
 
 from idetect.model import Relevance
 from idetect.nlp_models.base_model import DownloadableModel, CustomSklLsiModel
-import spacy
+from idetect.fact_extractor import nlp
 
-nlp = spacy.load('en_default')
 
 class RelevanceModel(DownloadableModel):
     def __init__(self, model_path='/home/idetect/python/idetect/nlp_models/relevance_classifier_svm_10052017',
@@ -20,10 +19,10 @@ class RelevanceModel(DownloadableModel):
 
     def predict(self, text):
         try:
-            relevance = self.model.transform(pd.Series(text))[0]
+            relevance = self.model.predict(pd.Series(text))[0]
             if relevance == 1:
                 return Relevance.DISPLACEMENT
-            else:
+            elif relevance == 0:
                 return Relevance.NOT_DISPLACEMENT
         except ValueError:
             # error can occur if empty text is passed to model
