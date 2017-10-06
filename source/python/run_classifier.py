@@ -4,8 +4,9 @@ import sys
 from sqlalchemy import create_engine
 
 from idetect.classifier import classify
-from idetect.nlp_models.category import CategoryModel, Tokenizer, TfidfTransformer, LsiTransformer
-from idetect.nlp_models.relevance import RelevanceModel, Stemmer, Combiner, RelevanceKeyWordClassifier
+from idetect.nlp_models.category import CategoryModel, Tokenizer, TfidfTransformer, LsiTransformer, Stemmer
+from idetect.nlp_models.relevance import RelevanceModel, PhraseProcessor, POSProcessor
+from idetect.nlp_models.base_model import CustomSklLsiModel, CleaningProcessor
 from idetect.model import db_url, Base, Session, Status, Analysis
 from idetect.worker import Worker
 
