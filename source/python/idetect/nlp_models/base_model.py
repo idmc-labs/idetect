@@ -14,8 +14,6 @@ from gensim.sklearn_integration.sklearn_wrapper_gensim_lsimodel import SklLsiMod
 
 from idetect.geotagger import strip_accents, compare_strings, strip_words, common_names, LocationType, subdivision_country_code, match_country_name, city_subdivision_country
 
-nlp = spacy.load('en_default')
-
 class DownloadableModel(object):
     """A base class for loading pickeld scikit-learn models that may be stored
     locally or in online storage.
@@ -89,91 +87,6 @@ class DownloadableModel(object):
         except ValueError:
             raise
 
-class CleaningProcessor(BaseEstimator, TransformerMixin):
-    """Transformer that turns documents in string form
-    into token lists, with various processing steps applied.
-
-    Parameters
-    ----------
-    pos_tags : bool, required
-        Whether to tag words with their part of speech labels.
-    lemmatize : bool, required
-        Whether to lemmatize tokens.
-    stop_words : book, required
-        Whether to remove stop words.
-    """
-
-    def cleanup(self, text):
-        """
-        Cleanup text based on commonly encountered errors.
-        param: text     A string
-        return: A cleaned string
-        """
-        text = re.sub(r'([a-zA-Z0-9])(IMPACT)', r'\1. \2', text)
-        text = re.sub(r'([a-zA-Z0-9])(RESPONSE)', r'\1. \2', text)
-        text = re.sub(r'(IMPACT)([a-zA-Z0-9])', r'\1. \2', text)
-        text = re.sub(r'(RESPONSE)([a-zA-Z0-9])', r'\1. \2', text)
-        text = re.sub(r'([a-z])([A-Z]{2,})', r'\1 \2', text)
-        text = re.sub(r'([a-zA-Z])(\d)', r'\1. \2', text)
-        text = re.sub(r'(\d)\s(\d)', r'\1\2', text)
-        text = text.replace('\r', ' ')
-        text = text.replace('  ', ' ')
-        text = text.replace('\n', ' ')
-        text = text.replace("peole", "people")
-
-        output = ''
-        for char in text:
-            if char in string.printable:
-                output += char
-        return output
-
-    def tag_entities(self, text):
-        tokens = []
-        for token in text:
-            if token.ent_type_ == 'GPE':
-                if match_country_name(token.text)[0]:
-                    tokens.append('Switzerland')
-                elif city_subdivision_country(token.text):
-                    tokens.append('Zurich')
-                else:
-                    tokens.append('Zurich')
-            elif token.like_num:
-                tokens.append('1000')
-            elif token.like_url:
-                continue
-            elif token.like_email:
-                continue
-            else:
-                tokens.append(token.text)
-        return tokens
-
-    def join_phrases(self, phrases):
-        joined = []
-        for phrase in phrases:
-            tokens = []
-            for token in phrase:
-                if isinstance(token, spacy.tokens.token.Token):
-                    tokens.append(token.lemma_)
-                else:
-                    tokens.append(token)
-            if len(tokens) < 2:
-                continue
-            joined.append('_'.join(tokens))
-        return joined
-
-    def single_string(self, texts):
-        strings = [' '.join(t) for t in texts]
-        return strings
-
-    def fit(self, texts, *args):
-        return self
-
-    def transform(self, texts, *args):
-        texts = [self.cleanup(t) for t in texts]
-        texts = [nlp(t) for t in texts]
-        texts = [self.tag_entities(t) for t in texts]
-        texts = self.single_string(texts)
-        return texts
 
 class CustomSklLsiModel(SklLsiModel):
     """Gensim's Lsi model with sklearn wrapper, modified to handle sparse matrices
