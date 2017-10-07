@@ -1,20 +1,21 @@
-import gensim
 import numpy as np
 import pandas as pd
-from nltk.stem import PorterStemmer
-from nltk.tokenize import WordPunctTokenizer
+import re
+import string
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.svm import LinearSVC
+from spacy.tokens.token import Token
 
 from idetect.model import Relevance
 from idetect.nlp_models.base_model import DownloadableModel, CustomSklLsiModel
 from idetect.fact_extractor import nlp
+from idetect.geotagger import strip_accents, compare_strings, strip_words, common_names, LocationType, subdivision_country_code, match_country_name, city_subdivision_country
 
 
 class RelevanceModel(DownloadableModel):
-    def __init__(self, model_path='/home/idetect/python/idetect/nlp_models/relevance_classifier_svm_10052017',
-            model_url='https://s3-us-west-2.amazonaws.com/idmc-idetect/relevance_models/relevance_classifier_svm_10052017'):
+    def __init__(self, model_path='/home/idetect/python/idetect/nlp_models/relevance_classifier_svm_10052017.pkl',
+            model_url='https://s3-us-west-2.amazonaws.com/idmc-idetect/relevance_models/relevance_classifier_svm_10052017.pkl'):
         self.model = self.load_model(model_path, model_url)
 
     def predict(self, text):
@@ -27,6 +28,7 @@ class RelevanceModel(DownloadableModel):
         except ValueError:
             # error can occur if empty text is passed to model
             raise
+
 
 class CleaningProcessor(BaseEstimator, TransformerMixin):
     """Transformer that turns documents in string form
@@ -91,7 +93,7 @@ class CleaningProcessor(BaseEstimator, TransformerMixin):
         for phrase in phrases:
             tokens = []
             for token in phrase:
-                if isinstance(token, spacy.tokens.token.Token):
+                if isinstance(token, Token):
                     tokens.append(token.lemma_)
                 else:
                     tokens.append(token)
@@ -113,6 +115,8 @@ class CleaningProcessor(BaseEstimator, TransformerMixin):
         texts = [self.tag_entities(t) for t in texts]
         texts = self.single_string(texts)
         return texts
+
+
 class PhraseProcessor(BaseEstimator, TransformerMixin):
     """Transformer that creates phrases from documents.
 
@@ -148,7 +152,7 @@ class PhraseProcessor(BaseEstimator, TransformerMixin):
         for phrase in phrases:
             tokens = []
             for token in phrase:
-                if isinstance(token, spacy.tokens.token.Token):
+                if isinstance(token, Token):
                     tokens.append(token.lemma_)
                 else:
                     tokens.append(token)
@@ -171,6 +175,7 @@ class PhraseProcessor(BaseEstimator, TransformerMixin):
         joined = [self.join_phrases(p) for p in phrases]
         text = self.single_string(joined)
         return text
+
 
 class POSProcessor(BaseEstimator, TransformerMixin):
     """Transformer that labels tokens in a document with their

@@ -2,10 +2,13 @@ import logging
 import sys
 
 from sqlalchemy import create_engine
-
+import re
+import string
+import numpy as np
+import pandas as pd
 from idetect.classifier import classify
-from idetect.nlp_models.category import CategoryModel, Tokenizer, TfidfTransformer, LsiTransformer, Stemmer
-from idetect.nlp_models.relevance import RelevanceModel, PhraseProcessor, POSProcessor, CleaningProcessor
+from idetect.nlp_models.category import * 
+from idetect.nlp_models.relevance import * 
 from idetect.nlp_models.base_model import CustomSklLsiModel
 from idetect.model import db_url, Base, Session, Status, Analysis
 from idetect.worker import Worker
