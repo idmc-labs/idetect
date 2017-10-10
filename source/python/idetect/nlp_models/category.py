@@ -2,6 +2,7 @@ import gensim
 import numpy as np
 import pandas as pd
 from nltk.tokenize import WordPunctTokenizer
+from nltk.stem import PorterStemmer
 from sklearn.base import TransformerMixin
 
 from idetect.model import DisplacementType
@@ -10,7 +11,7 @@ from idetect.nlp_models.base_model import DownloadableModel
 
 class CategoryModel(DownloadableModel):
 
-    def __init__(self, model_path='category.pkl', 
+    def __init__(self, model_path='/home/idetect/python/idetect/nlp_models/category.pkl',
                  model_url='https://s3-us-west-2.amazonaws.com/idmc-idetect/category_models/category.pkl'):
         self.model = self.load_model(model_path, model_url)
 
@@ -46,6 +47,29 @@ class Tokenizer(TransformerMixin):
 
     def transform(self, X, *args):
         X = X.map(lambda x: self.prepare_tokens(x, self.stop_words))
+        return X
+
+
+class Stemmer(TransformerMixin):
+    def __init__(self, stop_words):
+        self.stop_words = stop_words
+        self.tokenizer = WordPunctTokenizer()
+        self.stemmer = PorterStemmer()
+
+    def prepare_stems(self, text, stop_words):
+        tokens = self.tokenizer.tokenize(text)
+        tokens = [t for t in tokens if len(t) > 2]
+        tokens = [t.lower() for t in tokens]
+        tokens = [t for t in tokens if t not in stop_words]
+        stems = [self.stemmer.stem(t) for t in tokens]
+        stems = [s for s in stems if not s.isdigit()]
+        return stems
+
+    def fit(self, X, *args):
+        return self
+
+    def transform(self, X, *args):
+        X = X.map(lambda x: self.prepare_stems(x, self.stop_words))
         return X
 
 

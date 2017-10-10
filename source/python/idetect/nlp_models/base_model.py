@@ -1,11 +1,18 @@
 import errno
 import fcntl
 import os
-
+import re
+import numpy as np
 import pandas as pd
 import requests
+import spacy
 from sklearn.externals import joblib
+from sklearn.base import TransformerMixin, BaseEstimator
+from scipy import sparse
+from gensim import matutils, models
+from gensim.sklearn_integration.sklearn_wrapper_gensim_lsimodel import SklLsiModel
 
+from idetect.geotagger import strip_accents, compare_strings, strip_words, common_names, LocationType, subdivision_country_code, match_country_name, city_subdivision_country
 
 class DownloadableModel(object):
     """A base class for loading pickeld scikit-learn models that may be stored
@@ -79,3 +86,61 @@ class DownloadableModel(object):
             return self.model.transform(pd.Series(text))[0]
         except ValueError:
             raise
+
+
+class CustomSklLsiModel(SklLsiModel):
+    """Gensim's Lsi model with sklearn wrapper, modified to handle sparse matrices
+    for both fit and transform. Makes the class compatible with sklearn's Tfidf and
+    Count vectorizers.
+    """
+
+    def sparse_2_tupes(self, sparse):
+        """Converts sparse matrix into manageable tuple format."""
+        for t in t_skltfidf:
+            cx = t.tocoo()
+            tups = []
+            for i, j in zip(cx.col, cx.data):
+                tups.append((i, j))
+        return tups
+
+    def fit(self, X, y=None):
+        """
+        Fit the model according to the given training data.
+        Calls gensim.models.LsiModel
+        """
+        if sparse.issparse(X):
+            corpus = matutils.Sparse2Corpus(X, documents_columns=False)
+        else:
+            corpus = X
+
+        self.gensim_model = models.LsiModel(corpus=corpus, num_topics=self.num_topics, id2word=self.id2word, chunksize=self.chunksize,
+            decay=self.decay, onepass=self.onepass, power_iters=self.power_iters, extra_samples=self.extra_samples)
+        return self
+
+    def transform(self, docs):
+        """
+        Takes a list of documents as input ('docs').
+        Returns a matrix of topic distribution for the given document bow, where a_ij
+        indicates (topic_i, topic_probability_j).
+        The input `docs` should be in BOW format and can be a list of documents like : [ [(4, 1), (7, 1)], [(9, 1), (13, 1)], [(2, 1), (6, 1)] ]
+        or a single document like : [(4, 1), (7, 1)]
+        """
+        if self.gensim_model is None:
+            raise NotFittedError("This model has not been fitted yet. Call 'fit' with appropriate arguments before using this method.")
+
+        # The input as array of array
+        # import pdb; pdb.set_trace()
+        # check = lambda x: [x] if isinstance(x[0], tuple) else x
+        # docs = check(docs)
+        if sparse.issparse(docs):
+            docs = matutils.Sparse2Corpus(docs, documents_columns=False)
+        X = [[] for i in range(0, len(docs))];
+        for k,v in enumerate(docs):
+            doc_topics = self.gensim_model[v]
+            probs_docs = list(map(lambda x: x[1], doc_topics))
+            # Everything should be equal in length
+            if len(probs_docs) != self.num_topics:
+                probs_docs.extend([1e-12]*(self.num_topics - len(probs_docs)))
+            X[k] = probs_docs
+            probs_docs = []
+        return np.reshape(np.array(X), (len(docs), self.num_topics))
