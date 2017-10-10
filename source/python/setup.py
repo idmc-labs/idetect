@@ -34,5 +34,5 @@ if __name__ == "__main__":
     session.close()
 
     # Load the Classifier models once to ensure they are downloaded
-    # CategoryModel()
-    # RelevanceModel()
+    CategoryModel()
+    RelevanceModel()
