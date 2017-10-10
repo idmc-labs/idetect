@@ -16,7 +16,7 @@ Base.metadata.create_all(engine)
 if __name__ == "__main__":
 
     session = Session()
-    with open('/home/idetect/data/input_urls.csv') as f:
+    with open('/home/idetect/data/input_urls.csv', newline='', encoding='utf-8') as f:
         c = csv.reader(f)
         i = 0
         for l in c:
