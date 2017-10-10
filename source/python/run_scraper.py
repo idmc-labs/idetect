@@ -8,7 +8,6 @@ from idetect.model import db_url, Base, Session, Status, Analysis
 from idetect.scraper import scrape
 from idetect.worker import Worker
 
-
 MAX_RETRIEVAL_ATTEMPTS = 3
 HOURS_BETWEEN_ATTEMPTS = 12
 

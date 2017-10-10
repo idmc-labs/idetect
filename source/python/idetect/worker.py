@@ -141,18 +141,19 @@ class Initiator(Worker):
             # ... and lock it for updates
             # ... sort by created date
             # ... pick the first (oldest)
-            document = session.query(Document) \
+            documents = session.query(Document) \
                 .filter(~session.query(Analysis).filter(Document.id == Analysis.document_id).exists()) \
                 .with_for_update() \
                 .order_by(Document.created_at) \
-                .first()
-            if document is None:
+                .limit(1000).all()
+            if len(documents) == 0:
                 return False  # no work to be done
-            analysis = Analysis(document=document, status=Status.NEW)
-            session.add(analysis)
-            session.commit()
-            logger.info("Worker {} created Analysis {} in status {}".format(
-                os.getpid(), analysis.document_id, analysis.status))
+            for document in documents:
+                analysis = Analysis(document=document, status=Status.NEW)
+                session.add(analysis)
+                session.commit()
+                logger.info("Worker {} created Analysis {} in status {}".format(
+                    os.getpid(), analysis.document_id, analysis.status))
         finally:
             # make sure to release a FOR UPDATE lock, if we got one
             if session is not None:
