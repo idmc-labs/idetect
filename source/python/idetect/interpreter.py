@@ -8,7 +8,7 @@ from spacy.symbols import ORTH, LEMMA, POS
 from textacy.extract import pos_regex_matches
 from textacy.spacy_utils import get_main_verbs_of_sent, get_objects_of_verb, get_subjects_of_verb
 
-from idetect.model import FactUnit, FactTerm, KeywordType, FactKeyword, cleanup
+from idetect.model import FactUnit, FactTerm, KeywordType, FactKeyword
 
 
 def get_absolute_date(relative_date_string, publication_date=None):
@@ -656,7 +656,6 @@ class Interpreter(object):
         return: A list of dates
         """
         date_times = []
-        story = cleanup(story)
         story = self.nlp(story)
         date_entities = [e for e in story.ents if e.label_ == "DATE"]
         for ent in date_entities:
@@ -718,7 +717,6 @@ class Interpreter(object):
         ----------
         story:      the article content:String
         """
-        story = cleanup(story)
         processed_reports = []
         story = self.nlp(story)
         sentences = list(story.sents)  # Split into sentences

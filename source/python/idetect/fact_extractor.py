@@ -23,7 +23,7 @@ def extract_facts(analysis):
     '''
     session = object_session(analysis)
     interpreter = Interpreter(session, nlp)
-    content = analysis.content.content
+    content = analysis.content.content_clean # Use the cleaned content field
     facts = interpreter.process_article_new(content)
     if len(facts) > 0:
         save_facts(analysis, facts, session)

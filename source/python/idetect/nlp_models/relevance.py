@@ -14,8 +14,8 @@ from idetect.geotagger import strip_accents, compare_strings, strip_words, commo
 
 
 class RelevanceModel(DownloadableModel):
-    def __init__(self, model_path='/home/idetect/python/idetect/nlp_models/relevance_classifier_svm_10052017.pkl',
-            model_url='https://s3-us-west-2.amazonaws.com/idmc-idetect/relevance_models/relevance_classifier_svm_10052017.pkl'):
+    def __init__(self, model_path='/home/idetect/python/idetect/nlp_models/relevance_classifier_svm_10132017.pkl',
+            model_url='https://s3-us-west-2.amazonaws.com/idmc-idetect/relevance_models/relevance_classifier_svm_10132017.pkl'):
         self.model = self.load_model(model_path, model_url)
 
     def predict(self, text):
@@ -30,43 +30,10 @@ class RelevanceModel(DownloadableModel):
             raise
 
 
-class CleaningProcessor(BaseEstimator, TransformerMixin):
-    """Transformer that turns documents in string form
-    into token lists, with various processing steps applied.
-
-    Parameters
-    ----------
-    pos_tags : bool, required
-        Whether to tag words with their part of speech labels.
-    lemmatize : bool, required
-        Whether to lemmatize tokens.
-    stop_words : book, required
-        Whether to remove stop words.
+class LocationProcessor(BaseEstimator, TransformerMixin):
+    """Transformer that replaces all country and subdivisions
+        mentioned in text with common names.
     """
-
-    def cleanup(self, text):
-        """
-        Cleanup text based on commonly encountered errors.
-        param: text     A string
-        return: A cleaned string
-        """
-        text = re.sub(r'([a-zA-Z0-9])(IMPACT)', r'\1. \2', text)
-        text = re.sub(r'([a-zA-Z0-9])(RESPONSE)', r'\1. \2', text)
-        text = re.sub(r'(IMPACT)([a-zA-Z0-9])', r'\1. \2', text)
-        text = re.sub(r'(RESPONSE)([a-zA-Z0-9])', r'\1. \2', text)
-        text = re.sub(r'([a-z])([A-Z]{2,})', r'\1 \2', text)
-        text = re.sub(r'([a-zA-Z])(\d)', r'\1. \2', text)
-        text = re.sub(r'(\d)\s(\d)', r'\1\2', text)
-        text = text.replace('\r', ' ')
-        text = text.replace('  ', ' ')
-        text = text.replace('\n', ' ')
-        text = text.replace("peole", "people")
-
-        output = ''
-        for char in text:
-            if char in string.printable:
-                output += char
-        return output
 
     def tag_entities(self, text):
         tokens = []
@@ -75,9 +42,9 @@ class CleaningProcessor(BaseEstimator, TransformerMixin):
                 if match_country_name(token.text)[0]:
                     tokens.append('Switzerland')
                 elif city_subdivision_country(token.text):
-                    tokens.append('Zurich')
+                    tokens.append('Geneva')
                 else:
-                    tokens.append('Zurich')
+                    tokens.append('Geneva')
             elif token.like_num:
                 tokens.append('1000')
             elif token.like_url:
@@ -110,7 +77,6 @@ class CleaningProcessor(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, texts, *args):
-        texts = [self.cleanup(t) for t in texts]
         texts = [nlp(t) for t in texts]
         texts = [self.tag_entities(t) for t in texts]
         texts = self.single_string(texts)
