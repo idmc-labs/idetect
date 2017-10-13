@@ -35,7 +35,7 @@ class TestFactExtractor(TestCase):
         analysis = Analysis(document=document, status=Status.NEW)
         self.session.add(analysis)
         content = DocumentContent(
-            content="It was early Saturday when a flash flood hit the area and washed away more than 500 houses")
+            content_clean="It was early Saturday when a flash flood hit the area and washed away more than 500 houses")
         self.session.add(content)
         self.session.commit()
         analysis.content_id = content.id
@@ -50,7 +50,7 @@ class TestFactExtractor(TestCase):
         analysis = Analysis(document=document, status=Status.NEW)
         self.session.add(analysis)
         content = DocumentContent(
-            content="It was early Saturday when a flash flood hit large parts of Pakistan and India and washed away more than 500 houses")
+            content_clean="It was early Saturday when a flash flood hit large parts of Pakistan and India and washed away more than 500 houses")
         self.session.add(content)
         self.session.commit()
         analysis.content_id = content.id
@@ -69,7 +69,7 @@ class TestFactExtractor(TestCase):
         analysis1 = Analysis(document=d1, status=Status.NEW)
         self.session.add(analysis1)
         content = DocumentContent(
-            content="It was early Saturday when a flash flood hit large parts of India and washed away more than 500 houses")
+            content_clean="It was early Saturday when a flash flood hit large parts of India and washed away more than 500 houses")
         self.session.add(content)
         self.session.commit()
         analysis1.content_id = content.id
@@ -81,7 +81,7 @@ class TestFactExtractor(TestCase):
         analysis2 = Analysis(document=d2, status=Status.NEW)
         self.session.add(analysis2)
         content = DocumentContent(
-            content="It was early Saturday when a flash flood hit large parts of India and washed away more than 500 houses")
+            content_clean="It was early Saturday when a flash flood hit large parts of India and washed away more than 500 houses")
         self.session.add(content)
         self.session.commit()
         analysis2.content_id = content.id

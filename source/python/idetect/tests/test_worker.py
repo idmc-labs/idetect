@@ -126,7 +126,8 @@ class TestWorker(TestCase):
     def test_work_chain(self):
         worker1 = Worker(scraping_filter, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
                          TestWorker.nap_fn, self.engine)
-        worker2 = Worker(Status.SCRAPED, Status.EXTRACTING, Status.EXTRACTED, Status.EXTRACTING_FAILED,
+        worker2 = Worker(lambda query: query.filter(Analysis.status == Status.SCRAPED),
+                        Status.EXTRACTING, Status.EXTRACTED, Status.EXTRACTING_FAILED,
                          TestWorker.nap_fn, self.engine)
         document = Document(
             type=DocumentType.WEB,

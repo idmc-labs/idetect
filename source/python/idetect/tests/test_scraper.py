@@ -35,9 +35,9 @@ class TestScraper(TestCase):
         scrape(analysis)
         content = analysis.content
         self.assertEqual("text", content.content_type)
-        self.assertTrue("Katrina" in content.content)
-        self.assertTrue("Louisiana" in content.content)
-        self.assertTrue("\n" not in content.content)
+        self.assertTrue("Katrina" in content.content_clean)
+        self.assertTrue("Louisiana" in content.content_clean)
+        self.assertTrue("\n" not in content.content_clean)
 
     def test_scrape_pdf(self):
         document = Document(
