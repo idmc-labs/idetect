@@ -5,8 +5,9 @@ One-time setup script to download classifier models and pre-populate database wi
 from sqlalchemy import create_engine
 from idetect.model import db_url, Base, Session, Country, FactKeyword
 from idetect.load_data import load_countries, load_terms
-from idetect.nlp_models.category import CategoryModel, Tokenizer, TfidfTransformer, LsiTransformer
-from idetect.nlp_models.relevance import RelevanceModel, Stemmer, Combiner, RelevanceKeyWordClassifier
+from idetect.nlp_models.category import *
+from idetect.nlp_models.relevance import *
+from idetect.nlp_models.base_model import CustomSklLsiModel
 
 if __name__ == "__main__":
 
