@@ -11,7 +11,7 @@ def classify(analysis, category_model, relevance_model):
     :return: None
     """
     session = object_session(analysis)
-    content = analysis.content.content
+    content = analysis.content.content_clean
     category = category_model.predict(content)
     relevance = relevance_model.predict(content)
     analysis.category = category
