@@ -1,10 +1,10 @@
-import logging
 import json
+import logging
 
-from flask import Flask, render_template, abort, request, redirect, url_for, jsonify, Response, flash
+from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
 from sqlalchemy import create_engine, desc
 
-from idetect.model import db_url, Base, Analysis, Session, Status, Document, DocumentType
+from idetect.model import db_url, Base, Analysis, Session, Document, DocumentType
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -22,11 +22,14 @@ Base.metadata.create_all(engine)
 @app.route('/')
 def homepage():
     session = Session()
-    articles = session.query(Analysis).order_by(
-        desc(Analysis.updated)).limit(10).all()
-    counts = Analysis.status_counts(session)
-    cat_counts = Analysis.category_counts(session)
-    return render_template('index.html', articles=articles, counts=counts, cat_counts=cat_counts)
+    try:
+        articles = session.query(Analysis).order_by(
+            desc(Analysis.updated)).limit(10).all()
+        counts = Analysis.status_counts(session)
+        cat_counts = Analysis.category_counts(session)
+        return render_template('index.html', articles=articles, counts=counts, cat_counts=cat_counts)
+    finally:
+        session.close()
 
 
 @app.route('/add_url', methods=['POST'])
@@ -38,36 +41,45 @@ def add_url():
         return redirect(url_for('/'))
     article = Document(url=url, name="New Document", type=DocumentType.WEB)
     session = Session()
-    session.add(article)
-    session.commit()
-    flash(u"{} was successfully added".format(url), 'success')
-    return redirect('/')
+    try:
+        session.add(article)
+        session.commit()
+        flash(u"{} was successfully added".format(url), 'success')
+        return redirect('/')
+    finally:
+        session.close()
 
 
 @app.route('/article/<int:doc_id>', methods=['GET'])
 def article(doc_id):
     session = Session()
-    analysis = session.query(Analysis) \
-        .filter(Analysis.document_id == doc_id).one()
-    coords = {tuple(l.latlong.split(","))
+    try:
+        analysis = session.query(Analysis) \
+            .filter(Analysis.document_id == doc_id).one()
+        coords = {tuple(l.latlong.split(","))
                   for f in analysis.facts for l in f.locations}
-    return render_template('article.html', article=analysis, coords=list(coords))
+        return render_template('article.html', article=analysis, coords=list(coords))
+    finally:
+        session.close()
 
 
 @app.route('/search_url', methods=['GET'])
 def search_url():
     url = request.args.get('url')
     if url is None:
-        return json.dumps({'success':False}), 422, {'ContentType':'application/json'} 
+        return json.dumps({'success': False}), 422, {'ContentType': 'application/json'}
     session = Session()
-    docs = session.query(Document).filter(
-        Document.url.like("%" + url + "%")).order_by(Document.created_at.desc()).first()
-    if doc:
-        resp = jsonify({'doc_id': doc.id})
-        resp.status_code = 200
-        return resp
-    else:
-        return json.dumps({'success':False}), 422, {'ContentType':'application/json'} 
+    try:
+        docs = session.query(Document).filter(
+            Document.url.like("%" + url + "%")).order_by(Document.created_at.desc()).first()
+        if doc:
+            resp = jsonify({'doc_id': doc.id})
+            resp.status_code = 200
+            return resp
+        else:
+            return json.dumps({'success': False}), 422, {'ContentType': 'application/json'}
+    finally:
+        session.close()
 
 
 @app.context_processor
@@ -76,6 +88,7 @@ def utility_processor():
         return dt.strftime("%Y-%m-%d %H:%M")
 
     return dict(format_date=format_date)
+
 
 if __name__ == "__main__":
     # Start flask app
