@@ -5,7 +5,7 @@ from unittest import TestCase
 import dateutil.parser
 from sqlalchemy import create_engine
 
-from idetect.model import Base, Session, Status, Document, DocumentType, \
+from idetect.model import Base, Session, Status, Gkg, \
     Analysis, DocumentContent, NotLatestException, AnalysisHistory, Country, CountryTerm, Location, LocationType, Fact
 
 
@@ -22,56 +22,34 @@ class TestModel(TestCase):
         self.sample_data()
 
     def sample_data(self):
-        document1 = Document(
-            id=2749,
-            name="Flooding, Water Shortage Expected After Regional Storms Disperse",
-            serial_no="D2017-PDF-000575",
-            type=DocumentType.PDF,
-            publication_date=date(2017, 7, 31),
-            url="https://www.cambodiadaily.com/news/flooding-water-shortage-expected-after-regional-storms-disperse-133048/",
-            original_filename="Flooding, Water Shortage Expected After Regional Storms Disperse - The Cambodia Daily.pdf",
-            filename="96512595-54ed-445b-8add-4df49ace2ee3.pdf",
-            content_type='application/pdf',
-            displacement_types=['Disaster'],
-            countries=["Cambodia"],
-            sources=["local authorities"],
-            publishers=["The Cambodia Daily"],
-            created_by="John.Doe",
-            created_at=dateutil.parser.parse("2017-08-12 00:32:47.303859")
+        gkg1 = Gkg(
+            id=3771256,
+            gkgrecordid="20170215174500-2503",
+            date=20170215174500,
+            source_common_name="philstar.com",
+            document_identifier="http://www.philstar.com/headlines/2017/02/16/1672746/yasay-harris-affirm-stronger-phl-us-ties"
         )
-        self.session.add(document1)
+        self.session.add(gkg1)
 
-        document2 = Document(
-            id=2743,
-            name="OCHA: CAR Eastern Region weekly situation report #24 (18 June 2017)",
-            serial_no="D2017-WEB-000274",
-            type=DocumentType.PDF,
-            publication_date=date(2017, 6, 18),
-            url="http://reliefweb.int/sites/reliefweb.int/files/resources/18-06-2017_sous-bureau_de_bambari_rapport_hebdomadaire_vf_0.pdf",
-            original_filename="18-06-2017_sous-bureau_de_bambari_rapport_hebdomadaire_vf_0.pdf",
-            filename="e2675928-4462-4e27-9464-0f8f2a0a1eff.pdf",
-            content_type='application/pdf',
-            displacement_types=['Conflict'],
-            countries=["Central African Republic"],
-            sources=["OCHA"],
-            publishers=["OCHA"],
-            created_by="Giulia.Rossi",
-            created_at=dateutil.parser.parse("2017-08-04 18:20:47"),
-            modified_by="Giulia.Rossi",
-            modified_at=dateutil.parser.parse("2017-08-04 18:23:00.57118")
+        gkg2 = Gkg(
+            id=3771257,
+            gkgrecordid="20170215174500-1536",
+            date=20170215174500,
+            source_common_name="iheart.com",
+            document_identifier="http://wynkcountry.iheart.com/onair/cmt-cody-alan-54719/thomas-rhett-and-lauren-akins-are-15565244/"
         )
-        self.session.add(document2)
+        self.session.add(gkg2)
         self.session.commit()
 
     def tearDown(self):
         self.session.rollback()
-        for article in self.session.query(Document).all():
-            self.session.delete(article)
+        for gkg in self.session.query(Gkg).all():
+            self.session.delete(gkg)
         self.session.commit()
 
     def test_status_update(self):
-        document = self.session.query(Document).first()
-        analysis = Analysis(document=document, status=Status.NEW)
+        gkg = self.session.query(Gkg).first()
+        analysis = Analysis(gkg=gkg, status=Status.NEW)
         self.session.add(analysis)
         self.session.commit()
 
@@ -81,7 +59,7 @@ class TestModel(TestCase):
         # meanwhile, some other process changed the status of this...
         session2 = Session()
         try:
-            other = session2.query(Analysis).get(analysis.document_id)
+            other = session2.query(Analysis).get(analysis.gkg_id)
             other.create_new_version(Status.SCRAPING_FAILED)
         finally:
             session2.rollback()
@@ -90,14 +68,14 @@ class TestModel(TestCase):
             analysis.create_new_version(Status.SCRAPED)
 
     def test_version_lifecycle(self):
-        document = self.session.query(Document).first()
-        analysis = Analysis(document=document, status=Status.NEW)
+        gkg = self.session.query(Gkg).first()
+        analysis = Analysis(gkg=gkg, status=Status.NEW)
         self.session.add(analysis)
         self.session.commit()
 
         analysis.create_new_version(Status.SCRAPING)
 
-        history = self.session.query(AnalysisHistory).filter(AnalysisHistory.document == document)
+        history = self.session.query(AnalysisHistory).filter(AnalysisHistory.gkg == gkg)
         self.assertEqual(1, history.count())
         self.assertEqual(1, history.filter(AnalysisHistory.status == Status.NEW).count())
 
@@ -170,8 +148,8 @@ class TestModel(TestCase):
         self.assertCountEqual([f.id for f in edited.facts], [fact.id])
 
     def test_status_counts(self):
-        documents = self.session.query(Document).all()[:2]
-        analysis1 = Analysis(document=documents[0], status=Status.NEW)
+        gkgs = self.session.query(Gkg).all()[:2]
+        analysis1 = Analysis(gkg=gkgs[0], status=Status.NEW)
         self.session.add(analysis1)
         self.session.commit()
 
@@ -183,7 +161,7 @@ class TestModel(TestCase):
         self.assertEqual(Analysis.status_counts(self.session),
                          {Status.SCRAPING: 1})
 
-        analysis2 = Analysis(document=documents[1], status=Status.NEW)
+        analysis2 = Analysis(gkg=gkgs[1], status=Status.NEW)
         self.session.add(analysis2)
         self.session.commit()
 

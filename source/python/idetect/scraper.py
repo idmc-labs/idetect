@@ -36,7 +36,7 @@ def scrape(analysis, scrape_pdfs=True):
     session = object_session(analysis)
     session.commit()
     if scrape_pdfs:
-        pdf_url = get_pdf_url(analysis.document.url)
+        pdf_url = get_pdf_url(analysis.gkg.document_identifier)
         if pdf_url:
             return scrape_pdf(pdf_url, analysis)
     return scrape_html(analysis)
@@ -90,7 +90,7 @@ def scrape_html(analysis):
     analysis: The updated analysis object
     """
 
-    a = newspaper.Article(analysis.document.url)
+    a = newspaper.Article(analysis.gkg.document_identifier)
     a.download()
     if a.download_state == 2:
         a.parse()

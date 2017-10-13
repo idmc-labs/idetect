@@ -63,42 +63,23 @@ class NotLatestException(Exception):
     pass
 
 
-class DocumentType:
-    WEB = 'WEB'
-    EML = 'EML'
-    PDF = 'PDF'
-    EXL = 'EXL'
-
-
-class Document(Base):
-    __tablename__ = 'documents'
+class Gkg(Base):
+    __tablename__ = 'gkg'
 
     id = Column(Integer, primary_key=True)
-    legacy_id = Column(BigInteger)
-    idx = Column(BigInteger)
-    name = Column(String, nullable=False)  # Document title
-    serial_no = Column(String)  # eg. D2016-PDF-000005
-    type = Column(String, nullable=False)  # DocumentType, eg. WEB
-    publication_date = Column(Date)
-    comment = Column(String)
-    url = Column(String)
-    original_filename = Column(String)  # filename
-    filename = Column(String)  # uuid based filename
-    content_type = Column(String)  # eg. application/pdf
-    displacement_types = Column(postgresql.ARRAY(String))  # eg. {Conflict, Disaster}
-    countries = Column(postgresql.ARRAY(String))  # eg. {Haiti,Bahamas,"United States of America"}
-    sources = Column(postgresql.ARRAY(String))  # eg. {IOM,"CCCM Cluster",WFP,"Local Authorities"}
-    publishers = Column(postgresql.ARRAY(String))  # eg. {REDLAC,"Radio La Primerisima"}
-    confidential = Column(Boolean)
-    created_by = Column(String)  # eg. First.Last
-    created_at = Column(DateTime(timezone=False), server_default=func.now())
-    modified_by = Column(String)  # eg. First.Last
-    modified_at = Column(DateTime(timezone=False), server_default=func.now())
+    gkgrecordid = Column(String)
+    date = Column(BigInteger)
+    source_common_name = Column(String)
+    document_identifier = Column(String)
+    locations = Column(String)
+    v2_counts = Column(String)
+    v2_themes = Column(String)
+
 
 
 analysis_fact = Table(
     'idetect_analysis_facts', Base.metadata,
-    Column('analysis', ForeignKey('idetect_analyses.document_id', ondelete="CASCADE"), primary_key=True),
+    Column('analysis', ForeignKey('idetect_analyses.gkg_id', ondelete="CASCADE"), primary_key=True),
     Column('fact', ForeignKey('idetect_facts.id', ondelete="CASCADE"), primary_key=True)
 )
 
@@ -128,10 +109,10 @@ def cleanup(text):
 class Analysis(Base):
     __tablename__ = 'idetect_analyses'
 
-    document_id = Column(Integer,
-                         ForeignKey('documents.id', ondelete="CASCADE"),
-                         primary_key=True)
-    document = relationship('Document')
+    gkg_id = Column(Integer,
+                    ForeignKey('gkg.id', ondelete="CASCADE"),
+                    primary_key=True)
+    gkg = relationship('Gkg')
     status = Column(String, nullable=False)
     title = Column(String)
     publication_date = Column(DateTime(timezone=True))
@@ -154,13 +135,13 @@ class Analysis(Base):
     processing_time = Column(Numeric)  # time it took to process to bring it to the current status
 
     def __str__(self):
-        return "<DocumentAnalysis {} {} {}>".format(self.document_id, self.document.url)
+        return "<Analysis {} {} {}>".format(self.gkg_id, self.document.url)
 
     def get_updated_version(self):
         """Return the most recent version of this article"""
         # can't just use get() because that will use the cache instead of running a query
         return object_session(self).query(Analysis) \
-            .filter(Analysis.document_id == self.document_id).one()
+            .filter(Analysis.gkg_id == self.gkg_id).one()
 
     def create_new_version(self, new_status):
         """
@@ -175,7 +156,7 @@ class Analysis(Base):
 
             try:
                 latest = session.query(Analysis) \
-                    .filter(Analysis.document_id == self.document_id) \
+                    .filter(Analysis.gkg_id == self.gkg_id) \
                     .filter(Analysis.status == self.status) \
                     .with_for_update().one()
             except NoResultFound:
@@ -254,12 +235,12 @@ class Analysis(Base):
     def category_counts(cls, session):
         cat_counts = session.query(Analysis)\
                 .filter(Analysis.relevance == True)\
-                .with_entities(Analysis.category, func.count(Analysis.document_id))\
+                .with_entities(Analysis.category, func.count(Analysis.gkg_id))\
                 .group_by(Analysis.category).all()
         cat_counts = dict(cat_counts)
         cat_counts['Not Relevant'] = session.query(Analysis)\
                 .filter(Analysis.relevance == False)\
-                .with_entities(func.count(Analysis.document_id)).first()[0]
+                .with_entities(func.count(Analysis.gkg_id)).first()[0]
         return cat_counts
 
 
@@ -271,8 +252,8 @@ class AnalysisHistory(Base):
     __tablename__ = 'idetect_analysis_histories'
 
     id = Column(Integer, primary_key=True)
-    document_id = Column(Integer, ForeignKey('documents.id', ondelete="CASCADE"))
-    document = relationship('Document')
+    gkg_id = Column(Integer, ForeignKey('gkg.id', ondelete="CASCADE"))
+    gkg = relationship('Gkg')
     status = Column(String, nullable=False)
     title = Column(String)
     publication_date = Column(DateTime(timezone=True))

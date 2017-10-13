@@ -4,7 +4,7 @@ import logging
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
 from sqlalchemy import create_engine, desc
 
-from idetect.model import db_url, Base, Analysis, Session, Document, DocumentType
+from idetect.model import db_url, Base, Analysis, Session, Gkg
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -55,7 +55,7 @@ def article(doc_id):
     session = Session()
     try:
         analysis = session.query(Analysis) \
-            .filter(Analysis.document_id == doc_id).one()
+            .filter(Analysis.gkg_id == doc_id).one()
         coords = {tuple(l.latlong.split(","))
                   for f in analysis.facts for l in f.locations}
         return render_template('article.html', article=analysis, coords=list(coords))
@@ -70,10 +70,10 @@ def search_url():
         return json.dumps({'success': False}), 422, {'ContentType': 'application/json'}
     session = Session()
     try:
-        docs = session.query(Document).filter(
-            Document.url.like("%" + url + "%")).order_by(Document.created_at.desc()).first()
-        if doc:
-            resp = jsonify({'doc_id': doc.id})
+        gkg = session.query(Gkg).filter(
+            Gkg.document_identifier.like("%" + url + "%")).order_by(Gkg.date.desc()).first()
+        if gkg:
+            resp = jsonify({'doc_id': gkg.id})
             resp.status_code = 200
             return resp
         else:

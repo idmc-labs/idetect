@@ -3,7 +3,8 @@ from unittest import TestCase
 
 from sqlalchemy import create_engine
 
-from idetect.model import Base, Session, Status, Document, Analysis, DocumentContent, DocumentType, Country, Location
+from idetect.model import Base, Session, Status, Gkg, Analysis, DocumentContent, Country, Location, \
+    Gkg
 from idetect.fact_extractor import extract_facts, process_location
 from idetect.load_data import load_countries, load_terms
 
@@ -24,15 +25,14 @@ class TestFactExtractor(TestCase):
 
     def tearDown(self):
         self.session.rollback()
-        for article in self.session.query(Document).all():
+        for article in self.session.query(Gkg).all():
             self.session.delete(article)
         self.session.commit()
 
     def test_extract_facts_simple(self):
         """Extracts simple facts when present and saves to DB"""
-        document = Document(type=DocumentType.WEB,
-                            name="Hurricane Katrina Fast Facts")
-        analysis = Analysis(document=document, status=Status.NEW)
+        gkg = Gkg()
+        analysis = Analysis(gkg=gkg, status=Status.NEW)
         self.session.add(analysis)
         content = DocumentContent(
             content_clean="It was early Saturday when a flash flood hit the area and washed away more than 500 houses")
@@ -45,9 +45,8 @@ class TestFactExtractor(TestCase):
 
     def test_create_facts_per_country(self):
         """Creates one fact per country mentioned"""
-        document = Document(type=DocumentType.WEB,
-                            name="Hurricane Katrina Fast Facts")
-        analysis = Analysis(document=document, status=Status.NEW)
+        gkg = Gkg()
+        analysis = Analysis(gkg=gkg, status=Status.NEW)
         self.session.add(analysis)
         content = DocumentContent(
             content_clean="It was early Saturday when a flash flood hit large parts of Pakistan and India and washed away more than 500 houses")
@@ -64,9 +63,8 @@ class TestFactExtractor(TestCase):
 
     def test_use_existing_locations_for_facts(self):
         """Uses existing locations when creating facts"""
-        d1 = Document(type=DocumentType.WEB,
-                      name="Hurricane Katrina Fast Facts")
-        analysis1 = Analysis(document=d1, status=Status.NEW)
+        g1 = Gkg()
+        analysis1 = Analysis(gkg=g1, status=Status.NEW)
         self.session.add(analysis1)
         content = DocumentContent(
             content_clean="It was early Saturday when a flash flood hit large parts of India and washed away more than 500 houses")
@@ -76,9 +74,8 @@ class TestFactExtractor(TestCase):
         self.session.commit()
         extract_facts(analysis1)
 
-        d2 = Document(type=DocumentType.WEB,
-                      name="Hurricane Katrina Fast Facts")
-        analysis2 = Analysis(document=d2, status=Status.NEW)
+        g2 = Gkg()
+        analysis2 = Analysis(gkg=g2, status=Status.NEW)
         self.session.add(analysis2)
         content = DocumentContent(
             content_clean="It was early Saturday when a flash flood hit large parts of India and washed away more than 500 houses")

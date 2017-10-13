@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from sqlalchemy import create_engine
 
-from idetect.model import Base, Session, Status, Document, Analysis, DocumentType
+from idetect.model import Base, Session, Status, Gkg, Analysis
 from idetect.scraper import scrape
 
 
@@ -20,16 +20,13 @@ class TestScraper(TestCase):
 
     def tearDown(self):
         self.session.rollback()
-        for article in self.session.query(Document).all():
-            self.session.delete(article)
+        for gkg in self.session.query(Gkg).all():
+            self.session.delete(gkg)
         self.session.commit()
 
     def test_scrape_html(self):
-        document = Document(
-            type=DocumentType.WEB,
-            name="Hurricane Katrina Fast Facts",
-            url="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
-        analysis = Analysis(document=document, status=Status.NEW)
+        gkg = Gkg(document_identifier="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
+        analysis = Analysis(gkg=gkg, status=Status.NEW)
         self.session.add(analysis)
         self.session.commit()
         scrape(analysis)
@@ -40,11 +37,8 @@ class TestScraper(TestCase):
         self.assertTrue("\n" not in content.content_clean)
 
     def test_scrape_pdf(self):
-        document = Document(
-            type=DocumentType.PDF,
-            name="Hurricane Katrina Special Report",
-            url="https://www1.ncdc.noaa.gov/pub/data/extremeevents/specialreports/Hurricane-Katrina.pdf")
-        analysis = Analysis(document=document, status=Status.NEW)
+        gkg = Gkg(document_identifier="https://www1.ncdc.noaa.gov/pub/data/extremeevents/specialreports/Hurricane-Katrina.pdf")
+        analysis = Analysis(gkg=gkg, status=Status.NEW)
         self.session.add(analysis)
         self.session.commit()
         scrape(analysis)

@@ -7,7 +7,7 @@ from unittest import TestCase
 
 from sqlalchemy import create_engine, func
 
-from idetect.model import Base, Session, Status, Document, Analysis, DocumentType
+from idetect.model import Base, Session, Status, Gkg, Analysis
 from idetect.worker import Worker, Initiator
 
 logger = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ class TestWorker(TestCase):
         logger.debug("processes terminated")
         self.session.rollback()
         logger.debug("sessions rolled back")
-        if self.session.query(Document).delete() > 0:
+        if self.session.query(Gkg).delete() > 0:
             self.session.commit()
         logger.debug("tearDown complete")
 
@@ -60,11 +60,9 @@ class TestWorker(TestCase):
     def test_work_one(self):
         worker = Worker(scraping_filter, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
                         TestWorker.nap_fn, self.engine)
-        document = Document(
-            type=DocumentType.WEB,
-            name="Hurricane Katrina Fast Facts",
-            url="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
-        analysis = Analysis(document=document, status=Status.NEW)
+        gkg = Gkg(
+            document_identifier="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
+        analysis = Analysis(gkg=gkg, status=Status.NEW)
         self.session.add(analysis)
         self.session.commit()
         self.assertTrue(worker.work(), "Worker didn't find work")
@@ -78,23 +76,21 @@ class TestWorker(TestCase):
     def test_rework(self):
         worker = Worker(scraping_filter, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
                         TestWorker.nap_fn, self.engine)
-        document = Document(
-            type=DocumentType.WEB,
-            name="Hurricane Katrina Fast Facts",
-            url="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
-        analysis = Analysis(document=document, status=Status.SCRAPING_FAILED, retrieval_attempts=1,
+        gkg = Gkg(
+            document_identifier="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
+        analysis = Analysis(gkg=gkg, status=Status.SCRAPING_FAILED, retrieval_attempts=1,
                             retrieval_date=func.now() - timedelta(hours=13))
         self.session.add(analysis)
         self.session.commit()
         self.assertTrue(worker.work(), "Worker didn't find work")
 
-        analysis2 = Analysis(document=document, status=Status.SCRAPING_FAILED, retrieval_attempts=4,
+        analysis2 = Analysis(gkg=gkg, status=Status.SCRAPING_FAILED, retrieval_attempts=4,
                             retrieval_date=func.now() - timedelta(hours=13))
         self.session.add(analysis)
         self.session.commit()
         self.assertFalse(worker.work(), "Worker found work")
 
-        analysis3 = Analysis(document=document, status=Status.SCRAPING_FAILED, retrieval_attempts=1,
+        analysis3 = Analysis(gkg=gkg, status=Status.SCRAPING_FAILED, retrieval_attempts=1,
                             retrieval_date=func.now() - timedelta(hours=8))
         self.session.add(analysis)
         self.session.commit()
@@ -107,11 +103,9 @@ class TestWorker(TestCase):
     def test_work_failure(self):
         worker = Worker(scraping_filter, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
                         TestWorker.err_fn, self.engine)
-        document = Document(
-            type=DocumentType.WEB,
-            name="Hurricane Katrina Fast Facts",
-            url="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
-        analysis = Analysis(document=document, status=Status.NEW)
+        gkg = Gkg(
+            document_identifier="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
+        analysis = Analysis(gkg=gkg, status=Status.NEW)
         self.session.add(analysis)
         self.session.commit()
         self.assertTrue(worker.work(), "Worker didn't find work")
@@ -129,11 +123,9 @@ class TestWorker(TestCase):
         worker2 = Worker(lambda query: query.filter(Analysis.status == Status.SCRAPED),
                         Status.EXTRACTING, Status.EXTRACTED, Status.EXTRACTING_FAILED,
                          TestWorker.nap_fn, self.engine)
-        document = Document(
-            type=DocumentType.WEB,
-            name="Hurricane Katrina Fast Facts",
-            url="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
-        analysis = Analysis(document=document, status=Status.NEW)
+        gkg = Gkg(
+            document_identifier="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
+        analysis = Analysis(gkg=gkg, status=Status.NEW)
         self.session.add(analysis)
         self.session.commit()
         self.assertFalse(worker2.work(), "Worker2 found work")
@@ -151,11 +143,9 @@ class TestWorker(TestCase):
                         TestWorker.nap_fn, self.engine)
         n = 3
         for i in range(n):
-            document = Document(
-                type=DocumentType.WEB,
-                name="Hurricane Katrina Fast Facts",
-                url="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
-            analysis = Analysis(document=document, status=Status.NEW)
+            gkg = Gkg(
+                document_identifier="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
+            analysis = Analysis(gkg=gkg, status=Status.NEW)
             self.session.add(analysis)
             self.session.commit()
         self.assertEqual(worker.work_all(), 3)
@@ -166,11 +156,9 @@ class TestWorker(TestCase):
     def test_work_parallel(self):
         n = 100
         for i in range(n):
-            document = Document(
-                type=DocumentType.WEB,
-                name="Hurricane Katrina Fast Facts",
-                url="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
-            analysis = Analysis(document=document, status=Status.NEW)
+            gkg = Gkg(
+                document_identifier="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
+            analysis = Analysis(gkg=gkg, status=Status.NEW)
             self.session.add(analysis)
             self.session.commit()
         remaining = self.session.query(Analysis).filter(Analysis.status == Status.NEW).count()
@@ -196,11 +184,9 @@ class TestWorker(TestCase):
     def test_initiator(self):
         n = 3
         for i in range(n):
-            document = Document(
-                type=DocumentType.WEB,
-                name="Hurricane Katrina Fast Facts",
-                url="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
-            self.session.add(document)
+            gkg = Gkg(
+                document_identifier="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
+            self.session.add(gkg)
             self.session.commit()
         initiator = Initiator(self.engine)
 
