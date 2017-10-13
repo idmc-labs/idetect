@@ -194,7 +194,7 @@ class Analysis(Base):
     def tagged_text(self):
         # Add tags to article content for display purposes
         spans = self.get_unique_tag_spans()
-        text = cleanup(self.content.content)
+        text = self.content.content_clean
         text_blocks = []
         text_start_point = 0
         for span in spans:
