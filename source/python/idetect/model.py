@@ -300,6 +300,7 @@ class DocumentContent(Base):
     id = Column(Integer, primary_key=True)
     analysis = relationship('Analysis', back_populates='content')
     content = Column(String)
+    content_clean = Column(String)
     content_type = Column(String)
 
 

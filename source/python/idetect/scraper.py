@@ -16,7 +16,7 @@ from sqlalchemy.orm import object_session
 from langdetect import detect
 from langdetect.lang_detect_exception import LangDetectException
 
-from idetect.model import DocumentContent
+from idetect.model import DocumentContent, cleanup
 
 
 def scrape(analysis, scrape_pdfs=True):
@@ -99,11 +99,12 @@ def scrape_html(analysis):
         analysis.publication_date = a.publish_date
 
         text = re.sub('\s+', ' ', a.text)  # collapse all whitespace
+        text_clean = cleanup(text) # Clean text for analysis steps
         try:
             analysis.language = detect(text)
         except LangDetectException:
             pass
-        content = DocumentContent(analysis=[analysis], content=text, content_type='text')
+        content = DocumentContent(analysis=[analysis], content=text, content_clean=text_clean, content_type='text')
         session = object_session(analysis)
         session.add(content)
         session.commit()
@@ -140,13 +141,14 @@ def scrape_pdf(url, analysis):
         if not text:
             raise Exception("No text extracted from PDF at {}".format(url))
         text = re.sub('\s+', ' ', text)  # collapse all whitespace
+        text_clean = cleanup(text) # Clean text for analysis steps
         analysis.domain = urlparse(url).hostname
         analysis.publication_date = last_modified
         try:
             analysis.language = detect(text)
         except LangDetectException:
             pass
-        content = DocumentContent(analysis=[analysis], content=text, content_type='pdf')
+        content = DocumentContent(analysis=[analysis], content=text, content_clean=text_clean, content_type='pdf')
         session = object_session(analysis)
         session.add(content)
         session.commit()
