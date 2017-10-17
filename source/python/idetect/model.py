@@ -379,7 +379,7 @@ class Location(Base):
     __tablename__ = 'idetect_locations'
 
     id = Column(Integer, primary_key=True, unique=True)
-    location_name = Column(String)
+    location_name = Column(String, unique=True)
     location_type = Column(String)
     country_iso3 = Column('country', ForeignKey(Country.iso3))
     country = relationship(Country)
