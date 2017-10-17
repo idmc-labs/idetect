@@ -4,47 +4,72 @@ import unicodedata
 
 import pycountry
 import requests
-
+from itertools import groupby
 from idetect.model import LocationType
 
 
-
-def save_facts(analysis, facts, session):
-    '''Loop through extracted facts and save them to database
-    :params article: instance of Article
-    :params facts: list of extracted facts
-    :params session: session object corresponding to the article
+def process_locations(analysis):
+    '''Geotag locations for a given article
+    :params analysis: instance of Analysis
     :return: None
     '''
-    for f in facts:
-        # First geolocate locations; split into countries and create one fact per country
-        country_locations = []
-        for location in f.locations:
-            country_locations.extend((process_location(location, session)))
+    session = object_session(analysis)
+    facts = analysis.facts
+    for fact in facts:
+        if len(fact.locations) > 0:
+            process_fact(fact, analysis, session)
 
-        if len(country_locations) > 0:
-            country_locations.sort(key=lambda x: x.country.iso3)
-            for key, group in groupby(country_locations, lambda x: x.country.iso3):
 
-                fact = Fact(unit=f.reporting_unit, term=f.reporting_term,
-                        excerpt_start=f.sentence_start, excerpt_end=f.sentence_end,
-                        specific_reported_figure=f.quantity[0],
-                        vague_reported_figure=f.quantity[1], iso3=key,
-                        tag_locations=json.dumps(f.tag_spans))
-                session.add(fact)
-                analysis.facts.append(fact)
-                fact.locations.extend([location for location in group])
-                session.commit()
-        else:
-            fact = Fact(unit=f.reporting_unit, term=f.reporting_term,
-                        excerpt_start=f.sentence_start, excerpt_end=f.sentence_end,
-                        specific_reported_figure=f.quantity[0],
-                        vague_reported_figure=f.quantity[1], iso3=None,
-                        tag_locations=json.dumps(f.tag_spans))
-            session.add(fact)
-            analysis.facts.append(fact)
-            session.commit()
+def process_fact(fact, analysis, session):
+    '''Geotag locations for a given fact
+    If the locations represent multiple countries, duplicate
+    the fact for each country
+    :params fact: instance of Fact
+    :params analysis: instance of Analysis
+    :params session: object session for Analysis
+    :return: None
+    '''
+    for location in fact.locations:
+        process_location(location, session)
 
+    country_locations = fact.locations
+    country_locations.sort(key=lambda x: x.country.iso3)
+    country_groups = list(groupby(country_locations, lambda x: x.country.iso3))
+    # If all locations from same country
+    # Update the Fact iso3 field, then done
+    if len(country_groups) == 1:
+        fact.iso3 = country_groups[0][0]
+        session.commit()
+    else:
+        # Empty the fact locations
+        fact.locations = []
+        # Update the iso3 and locations for original fact
+        fact.iso3 = country_groups[0][0]
+        fact.locations = [location for location in country_groups[0][1]]
+        # Duplicate the fact for the remaining countries
+        for key, group in country_groups[1:]:
+            f = Fact(unit=fact.unit, term=fact.term,
+                excerpt_start=fact.excerpt_start, excerpt_end=fact.excerpt_end,
+                specific_reported_figure=fact.specific_reported_figure,
+                vague_reported_figure=fact.vague_reported_figure, iso3=key,
+                tag_locations=fact.tag_locations)
+            session.add(f)
+            analysis.facts.append(f)
+            f.locations.extend([location for location in group])
+        session.commit()
+
+
+def process_location(location, session):
+    '''Geotag and update given location object
+    :params location: instance of Location
+    :params session: session object
+    :return: None
+    '''
+    loc_info = get_geo_info(location.location_name)
+    location.location_type = loc_info['type']
+    location.country = loc_info['country_code']
+    location.latlong = loc_info['coordinates']
+    session.commit()
 
 
 def get_geo_info(place_name):
