@@ -60,16 +60,6 @@ def coords_tostring(coords_list, separator=','):
     return separator.join(map(str, coords_list[::-1]))
 
 
-def common_names(place_name):
-    '''Convert countries or places with commonly used names
-    to their official names
-    '''
-    return {
-        'Syria': 'Syrian Arab Republic',
-        'Bosnia': 'Bosnia and Herzegovina'
-    }.get(place_name, place_name)
-
-
 def subdivision_country_code(place_name):
     '''Try and extract the country code by looking
     at country subdivisions i.e. States, Provinces etc.
@@ -108,7 +98,6 @@ def city_subdivision_country(place_name):
         and the ISO-3166 alpha_3 country code for a given place name.
         Return None if the country cannot be identified.
         '''
-    place_name = common_names(place_name)
     country_code, country_name = match_country_name(place_name)
     if country_code:
         return {'place_name': place_name, 'country_code': country_code, 'type': 'country'}
