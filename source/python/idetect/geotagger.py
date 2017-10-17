@@ -128,21 +128,24 @@ def mapzen_coordinates(place_name, country_code=None):
     query_params = {'text': place_name, 'api_key': api_key}
     if country_code:
         query_params['boundary.country'] = country_code
-    resp = requests.get(base_url, params=query_params)
-    res = resp.json()
-    data = res["features"]
-    if len(data) == 0:
-        return {'place_name': place_name, 'type': '', 'country_code': '', 'flag': 'no-results', 'coordinates': ''}
-    else:
-        if len(data) > 1:
-            flag = "multiple-results"
+    try:
+        resp = requests.get(base_url, params=query_params)
+        res = resp.json()
+        data = res["features"]
+        if len(data) == 0:
+            return {'place_name': place_name, 'type': '', 'country_code': '', 'flag': 'no-results', 'coordinates': ''}
         else:
-            flag = "single-result"
+            if len(data) > 1:
+                flag = "multiple-results"
+            else:
+                flag = "single-result"
 
-        data.sort(key=lambda x: x['properties']['confidence'], reverse=True)
-        return {'place_name': place_name, 'type': layer_to_entity(data[0]['properties']['layer']),
-                'country_code': data[0]['properties']['country_a'], 'flag': flag,
-                'coordinates': coords_tostring(data[0]['geometry']['coordinates'])}
+            data.sort(key=lambda x: x['properties']['confidence'], reverse=True)
+            return {'place_name': place_name, 'type': layer_to_entity(data[0]['properties']['layer']),
+                    'country_code': data[0]['properties']['country_a'], 'flag': flag,
+                    'coordinates': coords_tostring(data[0]['geometry']['coordinates'])}
+    except:
+        return {'place_name': place_name, 'type': '', 'country_code': '', 'flag': 'no-results', 'coordinates': ''}
 
 
 def layer_to_entity(layer):
