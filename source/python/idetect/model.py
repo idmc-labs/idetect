@@ -40,9 +40,12 @@ class Status:
     CLASSIFIED = 'classified'
     EXTRACTING = 'extracting'
     EXTRACTED = 'extracted'
+    GEOTAGGING = 'geotagging'
+    GEOTAGGED = 'geotagged'
     SCRAPING_FAILED = 'scraping failed'
     CLASSIFYING_FAILED = 'classifying failed'
     EXTRACTING_FAILED = 'extracting failed'
+    GEOTAGGING_FAILED = 'geotagging failed'
     EDITING = 'editing'
     EDITED = 'edited'
 
