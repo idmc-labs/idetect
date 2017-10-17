@@ -122,7 +122,7 @@ def mapzen_coordinates(place_name, country_code=None):
         res = resp.json()
         data = res["features"]
         if len(data) == 0:
-            return {'place_name': place_name, 'type': '', 'country_code': '', 'flag': 'no-results', 'coordinates': ''}
+            return {'place_name': place_name, 'type': '', 'country_code': country_code, 'flag': 'no-results', 'coordinates': ''}
         else:
             if len(data) > 1:
                 flag = "multiple-results"
@@ -134,7 +134,7 @@ def mapzen_coordinates(place_name, country_code=None):
                     'country_code': data[0]['properties']['country_a'], 'flag': flag,
                     'coordinates': coords_tostring(data[0]['geometry']['coordinates'])}
     except:
-        return {'place_name': place_name, 'type': '', 'country_code': '', 'flag': 'no-results', 'coordinates': ''}
+        return {'place_name': place_name, 'type': '', 'country_code': country_code, 'flag': 'no-results', 'coordinates': ''}
 
 
 def layer_to_entity(layer):
