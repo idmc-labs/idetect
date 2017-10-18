@@ -3,9 +3,10 @@
 import unicodedata
 
 import pycountry
-import requests
 from itertools import groupby
-from idetect.model import LocationType
+from idetect.model import LocationType, Fact
+from idetect.geo_external import mapzen_coordinates, GeotagException
+from sqlalchemy.orm import object_session
 
 
 def process_locations(analysis):
@@ -30,11 +31,12 @@ def process_fact(fact, analysis, session):
     :return: None
     '''
     for location in fact.locations:
-        process_location(location, session)
+        if location.country == '' or location.country is None:
+            process_location(location, session)
 
     country_locations = fact.locations
     country_locations.sort(key=lambda x: x.country.iso3)
-    country_groups = list(groupby(country_locations, lambda x: x.country.iso3))
+    country_groups = [(key, [loc for loc in group]) for key, group in groupby(country_locations, lambda x: x.country.iso3)]
     # If all locations from same country
     # Update the Fact iso3 field, then done
     if len(country_groups) == 1:
@@ -120,10 +122,6 @@ def strip_words(place_name):
     return place_name.strip().title()
 
 
-def coords_tostring(coords_list, separator=','):
-    return separator.join(map(str, coords_list[::-1]))
-
-
 def subdivision_country_code(place_name):
     '''Try and extract the country code by looking
     at country subdivisions i.e. States, Provinces etc.
@@ -172,45 +170,3 @@ def city_subdivision_country(place_name):
         return {'place_name': place_name, 'country_code': country_code, 'type': 'subdivision'}
 
     return None
-
-
-def mapzen_coordinates(place_name, country_code=None):
-    api_key = 'mapzen-neNu6xZ'
-    base_url = 'https://search.mapzen.com/v1/search'
-
-    query_params = {'text': place_name, 'api_key': api_key}
-    if country_code:
-        query_params['boundary.country'] = country_code
-    try:
-        resp = requests.get(base_url, params=query_params)
-        res = resp.json()
-        data = res["features"]
-        if len(data) == 0:
-            return {'place_name': place_name, 'type': '', 'country_code': country_code, 'flag': 'no-results', 'coordinates': ''}
-        else:
-            if len(data) > 1:
-                flag = "multiple-results"
-            else:
-                flag = "single-result"
-
-            data.sort(key=lambda x: x['properties']['confidence'], reverse=True)
-            return {'place_name': place_name, 'type': layer_to_entity(data[0]['properties']['layer']),
-                    'country_code': data[0]['properties']['country_a'], 'flag': flag,
-                    'coordinates': coords_tostring(data[0]['geometry']['coordinates'])}
-    except:
-        return {'place_name': place_name, 'type': '', 'country_code': country_code, 'flag': 'no-results', 'coordinates': ''}
-
-
-def layer_to_entity(layer):
-    if layer in ('address', 'street'):
-        return LocationType.ADDRESS
-    elif layer in ('neighbourhood', 'borough', 'localadmin'):
-        return LocationType.NEIGHBORHOOD
-    elif layer in ('locality'):
-        return LocationType.CITY
-    elif layer in ('county', 'region'):
-        return LocationType.SUBDIVISION
-    elif layer in ('country'):
-        return LocationType.COUNTRY
-    else:
-        return LocationType.UNKNOWN
