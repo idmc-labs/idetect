@@ -69,6 +69,7 @@ class Gkg(Base):
 
     id = Column(BigInteger, primary_key=True)
     gkgrecordid = Column(Text)
+    date = Column(BigInteger)
     document_identifier = Column(Text)
 
 
