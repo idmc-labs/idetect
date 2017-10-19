@@ -1,3 +1,4 @@
+import os
 import requests
 from idetect.model import LocationType
 
@@ -11,7 +12,7 @@ def coords_tostring(long_lat_floats):
 
 
 def mapzen_coordinates(place_name, country_code=None):
-    api_key = 'mapzen-i8JEmx7'
+    api_key = os.environ.get('MAPZEN_KEY')
     base_url = 'https://search.mapzen.com/v1/search'
 
     query_params = {'text': place_name, 'api_key': api_key}
