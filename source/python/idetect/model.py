@@ -3,7 +3,8 @@ import ast
 import re
 import string
 
-from sqlalchemy import Column, BigInteger, Integer, String, Date, DateTime, Boolean, Numeric, ForeignKey, Table, Index
+from sqlalchemy import Column, BigInteger, Integer, String, Date, DateTime, Boolean, \
+    Numeric, ForeignKey, Table, Index, Text
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, object_session, relationship
@@ -64,16 +65,11 @@ class NotLatestException(Exception):
 
 
 class Gkg(Base):
-    __tablename__ = 'gkg'
+    __tablename__ = 'gkg_idetect'
 
-    id = Column(Integer, primary_key=True)
-    gkgrecordid = Column(String)
-    date = Column(BigInteger)
-    source_common_name = Column(String)
-    document_identifier = Column(String)
-    locations = Column(String)
-    v2_counts = Column(String)
-    v2_themes = Column(String)
+    id = Column(BigInteger, primary_key=True)
+    gkgrecordid = Column(Text)
+    document_identifier = Column(Text)
 
 
 
@@ -110,7 +106,7 @@ class Analysis(Base):
     __tablename__ = 'idetect_analyses'
 
     gkg_id = Column(Integer,
-                    ForeignKey('gkg.id', ondelete="CASCADE"),
+                    ForeignKey('gkg_idetect.id', ondelete="CASCADE"),
                     primary_key=True)
     gkg = relationship('Gkg')
     status = Column(String, nullable=False)
@@ -252,7 +248,7 @@ class AnalysisHistory(Base):
     __tablename__ = 'idetect_analysis_histories'
 
     id = Column(Integer, primary_key=True)
-    gkg_id = Column(Integer, ForeignKey('gkg.id', ondelete="CASCADE"))
+    gkg_id = Column(Integer, ForeignKey('gkg_idetect.id', ondelete="CASCADE"))
     gkg = relationship('Gkg')
     status = Column(String, nullable=False)
     title = Column(String)
