@@ -33,7 +33,8 @@ RUN apt-get -y install supervisor && \
     mkdir /var/log/workers && \
     chmod 777 /var/log/workers
 
-RUN useradd -ms /bin/bash -u 1001 idetect
+ARG UID
+RUN useradd -ms /bin/bash -u $UID idetect
 USER idetect
 WORKDIR /home/idetect
 COPY ./source /home/idetect
