@@ -5,8 +5,9 @@ class GeotagException(Exception):
     pass
 
 
-def coords_tostring(coords_list, separator=','):
-    return separator.join(map(str, coords_list[::-1]))
+def coords_tostring(long_lat_floats):
+    longitude, latitude = long_lat_floats
+    return "{},{}".format(latitude, longitude)
 
 
 def mapzen_coordinates(place_name, country_code=None):
