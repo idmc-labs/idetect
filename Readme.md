@@ -4,12 +4,6 @@
 
 Edit `idetect/docker.env` to add the appropriate environment variables
 
-Start LocalDB and Notebooks, run setup script. We start the Notebooks
-for this because it's the container that doesn't immediately start something
-that relies on the things that get set up in the setup script. The API
-wants the DB to be up already, and the Workers try to load the models that
-the setup script fetches, so that leaves the Notebooks.
-
 Exporting the UID is necessary before build so that the user that everything
 runs as inside the docker container matches the user on the host machine.
 Without this, there will be a bunch of permissions problems, like things
@@ -19,11 +13,12 @@ into the containers, which would be an option in production. Having to
 re`build` the images every time during development would be a real drag,
 though.
 
+We start the workers in order to get it to run the setup.py script.
+
 ```
 export UID
-docker-compose up notebooks
-docker exec -it idetect_notebooks_1 bash
-python3 python/setup.py
+docker-compose build
+docker-compose up workers
 ```
 
 ## running after initial setup

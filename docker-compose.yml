@@ -28,7 +28,7 @@ services:
       args:
         - UID=${UID}
     image: idetect
-    command: /usr/bin/supervisord
+    command: sh -c "python3 python/setup.py && /usr/bin/supervisord"
     volumes:
       - ./source:/home/idetect
       - ./logs:/var/log
