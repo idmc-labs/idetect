@@ -303,6 +303,8 @@ class FactTerm:
     DAMAGED = 'Partially Destroyed Housing'
     UNINHABITABLE = 'Uninhabitable Housing'
     OTHER = 'Multiple/Other'
+    REFUGEE = 'Refugee'
+    ASYLUM_SEEKER = 'Asylum Seeker'
 
 
 fact_location = Table(
