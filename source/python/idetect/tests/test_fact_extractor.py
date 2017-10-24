@@ -46,9 +46,8 @@ class TestFactExtractor(TestCase):
 
     def test_create_locations_with_names(self):
         """Creates locations for facts only with location names"""
-        document = Document(type=DocumentType.WEB,
-                            name="Hurricane Katrina Fast Facts")
-        analysis = Analysis(document=document, status=Status.NEW)
+        gkg = Gkg()
+        analysis = Analysis(gkg=gkg, status=Status.NEW)
         self.session.add(analysis)
         content = DocumentContent(
             content_clean="It was early Saturday when a flash flood hit large parts of London and Middlesex and washed away more than 500 houses")
@@ -69,9 +68,8 @@ class TestFactExtractor(TestCase):
 
     def test_use_existing_location(self):
         """Uses existing locations when they exist"""
-        document = Document(type=DocumentType.WEB,
-                            name="Hurricane Katrina Fast Facts")
-        analysis = Analysis(document=document, status=Status.NEW)
+        gkg = Gkg()
+        analysis = Analysis(gkg=gkg, status=Status.NEW)
         self.session.add(analysis)
         content = DocumentContent(
             content_clean="It was early Saturday when a flash flood hit large parts of Bosnia and washed away more than 500 houses")
