@@ -9,6 +9,8 @@ services:
     build:
       context: .
       dockerfile: ./docker/idetect/Dockerfile
+      args:
+        - UID=${UID}
     image: idetect
     command: python3 /home/idetect/python/run_api.py
     volumes:
@@ -18,13 +20,15 @@ services:
     depends_on:
       - localdb
     env_file: docker.env
-    user: 1001:1001
+    user: ${UID}
   workers:
     build:
       context: .
       dockerfile: ./docker/idetect/Dockerfile
+      args:
+        - UID=${UID}
     image: idetect
-    command: /usr/bin/supervisord
+    command: sh -c "python3 python/setup.py && /usr/bin/supervisord"
     volumes:
       - ./source:/home/idetect
       - ./logs:/var/log
@@ -32,11 +36,13 @@ services:
     depends_on:
       - localdb
     env_file: docker.env
-    user: 1001:1001
+    user: ${UID}
   notebooks:
     build:
       context: .
       dockerfile: ./docker/idetect/Dockerfile
+      args:
+        - UID=${UID}
     image: idetect
     command: jupyter notebook --no-browser --ip=0.0.0.0 --port 5002 /home/idetect/notebooks
     volumes:
@@ -46,11 +52,13 @@ services:
     depends_on:
       - localdb
     env_file: docker.env
-    user: 1001:1001
+    user: ${UID}
   unittests:
     build:
       context: .
       dockerfile: ./docker/idetect/Dockerfile
+      args:
+        - UID=${UID}
     image: idetect
     command: sh -c 'python3 -m unittest /home/idetect/python/idetect/tests/test_*.py'
     volumes:
@@ -58,4 +66,4 @@ services:
     depends_on:
       - localdb
     env_file: docker.env
-    user: 1001:1001
+    user: ${UID}
