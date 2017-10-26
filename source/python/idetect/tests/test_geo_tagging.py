@@ -3,7 +3,7 @@ from unittest import TestCase, mock
 
 from sqlalchemy import create_engine
 
-from idetect.model import Base, Session, Status, Document, Analysis, DocumentContent, DocumentType, Country, Location, LocationType, Fact
+from idetect.model import Base, Session, Status, Gkg, Analysis, DocumentContent, Country, Location, LocationType, Fact
 from idetect.load_data import load_countries
 from idetect.fact_extractor import extract_facts
 from idetect.geotagger import get_geo_info, process_locations, mapzen_coordinates, GeotagException
@@ -56,9 +56,14 @@ class TestGeoTagger(TestCase):
     # DONT RUN geotagging if detail already exists
     @mock.patch('idetect.geotagger.mapzen_coordinates')
     def dont_geotag_if_detail_exists(self, mapzen):
-        document = Document(type=DocumentType.WEB,
-                            name="Hurricane Katrina Fast Facts")
-        analysis = Analysis(document=document, status=Status.NEW)
+        gkg = Gkg(
+            id=3771256,
+            gkgrecordid="20170215174500-2503",
+            date=20170215174500,
+            document_identifier="http://www.philstar.com/headlines/2017/02/16/1672746/yasay-harris-affirm-stronger-phl-us-ties"
+        )
+        self.session.add(gkg)
+        analysis = Analysis(gkg=gkg, status=Status.NEW)
         self.session.add(analysis)
         content = DocumentContent(
             content_clean="It was early Saturday when a flash flood hit large parts of India and Pakistan and washed away more than 500 houses")
@@ -79,9 +84,14 @@ class TestGeoTagger(TestCase):
 
     def test_create_duplicate_fact(self):
         """Creates duplicate fact if locations from multiple countries exist"""
-        document = Document(type=DocumentType.WEB,
-                            name="Hurricane Katrina Fast Facts")
-        analysis = Analysis(document=document, status=Status.NEW)
+        gkg = Gkg(
+            id=3771256,
+            gkgrecordid="20170215174500-2503",
+            date=20170215174500,
+            document_identifier="http://www.philstar.com/headlines/2017/02/16/1672746/yasay-harris-affirm-stronger-phl-us-ties"
+        )
+        self.session.add(gkg)
+        analysis = Analysis(gkg=gkg, status=Status.NEW)
         self.session.add(analysis)
         self.session.commit()
         fact = Fact(unit='person', term='displaced')
@@ -107,9 +117,14 @@ class TestGeoTagger(TestCase):
     def test_fail_if_geotagging_fails(self, mapzen):
         """Location processing should fail if geotagging fails"""
         mapzen.side_effect = GeotagException()
-        document = Document(type=DocumentType.WEB,
-                            name="Hurricane Katrina Fast Facts")
-        analysis = Analysis(document=document, status=Status.NEW)
+        gkg = Gkg(
+            id=3771256,
+            gkgrecordid="20170215174500-2503",
+            date=20170215174500,
+            document_identifier="http://www.philstar.com/headlines/2017/02/16/1672746/yasay-harris-affirm-stronger-phl-us-ties"
+        )
+        self.session.add(gkg)
+        analysis = Analysis(gkg=gkg, status=Status.NEW)
         self.session.add(analysis)
         self.session.commit()
         fact = Fact(unit='person', term='displaced')

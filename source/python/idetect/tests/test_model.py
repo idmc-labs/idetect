@@ -26,7 +26,6 @@ class TestModel(TestCase):
             id=3771256,
             gkgrecordid="20170215174500-2503",
             date=20170215174500,
-            source_common_name="philstar.com",
             document_identifier="http://www.philstar.com/headlines/2017/02/16/1672746/yasay-harris-affirm-stronger-phl-us-ties"
         )
         self.session.add(gkg1)
@@ -35,7 +34,6 @@ class TestModel(TestCase):
             id=3771257,
             gkgrecordid="20170215174500-1536",
             date=20170215174500,
-            source_common_name="iheart.com",
             document_identifier="http://wynkcountry.iheart.com/onair/cmt-cody-alan-54719/thomas-rhett-and-lauren-akins-are-15565244/"
         )
         self.session.add(gkg2)
