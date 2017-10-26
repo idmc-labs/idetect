@@ -39,7 +39,7 @@ def add_url():
     if url is None:
         flash(u'Something went wrong. Please try again.', 'danger')
         return redirect(url_for('/'))
-    article = Document(url=url, name="New Document", type=DocumentType.WEB)
+    article = Gkg(document_identifier=url)
     session = Session()
     try:
         session.add(article)
