@@ -57,7 +57,7 @@ def article(doc_id):
         analysis = session.query(Analysis) \
             .filter(Analysis.gkg_id == doc_id).one()
         coords = {tuple(l.latlong.split(","))
-                  for f in analysis.facts for l in f.locations}
+                  for f in analysis.facts for l in f.locations if l.latlong is not None}
         return render_template('article.html', article=analysis, coords=list(coords))
     finally:
         session.close()

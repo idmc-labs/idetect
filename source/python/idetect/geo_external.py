@@ -11,12 +11,12 @@ def coords_tostring(long_lat_floats):
     return "{},{}".format(latitude, longitude)
 
 
-def mapzen_coordinates(place_name, country_code=None):
+def mapzen_coordinates(place_name, country_code='XXX'):
     api_key = os.environ.get('MAPZEN_KEY')
     base_url = 'https://search.mapzen.com/v1/search'
 
     query_params = {'text': place_name, 'api_key': api_key}
-    if country_code:
+    if country_code != 'XXX':
         query_params['boundary.country'] = country_code
     try:
         resp = requests.get(base_url, params=query_params)

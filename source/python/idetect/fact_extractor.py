@@ -46,7 +46,7 @@ def save_facts(analysis, facts, session):
         analysis.facts.append(fact)
 
         # Process the locations and add new ones to the locations table
-        locations = [process_location(location, session) for location in f.locations]
+        locations = { process_location(location, session) for location in f.locations }
         fact.locations.extend(locations)
         session.commit()
 

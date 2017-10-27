@@ -4,7 +4,8 @@ import sys
 from sqlalchemy import create_engine
 
 from idetect.fact_extractor import extract_facts
-from idetect.model import db_url, Base, Session, Status, Analysis
+from idetect.load_data import load_countries, load_terms
+from idetect.model import db_url, Base, Session, Status, Analysis, Country, FactKeyword
 from idetect.worker import Worker
 
 if __name__ == "__main__":
@@ -17,6 +18,19 @@ if __name__ == "__main__":
     engine = create_engine(db_url())
     Session.configure(bind=engine)
     Base.metadata.create_all(engine)
+
+    # Check necessary data exists prior to fact extraction
+    session = Session()
+    # Load the Countries data if necessary
+    countries = session.query(Country).all()
+    if len(countries) == 0:
+        load_countries(session)
+
+    # Load the Keywords if neccessary
+    keywords = session.query(FactKeyword).all()
+    if len(keywords) == 0:
+        load_terms(session)
+    session.close()
 
     worker = Worker(lambda query: query.filter(Analysis.status == Status.CLASSIFIED),
                     Status.EXTRACTING, Status.EXTRACTED, Status.EXTRACTING_FAILED,

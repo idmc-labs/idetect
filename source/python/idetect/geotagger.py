@@ -69,7 +69,7 @@ def process_location(location, session):
     '''
     loc_info = get_geo_info(location.location_name)
     location.location_type = loc_info['type']
-    location.country = loc_info['country_code']
+    location.country_iso3 = loc_info['country_code']
     location.latlong = loc_info['coordinates']
     session.commit()
 
