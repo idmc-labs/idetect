@@ -622,7 +622,6 @@ class Interpreter(object):
                         else:
                             unit = FactUnit.PEOPLE
                         quantity = Fact(o, o, o.lemma_, 'quantity')
-                        print(sentence)
                         report = Report(unit, self.convert_term(verb.text), [p.text for p in possible_locations],
                                         sentence.start_char, sentence.end_char,
                                         self.set_report_span([verb, quantity, possible_locations]), quantity)
@@ -641,7 +640,6 @@ class Interpreter(object):
                     quantity = self.get_quantity(sentence, o)
                 reporting_unit = Fact(
                     reporting_unit, reporting_unit, reporting_unit.lemma_, "unit")
-                print(sentence)
                 report = Report(self.convert_unit(reporting_unit), self.convert_term(verb.text, reporting_unit.text),
                                 [p.text for p in possible_locations],
                                 sentence.start_char, sentence.end_char,
@@ -685,7 +683,6 @@ class Interpreter(object):
         param: reporting_unit   A Fact
         return: An attribute of ReportTerm
         """
-        print(reporting_term, reporting_unit)
         reporting_term = reporting_term.split(" ")
         reporting_term = [self.nlp(t)[0].lemma_ for t in reporting_term]
         reporting_unit = reporting_unit.split(" ")
