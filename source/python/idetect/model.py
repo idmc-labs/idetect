@@ -4,7 +4,7 @@ import re
 import string
 
 from sqlalchemy import Column, BigInteger, Integer, String, Date, DateTime, Boolean, \
-    Numeric, ForeignKey, Table, Index, Text
+    Numeric, ForeignKey, Table, Index, Text, UniqueConstraint
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, object_session, relationship
@@ -308,7 +308,8 @@ class FactTerm:
 fact_location = Table(
     'idetect_fact_locations', Base.metadata,
     Column('fact', Integer, ForeignKey('idetect_facts.id')),
-    Column('location', Integer, ForeignKey('idetect_locations.id'))
+    Column('location', Integer, ForeignKey('idetect_locations.id')),
+    UniqueConstraint('fact', 'location', name='uix_fact_location')
 )
 
 
