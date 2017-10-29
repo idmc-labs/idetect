@@ -56,7 +56,7 @@ class TestFactExtractor(TestCase):
         analysis.content_id = content.id
         self.session.commit()
         extract_facts(analysis)
-        self.assertEqual(FactTerm.Refugee, analysis.facts[0].term)
+        self.assertEqual(FactTerm.REFUGEE, analysis.facts[0].term)
 
 
     def test_create_locations_with_names(self):
