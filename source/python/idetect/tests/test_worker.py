@@ -191,5 +191,5 @@ class TestWorker(TestCase):
         initiator = Initiator(self.engine)
 
         self.assertEqual(self.session.query(Analysis).count(), 0)
-        self.assertEqual(initiator.work_all(), 3)
+        self.assertEqual(initiator.work_all(), 1)
         self.assertEqual(self.session.query(Analysis).filter(Analysis.status == Status.NEW).count(), 3)

@@ -4,7 +4,7 @@ import re
 import string
 
 from sqlalchemy import Column, BigInteger, Integer, String, Date, DateTime, Boolean, \
-    Numeric, ForeignKey, Table, Index, Text
+    Numeric, ForeignKey, Table, Index, Text, UniqueConstraint
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, object_session, relationship
@@ -42,9 +42,12 @@ class Status:
     CLASSIFIED = 'classified'
     EXTRACTING = 'extracting'
     EXTRACTED = 'extracted'
+    GEOTAGGING = 'geotagging'
+    GEOTAGGED = 'geotagged'
     SCRAPING_FAILED = 'scraping failed'
     CLASSIFYING_FAILED = 'classifying failed'
     EXTRACTING_FAILED = 'extracting failed'
+    GEOTAGGING_FAILED = 'geotagging failed'
     EDITING = 'editing'
     EDITED = 'edited'
 
@@ -300,12 +303,15 @@ class FactTerm:
     DAMAGED = 'Partially Destroyed Housing'
     UNINHABITABLE = 'Uninhabitable Housing'
     OTHER = 'Multiple/Other'
+    REFUGEE = 'Refugee'
+    ASYLUM_SEEKER = 'Asylum Seeker'
 
 
 fact_location = Table(
     'idetect_fact_locations', Base.metadata,
     Column('fact', Integer, ForeignKey('idetect_facts.id')),
-    Column('location', Integer, ForeignKey('idetect_locations.id'))
+    Column('location', Integer, ForeignKey('idetect_locations.id')),
+    UniqueConstraint('fact', 'location', name='uix_fact_location')
 )
 
 
@@ -358,7 +364,7 @@ class Location(Base):
     __tablename__ = 'idetect_locations'
 
     id = Column(Integer, primary_key=True, unique=True)
-    location_name = Column(String)
+    location_name = Column(String, unique=True)
     location_type = Column(String)
     country_iso3 = Column('country', ForeignKey(Country.iso3))
     country = relationship(Country)

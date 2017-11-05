@@ -39,7 +39,7 @@ def add_url():
     if url is None:
         flash(u'Something went wrong. Please try again.', 'danger')
         return redirect(url_for('/'))
-    article = Document(url=url, name="New Document", type=DocumentType.WEB)
+    article = Gkg(document_identifier=url)
     session = Session()
     try:
         session.add(article)
@@ -57,7 +57,7 @@ def article(doc_id):
         analysis = session.query(Analysis) \
             .filter(Analysis.gkg_id == doc_id).one()
         coords = {tuple(l.latlong.split(","))
-                  for f in analysis.facts for l in f.locations}
+                  for f in analysis.facts for l in f.locations if l.latlong is not None}
         return render_template('article.html', article=analysis, coords=list(coords))
     finally:
         session.close()
