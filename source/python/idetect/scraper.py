@@ -99,6 +99,9 @@ def scrape_html(analysis):
         analysis.publication_date = a.publish_date
 
         text = re.sub('\s+', ' ', a.text)  # collapse all whitespace
+        # Scraping should fail if text is length 0
+        if len(text) == 0:
+            raise Exception("Content is empty")
         text_clean = cleanup(text) # Clean text for analysis steps
         try:
             analysis.language = detect(text)
