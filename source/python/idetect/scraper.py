@@ -106,7 +106,9 @@ def scrape_html(analysis):
         try:
             analysis.language = detect(text)
         except LangDetectException:
-            pass
+            raise Exception("Unable to determine language")
+        if analysis.language != 'en':
+            raise Exception("Article not in English")
         content = DocumentContent(analysis=[analysis], content=text, content_clean=text_clean, content_type='text')
         session = object_session(analysis)
         session.add(content)
