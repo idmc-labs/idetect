@@ -68,7 +68,7 @@ class NotLatestException(Exception):
 
 
 class Gkg(Base):
-    __tablename__ = 'gkg_idetect'
+    __tablename__ = 'gkg'
 
     id = Column(BigInteger, primary_key=True)
     gkgrecordid = Column(Text)
@@ -110,7 +110,7 @@ class Analysis(Base):
     __tablename__ = 'idetect_analyses'
 
     gkg_id = Column(Integer,
-                    ForeignKey('gkg_idetect.id', ondelete="CASCADE"),
+                    ForeignKey('gkg.id', ondelete="CASCADE"),
                     primary_key=True)
     gkg = relationship('Gkg')
     status = Column(String, nullable=False)
@@ -252,7 +252,7 @@ class AnalysisHistory(Base):
     __tablename__ = 'idetect_analysis_histories'
 
     id = Column(Integer, primary_key=True)
-    gkg_id = Column(Integer, ForeignKey('gkg_idetect.id', ondelete="CASCADE"))
+    gkg_id = Column(Integer, ForeignKey('gkg.id', ondelete="CASCADE"))
     gkg = relationship('Gkg')
     status = Column(String, nullable=False)
     title = Column(String)
