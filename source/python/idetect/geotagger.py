@@ -3,9 +3,75 @@
 import unicodedata
 
 import pycountry
-import requests
+from itertools import groupby
+from idetect.model import LocationType, Fact
+from idetect.geo_external import mapzen_coordinates, GeotagException
+from sqlalchemy.orm import object_session
 
-from idetect.model import LocationType
+
+def process_locations(analysis):
+    '''Geotag locations for a given article
+    :params analysis: instance of Analysis
+    :return: None
+    '''
+    session = object_session(analysis)
+    facts = analysis.facts
+    for fact in facts:
+        if len(fact.locations) > 0:
+            process_fact(fact, analysis, session)
+
+
+def process_fact(fact, analysis, session):
+    '''Geotag locations for a given fact
+    If the locations represent multiple countries, duplicate
+    the fact for each country
+    :params fact: instance of Fact
+    :params analysis: instance of Analysis
+    :params session: object session for Analysis
+    :return: None
+    '''
+    for location in fact.locations:
+        if location.country == '' or location.country is None:
+            process_location(location, session)
+
+    country_locations = fact.locations
+    country_locations.sort(key=lambda x: x.country.iso3)
+    country_groups = [(key, [loc for loc in group]) for key, group in groupby(country_locations, lambda x: x.country.iso3)]
+    # If all locations from same country
+    # Update the Fact iso3 field, then done
+    if len(country_groups) == 1:
+        fact.iso3 = country_groups[0][0]
+        session.commit()
+    else:
+        # Empty the fact locations
+        fact.locations = []
+        # Update the iso3 and locations for original fact
+        fact.iso3 = country_groups[0][0]
+        fact.locations = [location for location in country_groups[0][1]]
+        # Duplicate the fact for the remaining countries
+        for key, group in country_groups[1:]:
+            f = Fact(unit=fact.unit, term=fact.term,
+                excerpt_start=fact.excerpt_start, excerpt_end=fact.excerpt_end,
+                specific_reported_figure=fact.specific_reported_figure,
+                vague_reported_figure=fact.vague_reported_figure, iso3=key,
+                tag_locations=fact.tag_locations)
+            session.add(f)
+            analysis.facts.append(f)
+            f.locations.extend([location for location in group])
+        session.commit()
+
+
+def process_location(location, session):
+    '''Geotag and update given location object
+    :params location: instance of Location
+    :params session: session object
+    :return: None
+    '''
+    loc_info = get_geo_info(location.location_name)
+    location.location_type = loc_info['type']
+    location.country_iso3 = loc_info['country_code']
+    location.latlong = loc_info['coordinates']
+    session.commit()
 
 
 def get_geo_info(place_name):
@@ -56,20 +122,6 @@ def strip_words(place_name):
     return place_name.strip().title()
 
 
-def coords_tostring(coords_list, separator=','):
-    return separator.join(map(str, coords_list[::-1]))
-
-
-def common_names(place_name):
-    '''Convert countries or places with commonly used names
-    to their official names
-    '''
-    return {
-        'Syria': 'Syrian Arab Republic',
-        'Bosnia': 'Bosnia and Herzegovina'
-    }.get(place_name, place_name)
-
-
 def subdivision_country_code(place_name):
     '''Try and extract the country code by looking
     at country subdivisions i.e. States, Provinces etc.
@@ -108,7 +160,6 @@ def city_subdivision_country(place_name):
         and the ISO-3166 alpha_3 country code for a given place name.
         Return None if the country cannot be identified.
         '''
-    place_name = common_names(place_name)
     country_code, country_name = match_country_name(place_name)
     if country_code:
         return {'place_name': place_name, 'country_code': country_code, 'type': 'country'}
@@ -119,42 +170,3 @@ def city_subdivision_country(place_name):
         return {'place_name': place_name, 'country_code': country_code, 'type': 'subdivision'}
 
     return None
-
-
-def mapzen_coordinates(place_name, country_code=None):
-    api_key = 'mapzen-neNu6xZ'
-    base_url = 'https://search.mapzen.com/v1/search'
-
-    query_params = {'text': place_name, 'api_key': api_key}
-    if country_code:
-        query_params['boundary.country'] = country_code
-    resp = requests.get(base_url, params=query_params)
-    res = resp.json()
-    data = res["features"]
-    if len(data) == 0:
-        return {'place_name': place_name, 'type': '', 'country_code': '', 'flag': 'no-results', 'coordinates': ''}
-    else:
-        if len(data) > 1:
-            flag = "multiple-results"
-        else:
-            flag = "single-result"
-
-        data.sort(key=lambda x: x['properties']['confidence'], reverse=True)
-        return {'place_name': place_name, 'type': layer_to_entity(data[0]['properties']['layer']),
-                'country_code': data[0]['properties']['country_a'], 'flag': flag,
-                'coordinates': coords_tostring(data[0]['geometry']['coordinates'])}
-
-
-def layer_to_entity(layer):
-    if layer in ('address', 'street'):
-        return LocationType.ADDRESS
-    elif layer in ('neighbourhood', 'borough', 'localadmin'):
-        return LocationType.NEIGHBORHOOD
-    elif layer in ('locality'):
-        return LocationType.CITY
-    elif layer in ('county', 'region'):
-        return LocationType.SUBDIVISION
-    elif layer in ('country'):
-        return LocationType.COUNTRY
-    else:
-        return LocationType.UNKNOWN

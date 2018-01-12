@@ -3,7 +3,8 @@ import ast
 import re
 import string
 
-from sqlalchemy import Column, BigInteger, Integer, String, Date, DateTime, Boolean, Numeric, ForeignKey, Table, Index
+from sqlalchemy import Column, BigInteger, Integer, String, Date, DateTime, Boolean, \
+    Numeric, ForeignKey, Table, Index, Text, UniqueConstraint
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, object_session, relationship
@@ -25,10 +26,11 @@ def _compile_drop_table(element, compiler, **kwargs):
 
 def db_url():
     """Return the database URL based on environment variables"""
-    return 'postgresql://{user}:{passwd}@{db_host}/{db}'.format(
+    return 'postgresql://{user}:{passwd}@{db_host}:{db_port}/{db}'.format(
         user=os.environ.get('DB_USER'),
         passwd=os.environ.get('DB_PASSWORD'),
         db_host=os.environ.get('DB_HOST'),
+        db_port=os.environ.get('DB_PORT'),
         db=os.environ.get('DB_NAME'))
 
 
@@ -40,9 +42,12 @@ class Status:
     CLASSIFIED = 'classified'
     EXTRACTING = 'extracting'
     EXTRACTED = 'extracted'
+    GEOTAGGING = 'geotagging'
+    GEOTAGGED = 'geotagged'
     SCRAPING_FAILED = 'scraping failed'
     CLASSIFYING_FAILED = 'classifying failed'
     EXTRACTING_FAILED = 'extracting failed'
+    GEOTAGGING_FAILED = 'geotagging failed'
     EDITING = 'editing'
     EDITED = 'edited'
 
@@ -62,42 +67,19 @@ class NotLatestException(Exception):
     pass
 
 
-class DocumentType:
-    WEB = 'WEB'
-    EML = 'EML'
-    PDF = 'PDF'
-    EXL = 'EXL'
+class Gkg(Base):
+    __tablename__ = 'gkg'
 
+    id = Column(BigInteger, primary_key=True)
+    gkgrecordid = Column(Text)
+    date = Column(BigInteger)
+    document_identifier = Column(Text)
 
-class Document(Base):
-    __tablename__ = 'documents'
-
-    id = Column(Integer, primary_key=True)
-    legacy_id = Column(BigInteger)
-    idx = Column(BigInteger)
-    name = Column(String, nullable=False)  # Document title
-    serial_no = Column(String)  # eg. D2016-PDF-000005
-    type = Column(String, nullable=False)  # DocumentType, eg. WEB
-    publication_date = Column(Date)
-    comment = Column(String)
-    url = Column(String)
-    original_filename = Column(String)  # filename
-    filename = Column(String)  # uuid based filename
-    content_type = Column(String)  # eg. application/pdf
-    displacement_types = Column(postgresql.ARRAY(String))  # eg. {Conflict, Disaster}
-    countries = Column(postgresql.ARRAY(String))  # eg. {Haiti,Bahamas,"United States of America"}
-    sources = Column(postgresql.ARRAY(String))  # eg. {IOM,"CCCM Cluster",WFP,"Local Authorities"}
-    publishers = Column(postgresql.ARRAY(String))  # eg. {REDLAC,"Radio La Primerísima"}
-    confidential = Column(Boolean)
-    created_by = Column(String)  # eg. First.Last
-    created_at = Column(DateTime(timezone=False), server_default=func.now())
-    modified_by = Column(String)  # eg. First.Last
-    modified_at = Column(DateTime(timezone=False), server_default=func.now())
 
 
 analysis_fact = Table(
     'idetect_analysis_facts', Base.metadata,
-    Column('analysis', ForeignKey('idetect_analyses.document_id', ondelete="CASCADE"), primary_key=True),
+    Column('analysis', ForeignKey('idetect_analyses.gkg_id', ondelete="CASCADE"), primary_key=True),
     Column('fact', ForeignKey('idetect_facts.id', ondelete="CASCADE"), primary_key=True)
 )
 
@@ -127,10 +109,10 @@ def cleanup(text):
 class Analysis(Base):
     __tablename__ = 'idetect_analyses'
 
-    document_id = Column(Integer,
-                         ForeignKey('documents.id', ondelete="CASCADE"),
-                         primary_key=True)
-    document = relationship('Document')
+    gkg_id = Column(Integer,
+                    ForeignKey('gkg.id', ondelete="CASCADE"),
+                    primary_key=True)
+    gkg = relationship('Gkg')
     status = Column(String, nullable=False)
     title = Column(String)
     publication_date = Column(DateTime(timezone=True))
@@ -153,13 +135,13 @@ class Analysis(Base):
     processing_time = Column(Numeric)  # time it took to process to bring it to the current status
 
     def __str__(self):
-        return "<DocumentAnalysis {} {} {}>".format(self.document_id, self.document.url)
+        return "<Analysis {} {} {}>".format(self.gkg_id, self.document.url)
 
     def get_updated_version(self):
         """Return the most recent version of this article"""
         # can't just use get() because that will use the cache instead of running a query
         return object_session(self).query(Analysis) \
-            .filter(Analysis.document_id == self.document_id).one()
+            .filter(Analysis.gkg_id == self.gkg_id).one()
 
     def create_new_version(self, new_status):
         """
@@ -174,7 +156,7 @@ class Analysis(Base):
 
             try:
                 latest = session.query(Analysis) \
-                    .filter(Analysis.document_id == self.document_id) \
+                    .filter(Analysis.gkg_id == self.gkg_id) \
                     .filter(Analysis.status == self.status) \
                     .with_for_update().one()
             except NoResultFound:
@@ -253,12 +235,12 @@ class Analysis(Base):
     def category_counts(cls, session):
         cat_counts = session.query(Analysis)\
                 .filter(Analysis.relevance == True)\
-                .with_entities(Analysis.category, func.count(Analysis.document_id))\
+                .with_entities(Analysis.category, func.count(Analysis.gkg_id))\
                 .group_by(Analysis.category).all()
         cat_counts = dict(cat_counts)
         cat_counts['Not Relevant'] = session.query(Analysis)\
                 .filter(Analysis.relevance == False)\
-                .with_entities(func.count(Analysis.document_id)).first()[0]
+                .with_entities(func.count(Analysis.gkg_id)).first()[0]
         return cat_counts
 
 
@@ -270,8 +252,8 @@ class AnalysisHistory(Base):
     __tablename__ = 'idetect_analysis_histories'
 
     id = Column(Integer, primary_key=True)
-    document_id = Column(Integer, ForeignKey('documents.id', ondelete="CASCADE"))
-    document = relationship('Document')
+    gkg_id = Column(Integer, ForeignKey('gkg.id', ondelete="CASCADE"))
+    gkg = relationship('Gkg')
     status = Column(String, nullable=False)
     title = Column(String)
     publication_date = Column(DateTime(timezone=True))
@@ -321,12 +303,15 @@ class FactTerm:
     DAMAGED = 'Partially Destroyed Housing'
     UNINHABITABLE = 'Uninhabitable Housing'
     OTHER = 'Multiple/Other'
+    REFUGEE = 'Refugee'
+    ASYLUM_SEEKER = 'Asylum Seeker'
 
 
 fact_location = Table(
     'idetect_fact_locations', Base.metadata,
     Column('fact', Integer, ForeignKey('idetect_facts.id')),
-    Column('location', Integer, ForeignKey('idetect_locations.id'))
+    Column('location', Integer, ForeignKey('idetect_locations.id')),
+    UniqueConstraint('fact', 'location', name='uix_fact_location')
 )
 
 
@@ -379,7 +364,7 @@ class Location(Base):
     __tablename__ = 'idetect_locations'
 
     id = Column(Integer, primary_key=True, unique=True)
-    location_name = Column(String)
+    location_name = Column(String, unique=True)
     location_type = Column(String)
     country_iso3 = Column('country', ForeignKey(Country.iso3))
     country = relationship(Country)

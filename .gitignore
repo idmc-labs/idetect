@@ -6,6 +6,8 @@ source/.local
 source/notebooks/.ipynb_checkpoints
 source/data/input_urls.csv
 source/.bash_history
+source/.cache/
+source/.python_history
 
 *.swp
 *.swo

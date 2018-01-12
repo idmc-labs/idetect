@@ -5,7 +5,7 @@ import signal
 import time
 from multiprocessing import Process
 
-from idetect.model import Analysis, Session, Document, Status
+from idetect.model import Analysis, Session, Gkg, Status
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -55,7 +55,7 @@ class Worker:
             analysis_status = analysis.status
             analysis.create_new_version(self.working_status)
             logger.info("Worker {} claimed Analysis {} in status {}".format(
-                os.getpid(), analysis.document_id, analysis_status))
+                os.getpid(), analysis.gkg_id, analysis_status))
         finally:
             # make sure to release a FOR UPDATE lock, if we got one
             session.rollback()
@@ -66,14 +66,14 @@ class Worker:
             self.function(analysis)
             delta = time.time() - start
             logger.info("Worker {} processed Analysis {} {} -> {} {}s".format(
-                os.getpid(), analysis.document_id, analysis_status, self.success_status, delta))
+                os.getpid(), analysis.gkg_id, analysis_status, self.success_status, delta))
             analysis.error_msg = None
             analysis.processing_time = delta
             analysis.create_new_version(self.success_status)
         except Exception as e:
             delta = time.time() - start
             logger.warning("Worker {} failed to process Analysis {} {} -> {}".format(
-                os.getpid(), analysis.document_id, analysis_status, self.failure_status),
+                os.getpid(), analysis.gkg_id, analysis_status, self.failure_status),
                 exc_info=e)
             analysis.error_msg = str(e)
             analysis.processing_time = delta
@@ -141,18 +141,19 @@ class Initiator(Worker):
             # ... and lock it for updates
             # ... sort by created date
             # ... pick the first (oldest)
-            document = session.query(Document) \
-                .filter(~session.query(Analysis).filter(Document.id == Analysis.document_id).exists()) \
+            gkgs = session.query(Gkg) \
+                .filter(~session.query(Analysis).filter(Gkg.id == Analysis.gkg_id).exists()) \
                 .with_for_update() \
-                .order_by(Document.created_at) \
-                .first()
-            if document is None:
+                .order_by(Gkg.date) \
+                .limit(1000).all()
+            if len(gkgs) == 0:
                 return False  # no work to be done
-            analysis = Analysis(document=document, status=Status.NEW)
-            session.add(analysis)
-            session.commit()
-            logger.info("Worker {} created Analysis {} in status {}".format(
-                os.getpid(), analysis.document_id, analysis.status))
+            for gkg in gkgs:
+                analysis = Analysis(gkg=gkg, status=Status.NEW)
+                session.add(analysis)
+                session.commit()
+                logger.info("Worker {} created Analysis {} in status {}".format(
+                    os.getpid(), analysis.gkg_id, analysis.status))
         finally:
             # make sure to release a FOR UPDATE lock, if we got one
             if session is not None:

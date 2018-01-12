@@ -104,11 +104,11 @@
           </thead>
           {% for article in articles %}
           <tr>
-            <td>{{ article.document.url[:40] if article.document.url else "" }}</td>
+            <td>{{ article.gkg.document_identifier[:40] if article.gkg.document_identifier else "" }}</td>
             <td>{{ article.status.title() }}</td>
             <td>{{ format_date(article.updated) }}</td>
             <td>{{ article.content.content[:100] if article.content else "None" }}</td>
-            <td><a href="{{ url_for('.article', doc_id=article.document_id) }}">More</a></td>
+            <td><a href="{{ url_for('.article', doc_id=article.gkg_id) }}">More</a></td>
           </tr>
           {% endfor %}
         </table>

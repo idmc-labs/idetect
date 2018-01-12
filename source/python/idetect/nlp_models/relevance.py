@@ -10,7 +10,7 @@ from spacy.tokens.token import Token
 from idetect.model import Relevance
 from idetect.nlp_models.base_model import DownloadableModel, CustomSklLsiModel
 from idetect.fact_extractor import nlp
-from idetect.geotagger import strip_accents, compare_strings, strip_words, common_names, LocationType, subdivision_country_code, match_country_name, city_subdivision_country
+from idetect.geotagger import strip_accents, compare_strings, strip_words, LocationType, subdivision_country_code, match_country_name, city_subdivision_country
 
 
 class RelevanceModel(DownloadableModel):

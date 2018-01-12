@@ -12,7 +12,7 @@ from scipy import sparse
 from gensim import matutils, models
 from gensim.sklearn_integration.sklearn_wrapper_gensim_lsimodel import SklLsiModel
 
-from idetect.geotagger import strip_accents, compare_strings, strip_words, common_names, LocationType, subdivision_country_code, match_country_name, city_subdivision_country
+from idetect.geotagger import strip_accents, compare_strings, strip_words, LocationType, subdivision_country_code, match_country_name, city_subdivision_country
 
 class DownloadableModel(object):
     """A base class for loading pickeld scikit-learn models that may be stored

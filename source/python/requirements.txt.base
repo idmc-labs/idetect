@@ -1,0 +1,15 @@
+Flask
+psycopg2
+SQLAlchemy
+spacy
+textacy
+parsedatetime
+requests
+schedule
+pycountry
+newspaper3k
+pdfminer.six
+jupyter
+nltk
+langdetect
+

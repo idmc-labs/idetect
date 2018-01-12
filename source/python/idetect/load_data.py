@@ -37,7 +37,8 @@ def load_terms(session):
     # Load terms used for report extraction
     person_reporting_terms = [
         'displaced', 'evacuated', 'forced', 'flee', 'homeless', 'relief camp',
-        'sheltered', 'relocated', 'stranded', 'stuck', 'accommodated']
+        'sheltered', 'relocated', 'stranded', 'stuck', 'accommodated', 'refugee camp',
+        'refugee center']
 
     structure_reporting_terms = [
         'destroyed', 'damaged', 'swept', 'collapsed',
@@ -46,7 +47,7 @@ def load_terms(session):
 
     person_reporting_units = ["families", "person", "people", "individuals", "locals",
                               "villagers", "residents",
-                              "occupants", "citizens", "households"]
+                              "occupants", "citizens", "households", "refugee", "asylum seeker"]
 
     structure_reporting_units = [
         "home", "house", "hut", "dwelling", "building"]
