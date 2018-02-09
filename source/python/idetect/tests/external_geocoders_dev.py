@@ -50,7 +50,7 @@ def mapzen_coordinates(place_name, country_code='XXX'):
 
 def mapbox_coordinates(place_name, country_code='XXX'):
     base_url='https://api.mapbox.com/geocoding/v5/mapbox.places/'+place_name+'.json'
-    api_key='pk.eyJ1IjoiaWRtY2RhIiwiYSI6ImNqOThhZnRueDBnaWwycW5yc2FzM2MxMXoifQ.5CBgQnx2VS1WcXuVCongBw'
+    api_key='thisisnotakey'
     query_params = {'access_token': api_key}
     if country_code != 'XXX':
         try:
@@ -98,7 +98,7 @@ def nominatim_coordinates(place_name, country_code='XXX'):
             pass
     try:
         resp = requests.get(base_url, params=base_params)
-        res = resp.json()
+        res = resp.json()        
         data = res
         if len(data) == 0:
             return {'place_name': place_name, 'type': '',
@@ -113,6 +113,7 @@ def nominatim_coordinates(place_name, country_code='XXX'):
         data.sort(key=lambda x: x['importance'], reverse=True)
 
         geo_entity=data[0]
+        # print(geo_entity)
         placetype=LocationType.UNKNOWN
         try:
             placetype = OSM_place_to_entity(geo_entity['extratags']['place'])
@@ -133,7 +134,7 @@ def nominatim_coordinates(place_name, country_code='XXX'):
         return {
             'place_name': place_name, 'type': placetype,
             'country_code': iso3, 'flag': flag,
-            'coordinates': coords_tostring({geo_entity['lat'],geo_entity['lon']})
+            'coordinates': '{},{}'.format(geo_entity['lat'],geo_entity['lon'])
         }
     except:
         raise GeotagException()
@@ -169,20 +170,21 @@ def layer_to_entity(layer):
         return LocationType.UNKNOWN
 
 locations=[
-            ["Farigliano","XXX"],
-           ["Torino","XXX"],
-           ["Torino","USA"],
-           ["Torino","RRR"],
-           ["Mosul","XXX"],
-           ["Mosul","IRQ"],
-           ["rue d'Ermenonville 7","XXX"],
-           ["rue d'Ermenonville 7","USA"],
-           ["San Francisco","XXX"],
-           ["Nigeria","XXX"],
-           ["North Kivu","XXX"],
+           ["Bidibidi","XXX"],
+        #    ["Torino","XXX"],
+        #    ["Torino","USA"],
+        #    ["Torino","RRR"],
+        #    ["Mosul","XXX"],
+        #    ["Mosul","IRQ"],
+        #    ["rue d'Ermenonville 7","XXX"],
+        #    ["rue d'Ermenonville 7","USA"],
+        #    ["San Francisco","XXX"],
+        #    ["Vietnam","XXX"],
+        #    ["Nigeria","XXX"],
+        #    ["North Kivu","XXX"]
            ]
 for location in locations:
     print(mapzen_coordinates(location[0],location[1]))
-    print(mapbox_coordinates(location[0],location[1]))
+    # print(mapbox_coordinates(location[0],location[1]))
     print(nominatim_coordinates(location[0],location[1]))
     print('')

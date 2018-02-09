@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from idetect.model import Base, Session, Status, Gkg, Analysis, DocumentContent, Country, Location, LocationType, Fact
 from idetect.load_data import load_countries
 from idetect.fact_extractor import extract_facts
-from idetect.geotagger import get_geo_info, process_locations, mapzen_coordinates, GeotagException
+from idetect.geotagger import get_geo_info, process_locations, nominatim_coordinates, GeotagException
 
 
 class TestGeoTagger(TestCase):
@@ -42,7 +42,17 @@ class TestGeoTagger(TestCase):
         results = get_geo_info("Beijing")
         self.assertEqual(results['country_code'], 'CHN')
         self.assertEqual(results['coordinates'],
-                         "39.937967,116.417592")
+                         "39.9059631,116.391248")
+    
+    def test_country_code(self):
+        """Returns sufficient level of detail for results"""
+        results = get_geo_info("Bidibidi")
+        self.assertEqual(results['country_code'], 'UGA')
+        results = get_geo_info("Marrakech")
+        self.assertEqual(results['country_code'], 'MAR')
+        results = get_geo_info("Fairfax County")
+        self.assertEqual(results['country_code'], 'USA')
+
 
     def test_location_types(self):
         """Corectly distinguishes between Countries, Cities and Subdivisions"""
@@ -54,8 +64,8 @@ class TestGeoTagger(TestCase):
         self.assertEqual(results['type'], LocationType.SUBDIVISION)
 
     # DONT RUN geotagging if detail already exists
-    @mock.patch('idetect.geotagger.mapzen_coordinates')
-    def dont_geotag_if_detail_exists(self, mapzen):
+    @mock.patch('idetect.geotagger.nominatim_coordinates')
+    def dont_geotag_if_detail_exists(self, nominatim):
         gkg = Gkg(
             id=3771256,
             gkgrecordid="20170215174500-2503",
@@ -79,7 +89,7 @@ class TestGeoTagger(TestCase):
         analysis.facts.append(fact)
         self.session.commit()
         process_locations(analysis)
-        assert not mapzen.called
+        assert not nominatim.called
 
 
     def test_create_duplicate_fact(self):
@@ -113,10 +123,10 @@ class TestGeoTagger(TestCase):
         self.assertEqual(1, len(analysis.facts[1].locations))
 
 
-    @mock.patch('idetect.geotagger.mapzen_coordinates')
-    def test_fail_if_geotagging_fails(self, mapzen):
+    @mock.patch('idetect.geotagger.nominatim_coordinates')
+    def test_fail_if_geotagging_fails(self, nominatim):
         """Location processing should fail if geotagging fails"""
-        mapzen.side_effect = GeotagException()
+        nominatim.side_effect = GeotagException()
         gkg = Gkg(
             id=3771256,
             gkgrecordid="20170215174500-2503",

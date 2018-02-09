@@ -5,7 +5,7 @@ import unicodedata
 import pycountry
 from itertools import groupby
 from idetect.model import LocationType, Fact
-from idetect.geo_external import mapzen_coordinates, GeotagException
+from idetect.geo_external import nominatim_coordinates, GeotagException
 from sqlalchemy.orm import object_session
 
 
@@ -89,11 +89,11 @@ def get_geo_info(place_name):
 
     country_info = city_subdivision_country(place_name)
     if country_info:
-        coords = mapzen_coordinates(place_name, country_info['country_code'])
+        coords = nominatim_coordinates(place_name, country_info['country_code'])
         country_info['coordinates'] = coords['coordinates']
         country_info['flag'] = coords['flag']
     else:
-        country_info = mapzen_coordinates(place_name)
+        country_info = nominatim_coordinates(place_name)
 
     return country_info
 
