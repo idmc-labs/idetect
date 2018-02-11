@@ -20,3 +20,4 @@ logs/workers/*.log
 logs
 
 **/.DS_Store
+pgdata
