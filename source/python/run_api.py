@@ -2,7 +2,7 @@ import json
 import logging
 
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
-from sqlalchemy import create_engine, desc
+from sqlalchemy import create_engine, desc, func
 
 from idetect.model import db_url, Base, Analysis, Session, Gkg
 
@@ -16,7 +16,7 @@ app.secret_key = 'my unobvious secret key'
 
 engine = create_engine(db_url())
 Session.configure(bind=engine)
-Base.metadata.create_all(engine)
+#Base.metadata.create_all(engine)
 
 
 @app.route('/')
@@ -89,6 +89,34 @@ def utility_processor():
 
     return dict(format_date=format_date)
 
+# hmm
+from idetect.api_queries import ApiFiltered, filter_params, create_temp_filters_table
+
+
+@app.route('/filters', methods=['POST'])
+def filters():
+    from_date = request.form['fromdate']
+    to_date = request.form['todate']
+    extra_filters = filter_params(request.form)
+    session = Session()
+    try:
+        create_temp_filters_table(session, from_date, to_date, **extra_filters)
+        result = []
+        for column in (ApiFiltered.category,
+                       ApiFiltered.unit,
+                       ApiFiltered.source_common_name,
+                       ApiFiltered.term,
+                       ApiFiltered.iso3,
+                       ApiFiltered.specific_reported_figure
+                       ):
+            counts = session.query(column, func.count(ApiFiltered.category)).group_by(column).all()
+            result += [{'count': count, 'value': value, 'filter_type': column.name}
+                       for value, count in counts]
+        resp = jsonify(result)
+        resp.status_code = 200
+        return resp
+    finally:
+        session.close()
 
 if __name__ == "__main__":
     # Start flask app
