@@ -5,7 +5,7 @@ import time
 from sqlalchemy import create_engine, func, column, Integer
 from idetect.explain import explain_text
 
-from idetect.fact_api import FactApi, add_filters
+from idetect.fact_api import FactApi, add_filters, get_filter_counts
 from idetect.model import Session
 
 logger = logging.getLogger(__name__)
@@ -68,13 +68,6 @@ class TestSyriaYear(TestCase):
             locations=self.syria_locations
         ).group_by(FactApi.category)
 
-        #syr_year_category = (
-        #    filter_by_location(
-        #        self.session.query(func.count(FactApi.fact), FactApi.category)
-        #        .filter(FactApi.gdelt_day.between(self.fromdate, self.todate)),
-        #        self.syria_locations)
-        #        .group_by(FactApi.category)
-        #)
         t0 = time.time()
         result = {category: count for count, category in syr_year_by_category.all()}
         t1 = time.time()
@@ -83,3 +76,10 @@ class TestSyriaYear(TestCase):
         # print(explain_text(self.session, syr_year_by_category))
         print(t1 - t0)
         self.assertLess(t1 - t0, 1.0)
+
+    def test_filter_counts(self):
+        f_c = get_filter_counts(self.session,
+            fromdate=self.fromdate,
+            todate=self.todate,
+            locations=self.syria_locations)
+        print(f_c)

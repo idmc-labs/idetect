@@ -30,48 +30,8 @@ class FactApi(Base):
     content_id = Column(Integer, ForeignKey('idetect_document_contents.id'))
 
 
-class TempFactApiFiltered(Base):
-    __tablename__ = 'temp_fact_api_filtered'
-
-    document_identifier = Column(String)
-    source_common_name = Column(String)
-    gdelt_day = Column(Date)
-    fact = Column(Integer,
-                  ForeignKey('idetect_facts.id'),
-                  primary_key=True)
-    unit = Column(String)
-    term = Column(String)
-    specific_reported_figure = Column(Integer)
-    vague_reported_figure = Column(String)
-    iso3 = Column(String)
-
-    location = Column(Integer,
-                      ForeignKey('idetect_locations.id'),
-                      primary_key=True)
-
-    gkg_id = Column(Integer,
-                    ForeignKey('idetect_analyses.gkg_id'),
-                    primary_key=True)
-    category = Column(String)
-    content_id = Column(Integer, ForeignKey('idetect_document_contents.id'))
-
-    @staticmethod
-    def populate_from_select(query):
-        session = query.session
-        # Create the temporary table. SQLAlchemy doesn't have a nice way to do this
-        session.execute(text("""
-            DROP TABLE IF EXISTS temp_fact_api_filtered;
-            CREATE TEMPORARY TABLE temp_fact_api_filtered 
-            (LIKE idetect_fact_api)
-            ON COMMIT DROP;
-        """))
-        # populate the table with the query
-        session.execute(insert(TempFactApiFiltered).from_select(
-            TempFactApiFiltered.__table__.c,
-            query))
-
-
 def filter_by_locations(query, locations):
+    '''Because the location list is typically quite large, this does a VALUES query instead of an IN'''
     loctuples = [(l,) for l in set(locations)]
     locs = values(
         [column('location_id', Integer)],
@@ -81,9 +41,11 @@ def filter_by_locations(query, locations):
     return query.filter(FactApi.location == locs.c.location_id)
 
 
-def add_filters(query, fromdate=None, todate=None, locations=None,
+def add_filters(query,
+                fromdate=None, todate=None, locations=None,
                 categories=None, units=None, sources=None,
                 terms=None, iso3s=None, figures=None):
+    '''Add some of the known filters to the query'''
     if fromdate:
         query = query.filter(FactApi.gdelt_day >= fromdate)
     if todate:
@@ -101,7 +63,11 @@ def add_filters(query, fromdate=None, todate=None, locations=None,
     if iso3s:
         query = query.filter(FactApi.iso3.in_(iso3s))
     if figures:
-        query = query.filter(FactApi.specific_reported_figure.in_(figures))
+        # figures are typically passed in as all values in a range
+        # it's more efficient to just test the endpoints of the range
+        least = min(figures)
+        greatest = max(figures)
+        query = query.filter(FactApi.specific_reported_figure.between(least, greatest))
     return query
 
 
