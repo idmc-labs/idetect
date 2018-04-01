@@ -1,10 +1,10 @@
 import logging
+from hashlib import sha1
 
-from flask import request, jsonify
-from sqlalchemy import Column, Integer, String, ForeignKey, text
+from sqlalchemy import Column, Integer, String, Date,  ForeignKey, text
 from sqlalchemy import insert
 
-from idetect.model import Base, Analysis, Session, Gkg, Fact, Location, analysis_fact, fact_location
+from idetect.model import Base, Analysis, Gkg, Fact, Location, analysis_fact, fact_location
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -33,6 +33,89 @@ class ApiFiltered(Base):
     specific_reported_figure = Column(Integer)
 
     content_id = Column(Integer, ForeignKey('idetect_document_contents.id'))
+
+def get_class_by_table_name(table_name):
+  for c in Base._decl_class_registry.values():
+    if hasattr(c, '__tablename__') and c.__tablename__ == table_name:
+      return c
+
+def create_day_range_location_table(engine, session, from_date, to_date, locations=None):
+    table_id = ','.join([str(x) for x in [from_date, to_date] + sorted(set(locations))])
+    table_hash = sha1(table_id.encode('ascii')).hexdigest()
+    table_name = 'idetect_cache_' + table_hash
+
+    table = get_class_by_table_name(table_name)
+    if not table:
+        table = type(table_name, (Base,),
+                 {
+                     '__tablename__': table_name,
+                     'gkg_id': Column(Integer,
+                                      ForeignKey('gkg.id'),
+                                      primary_key=True),
+                     'fact_id': Column(Integer,
+                                       ForeignKey('idetect_facts.id'),
+                                       primary_key=True),
+                     'location_id': Column(Integer,
+                                           ForeignKey('idetect_locations.id'),
+                                           primary_key=True),
+
+                     'category': Column(String),
+                     'source_common_name': Column(String),
+                     'unit': Column(String),
+                     'term': Column(String),
+                     'iso3': Column(String),
+                     'specific_reported_figure': Column(Integer),
+
+                     'content_id': Column(Integer, ForeignKey('idetect_document_contents.id'))
+                 })
+
+    # create the table if it doesn't exist
+    if not engine.dialect.has_table(engine, table_name):
+        table.__table__.create(engine)
+
+    # populate its rows if it's empty
+    if session.query(table).count() == 0:
+        select = (session.query(
+            Fact.id,
+            Gkg.id,
+            Location.id,
+            Analysis.category,
+            'gkg.source_common_name',
+            Fact.unit,
+            Fact.term,
+            Fact.iso3,
+            Fact.specific_reported_figure,
+            Analysis.content_id)
+                  .join(analysis_fact)
+                  .join(Analysis)
+                  .join(Gkg)
+                  .join(fact_location)
+                  .join(Location)
+                  .filter(Gkg.date.between(from_date, to_date))
+                  )
+        # locations is optional
+        if locations:
+            select = select.filter(Location.id.in_(locations))
+
+        # force this query to use indexes
+        session.execute(text("SET LOCAL enable_seqscan=FALSE;"))
+        # populate the table with the query
+        session.execute(insert(table).from_select(
+            (
+                table.fact_id,
+                table.gkg_id,
+                table.location_id,
+                table.category,
+                table.source_common_name,
+                table.unit,
+                table.term,
+                table.iso3,
+                table.specific_reported_figure,
+                table.content_id
+            ),
+            select))
+        session.execute(text("SET LOCAL enable_seqscan=TRUE;"))
+    return table_name
 
 
 # This function populates the TEMP table
@@ -100,6 +183,8 @@ def create_temp_filters_table(
     if specific_reported_figure:
         select = select.filter(Fact.specific_reported_figure == specific_reported_figure)
 
+    # force this query to use indexes
+    session.execute(text("SET LOCAL enable_seqscan=FALSE;"))
     # populate the table with the query
     session.execute(insert(ApiFiltered).from_select(
         (
@@ -115,6 +200,7 @@ def create_temp_filters_table(
             ApiFiltered.content_id
         ),
         select))
+    session.execute(text("SET LOCAL enable_seqscan=TRUE;"))
 
 
 def int_or_None(str):
