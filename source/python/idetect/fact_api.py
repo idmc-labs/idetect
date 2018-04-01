@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, text, column, insert, func
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, column, func
 
 from idetect.model import Base
 from idetect.values import values
@@ -79,3 +79,15 @@ def get_filter_counts(session, **filters):
         for count, value in query.all():
             filter_counts.append({'count': count, 'value': value, 'filter_type': filter_column})
     return filter_counts
+
+def get_timeline_counts(session, **filters):
+    query = (
+        add_filters(session.query(func.count(FactApi.fact),
+                                  FactApi.gdelt_day,
+                                  FactApi.category),
+                    **filters)
+            .group_by(FactApi.gdelt_day, FactApi.category)
+            .order_by(FactApi.gdelt_day, FactApi.category)
+    )
+    return [{"count": count, "category": category, "gdelt_day": day}
+            for count, day, category in query.all()]

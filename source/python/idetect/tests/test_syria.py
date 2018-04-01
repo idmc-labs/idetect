@@ -1,11 +1,11 @@
-import os
 import logging
+import os
 from unittest import TestCase
-import time
-from sqlalchemy import create_engine, func, column, Integer
-from idetect.explain import explain_text
 
-from idetect.fact_api import FactApi, add_filters, get_filter_counts
+import time
+from sqlalchemy import create_engine, func
+
+from idetect.fact_api import FactApi, add_filters, get_filter_counts, get_timeline_counts
 from idetect.model import Session
 
 logger = logging.getLogger(__name__)
@@ -32,8 +32,11 @@ class TestSyriaYear(TestCase):
                        27027, 27393, 27507, 28185, 28626, 28628, 29703, 29704, 29754, 29942, 30210,
                        30286, 30302, 30442, 30993, 31492, 31743]
 
-    fromdate = '2017-01-01'
-    todate = '2018-01-01'
+    start_date = '2017-01-01'
+    plus_1_yr = '2018-01-01'
+    plus_6_mo = '2017-07-01'
+    plus_3_mo = '2017-04-01'
+    plus_1_mo = '2017-02-01'
 
     def setUp(self):
         logger.debug("setUp")
@@ -48,7 +51,7 @@ class TestSyriaYear(TestCase):
 
         db_url = 'postgresql://{user}:{passwd}@{db_host}:{db_port}/{db}'.format(
             user=db_user, passwd=db_pass, db_host=db_host, db_port=db_port, db='idetect')
-        self.engine = create_engine(db_url)  #, echo=True)
+        self.engine = create_engine(db_url)  # , echo=True)
         Session.configure(bind=self.engine)
         self.session = Session()
         self.session.query(FactApi).count()
@@ -63,8 +66,8 @@ class TestSyriaYear(TestCase):
     def test_categories(self):
         syr_year_by_category = add_filters(
             self.session.query(func.count(FactApi.fact), FactApi.category),
-            fromdate=self.fromdate,
-            todate=self.todate,
+            fromdate=self.start_date,
+            todate=self.plus_1_yr,
             locations=self.syria_locations
         ).group_by(FactApi.category)
 
@@ -72,14 +75,45 @@ class TestSyriaYear(TestCase):
         result = {category: count for count, category in syr_year_by_category.all()}
         t1 = time.time()
         print(result)
-        self.assertTrue({'Conflict', 'Disaster', 'Other'} == set(result.keys()))
+        self.assertEqual(set(result.keys()), {'Conflict', 'Disaster', 'Other'})
         # print(explain_text(self.session, syr_year_by_category))
         print(t1 - t0)
         self.assertLess(t1 - t0, 1.0)
 
     def test_filter_counts(self):
         f_c = get_filter_counts(self.session,
-            fromdate=self.fromdate,
-            todate=self.todate,
-            locations=self.syria_locations)
+                                fromdate=self.start_date,
+                                todate=self.plus_1_yr,
+                                locations=self.syria_locations)
         print(f_c)
+        self.assertGreater(len(f_c), 1000)
+
+    def test_filter_counts_speed(self):
+        for end_date in (self.plus_1_mo, self.plus_3_mo, self.plus_6_mo, self.plus_1_yr):
+            t0 = time.time()
+            f_c = get_filter_counts(self.session,
+                                    fromdate=self.start_date,
+                                    todate=end_date,
+                                    locations=self.syria_locations)
+            t1 = time.time()
+            print(f'{self.start_date} - {end_date}: {t1 - t0}s')
+            self.assertLess(t1 - t0, 1.0, f'Calculating filter counts {self.start_date} - {end_date} took too long')
+
+    def test_timeline(self):
+        t0 = time.time()
+        timeline = get_timeline_counts(self.session,
+                                       fromdate=self.start_date,
+                                       todate=self.plus_1_yr,
+                                       locations=self.syria_locations)
+        t1 = time.time()
+
+        days = {t['gdelt_day'] for t in timeline}
+        print(len(days))
+        self.assertGreater(len(days), 180)
+
+        categories = {t['category'] for t in timeline}
+        self.assertEqual(categories, {'Conflict', 'Disaster', 'Other'})
+
+        print(t1 - t0)
+        self.assertLess(t1 - t0, 1.0, f'Calculating timeline counts {self.start_date} - {self.plus_1_yr} took too long')
+
