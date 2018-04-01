@@ -5,7 +5,7 @@ from unittest import TestCase
 import time
 from sqlalchemy import create_engine, func
 
-from idetect.fact_api import FactApi, add_filters, get_filter_counts, get_timeline_counts
+from idetect.fact_api import FactApi, add_filters, get_filter_counts, get_timeline_counts, get_histogram_counts
 from idetect.model import Session
 
 logger = logging.getLogger(__name__)
@@ -101,19 +101,41 @@ class TestSyriaYear(TestCase):
 
     def test_timeline(self):
         t0 = time.time()
-        timeline = get_timeline_counts(self.session,
+        counts = get_timeline_counts(self.session,
                                        fromdate=self.start_date,
                                        todate=self.plus_1_yr,
                                        locations=self.syria_locations)
         t1 = time.time()
 
-        days = {t['gdelt_day'] for t in timeline}
-        print(len(days))
+        days = {t['gdelt_day'] for t in counts}
         self.assertGreater(len(days), 180)
 
-        categories = {t['category'] for t in timeline}
+        categories = {t['category'] for t in counts}
         self.assertEqual(categories, {'Conflict', 'Disaster', 'Other'})
 
         print(t1 - t0)
         self.assertLess(t1 - t0, 1.0, f'Calculating timeline counts {self.start_date} - {self.plus_1_yr} took too long')
 
+    def test_histogram(self):
+        t0 = time.time()
+        counts = get_histogram_counts(self.session,
+                                       fromdate=self.start_date,
+                                       todate=self.plus_1_yr,
+                                       locations=self.syria_locations)
+        t1 = time.time()
+        print(len(counts))
+
+        figures = {t['specific_reported_figure'] for t in counts if t['specific_reported_figure']}
+        self.assertLess(min(figures), 10)
+        self.assertGreater(max(figures), 1000000)
+
+        units = {t['unit'] for t in counts}
+        self.assertEqual(units, {'Household', 'Person'})
+
+        print(t1 - t0)
+        self.assertLess(t1 - t0, 1.0, f'Calculating histogram counts {self.start_date} - {self.plus_1_yr} took too long')
+
+    def test_none_location(self):
+        # TODO this isn't about Syria
+        counts = get_filter_counts(self.session, locations=['NULL'])
+        self.assertGreater(len(counts), 1000000)

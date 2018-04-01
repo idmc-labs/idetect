@@ -91,3 +91,15 @@ def get_timeline_counts(session, **filters):
     )
     return [{"count": count, "category": category, "gdelt_day": day}
             for count, day, category in query.all()]
+
+def get_histogram_counts(session, **filters):
+    query = (
+        add_filters(session.query(func.count(FactApi.fact),
+                                  FactApi.unit,
+                                  FactApi.specific_reported_figure),
+                    **filters)
+            .group_by(FactApi.unit, FactApi.specific_reported_figure)
+            .order_by(FactApi.unit, FactApi.specific_reported_figure)
+    )
+    return [{"count": count, "unit": unit, "specific_reported_figure": specific_reported_figure}
+            for count, unit, specific_reported_figure in query.all()]
