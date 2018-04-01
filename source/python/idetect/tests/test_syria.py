@@ -136,6 +136,12 @@ class TestSyriaYear(TestCase):
         self.assertLess(t1 - t0, 1.0, f'Calculating histogram counts {self.start_date} - {self.plus_1_yr} took too long')
 
     def test_none_location(self):
-        # TODO this isn't about Syria
+        # TODO this isn't about Syria, move it somewhere else
         counts = get_filter_counts(self.session, locations=['NULL'])
-        self.assertGreater(len(counts), 1000000)
+        self.assertGreater(len(counts), 1000)
+
+        self.assertEqual(counts, get_filter_counts(self.session, locations=['null']))
+        self.assertEqual(counts, get_filter_counts(self.session, locations=[None]))
+
+        counts2 = get_filter_counts(self.session, locations=['NULL', 1])
+        self.assertGreater(len(counts2), len(counts))

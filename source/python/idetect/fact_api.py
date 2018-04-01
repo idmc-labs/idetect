@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, column, func
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, column, func, or_
 
 from idetect.model import Base
 from idetect.values import values
@@ -32,13 +32,28 @@ class FactApi(Base):
 
 def filter_by_locations(query, locations):
     '''Because the location list is typically quite large, this does a VALUES query instead of an IN'''
-    loctuples = [(l,) for l in set(locations)]
-    locs = values(
-        [column('location_id', Integer)],
-        *loctuples,
-        alias_name='locs'
-    )
-    return query.filter(FactApi.location == locs.c.location_id)
+    null = False
+    if None in locations or 'NULL' in locations or 'null' in locations:
+        null = True
+        locations = [l for l in locations if isinstance(l, int)]
+
+    if locations:
+        loctuples = [(l,) for l in set(locations)]
+        locs = values(
+            [column('location_id', Integer)],
+            *loctuples,
+            alias_name='locs'
+        )
+
+        if null:
+            # Both the NULL location and some actual locations
+            return query.filter(or_(FactApi.location == None, FactApi.location == locs.c.location_id))
+        return query.filter(FactApi.location == locs.c.location_id)
+    if null:
+        # Specifically looking for the NULL location only
+        return query.filter(FactApi.location == None)
+    # No locations to select
+    return query
 
 
 def add_filters(query,
