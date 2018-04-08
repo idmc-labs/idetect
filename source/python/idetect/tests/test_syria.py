@@ -1,11 +1,12 @@
 import logging
 import os
+import time
 from unittest import TestCase
 
-import time
 from sqlalchemy import create_engine, func
 
-from idetect.fact_api import FactApi, add_filters, get_filter_counts, get_timeline_counts, get_histogram_counts
+from idetect.fact_api import FactApi, add_filters, get_filter_counts, get_timeline_counts, get_histogram_counts, \
+    get_wordcloud
 from idetect.model import Session
 
 logger = logging.getLogger(__name__)
@@ -51,7 +52,7 @@ class TestSyriaYear(TestCase):
 
         db_url = 'postgresql://{user}:{passwd}@{db_host}:{db_port}/{db}'.format(
             user=db_user, passwd=db_pass, db_host=db_host, db_port=db_port, db='idetect')
-        self.engine = create_engine(db_url)  # , echo=True)
+        self.engine = create_engine(db_url, echo=False)
         Session.configure(bind=self.engine)
         self.session = Session()
         self.session.query(FactApi).count()
@@ -138,7 +139,20 @@ class TestSyriaYear(TestCase):
         print(t1 - t0)
         self.assertLess(t1 - t0, 1.0,
                         'Calculating histogram counts {} - {} took too long'.format(
-            self.start_date, self.plus_1_yr))
+                            self.start_date, self.plus_1_yr))
+
+    def test_wordcloud(self):
+        t0 = time.time()
+        terms = get_wordcloud(self.session,
+                              self.engine,
+                              fromdate=self.start_date,
+                              todate=self.plus_1_yr,
+                              locations=self.syria_locations)
+        t1 = time.time()
+        print(t1 - t0)
+        print(terms)
+        self.assertEqual(len(terms), 20)
+        print(len(terms))
 
     def test_none_location(self):
         # TODO this isn't about Syria, move it somewhere else
