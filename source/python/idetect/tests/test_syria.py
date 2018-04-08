@@ -96,15 +96,16 @@ class TestSyriaYear(TestCase):
                                     todate=end_date,
                                     locations=self.syria_locations)
             t1 = time.time()
-            print(f'{self.start_date} - {end_date}: {t1 - t0}s')
-            self.assertLess(t1 - t0, 1.0, f'Calculating filter counts {self.start_date} - {end_date} took too long')
+            print('{} - {}: {}s'.format(self.start_date, end_date, t1 - t0))
+            self.assertLess(t1 - t0, 1.0, 'Calculating filter counts {} - {} took too long'.format(
+                self.start_date, end_date))
 
     def test_timeline(self):
         t0 = time.time()
         counts = get_timeline_counts(self.session,
-                                       fromdate=self.start_date,
-                                       todate=self.plus_1_yr,
-                                       locations=self.syria_locations)
+                                     fromdate=self.start_date,
+                                     todate=self.plus_1_yr,
+                                     locations=self.syria_locations)
         t1 = time.time()
 
         days = {t['gdelt_day'] for t in counts}
@@ -114,14 +115,16 @@ class TestSyriaYear(TestCase):
         self.assertEqual(categories, {'Conflict', 'Disaster', 'Other'})
 
         print(t1 - t0)
-        self.assertLess(t1 - t0, 1.0, f'Calculating timeline counts {self.start_date} - {self.plus_1_yr} took too long')
+        self.assertLess(t1 - t0, 1.0, 'Calculating timeline counts {} - {} took too long'.format(
+            self.start_date, self.plus_1_yr
+        ))
 
     def test_histogram(self):
         t0 = time.time()
         counts = get_histogram_counts(self.session,
-                                       fromdate=self.start_date,
-                                       todate=self.plus_1_yr,
-                                       locations=self.syria_locations)
+                                      fromdate=self.start_date,
+                                      todate=self.plus_1_yr,
+                                      locations=self.syria_locations)
         t1 = time.time()
         print(len(counts))
 
@@ -133,7 +136,9 @@ class TestSyriaYear(TestCase):
         self.assertEqual(units, {'Household', 'Person'})
 
         print(t1 - t0)
-        self.assertLess(t1 - t0, 1.0, f'Calculating histogram counts {self.start_date} - {self.plus_1_yr} took too long')
+        self.assertLess(t1 - t0, 1.0,
+                        'Calculating histogram counts {} - {} took too long'.format(
+            self.start_date, self.plus_1_yr))
 
     def test_none_location(self):
         # TODO this isn't about Syria, move it somewhere else
