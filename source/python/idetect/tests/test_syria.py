@@ -1,13 +1,13 @@
 import logging
 import os
 import time
-from unittest import TestCase
+from unittest import TestCase, skip
 
 from sqlalchemy import create_engine, func
 
 from idetect.fact_api import FactApi, add_filters, get_filter_counts, get_timeline_counts, get_histogram_counts, \
-    get_wordcloud
-from idetect.model import Session
+    get_wordcloud, get_urllist
+from idetect.model import Session, DocumentContent
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -164,3 +164,62 @@ class TestSyriaYear(TestCase):
 
         counts2 = get_filter_counts(self.session, locations=['NULL', 1])
         self.assertGreater(len(counts2), len(counts))
+
+    def test_filter_ts(self):
+        t0 = time.time()
+        query = add_filters(self.session.query(FactApi.content_id, DocumentContent.content_clean),
+                            fromdate=self.start_date,
+                            todate=self.plus_1_yr,
+                            locations=self.syria_locations,
+                            ts='Jordan'
+                            )
+        results = query.all()
+        t1 = time.time()
+        print(t1 - t0)
+        for id, content_clean in results:
+            self.assertTrue('Jordan' in content_clean)
+
+    @skip("Too slow in practice")
+    def test_filter_ts_exhaustive(self):
+        t0 = time.time()
+        query = add_filters(self.session.query(FactApi.content_id, DocumentContent.content_clean),
+                            fromdate=self.start_date,
+                            todate=self.plus_1_yr,
+                            locations=self.syria_locations,
+                            ts='Jordan'
+                            )
+        results = query.all()
+        t1 = time.time()
+        print(t1 - t0)
+        matched = set()
+        for id, content_clean in results:
+            self.assertTrue('Jordan' in content_clean)
+            matched.add(id)
+
+        query = add_filters(self.session.query(FactApi.content_id, DocumentContent.content_clean),
+                            fromdate=self.start_date,
+                            todate=self.plus_1_yr,
+                            locations=self.syria_locations
+                            )
+        for id, content_clean in query.all():
+            self.assertEqual(id in matched, 'Jordan' in content_clean)
+
+    def test_urllist(self):
+        t0 = time.time()
+        result1 = get_urllist(self.session,
+                              fromdate=self.start_date,
+                              todate=self.plus_1_yr,
+                              locations=self.syria_locations)
+        t1 = time.time()
+        print(t1 - t0)
+        self.assertEqual(32, len(list(result1)))
+        result2 = get_urllist(self.session,
+                              offset=32,
+                              limit=100,
+                              fromdate=self.start_date,
+                              todate=self.plus_1_yr,
+                              locations=self.syria_locations)
+        self.assertEqual(100, len(list(result2)))
+        for r1 in result1:
+            for r2 in result2:
+                self.assertLessEqual((r1.gdelt_day, r1.gkg_id), (r2.gdelt_day, r2.gkg_id), )

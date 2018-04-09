@@ -59,8 +59,9 @@ def filter_by_locations(query, locations):
 def add_filters(query,
                 fromdate=None, todate=None, locations=None,
                 categories=None, units=None, sources=None,
-                terms=None, iso3s=None, figures=None):
+                terms=None, iso3s=None, figures=None, ts=None):
     '''Add some of the known filters to the query'''
+    query = query.distinct()
     if fromdate:
         query = query.filter(FactApi.gdelt_day >= fromdate)
     if todate:
@@ -83,6 +84,12 @@ def add_filters(query,
         least = min(figures)
         greatest = max(figures)
         query = query.filter(FactApi.specific_reported_figure.between(least, greatest))
+    if ts:
+        query = (
+            query
+                .filter(DocumentContent.id == FactApi.content_id)
+                .filter(DocumentContent.content_ts.match(ts, postgresql_regconfig='simple_english'))
+        )
     return query
 
 
@@ -130,3 +137,13 @@ def get_wordcloud(session, engine, **filters):
                       ORDER BY nentry DESC, ndoc DESC, word
                       LIMIT 20'''.format(literal_query))
     return [{"word": r.word, "nentry": r.nentry, "ndoc": r.ndoc} for r in session.execute(ts_stat)]
+
+
+def get_urllist(session, limit=32, offset=0, **filters):
+    query = (
+        add_filters(session.query(FactApi), **filters)
+        .order_by(FactApi.gdelt_day, FactApi.gkg_id)
+        .limit(limit)
+        .offset(offset)
+    )
+    return query.all()
