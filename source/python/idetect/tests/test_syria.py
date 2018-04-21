@@ -2,6 +2,7 @@ import logging
 import os
 import time
 from unittest import TestCase, skip
+from datetime import date
 
 from sqlalchemy import create_engine, func
 
@@ -171,7 +172,7 @@ class TestSyriaYear(TestCase):
                             todate=self.plus_1_yr,
                             locations=self.syria_locations,
                             ts='Jordan'
-                            ).order_by(FactApi.gdelt_day).limit(100)
+                            ).order_by(FactApi.gdelt_day).limit(32)
         results = query.all()
         t1 = time.time()
         print(t1 - t0)
@@ -182,26 +183,33 @@ class TestSyriaYear(TestCase):
     def test_filter_ts_exhaustive(self):
         # make sure that the query found everything that it was supposed to
         t0 = time.time()
-        query = add_filters(self.session.query(FactApi.content_id, DocumentContent.content_clean),
+        query = add_filters(self.session.query(FactApi.content_id, DocumentContent.content_clean, FactApi.gdelt_day),
                             fromdate=self.start_date,
                             todate=self.plus_1_yr,
                             locations=self.syria_locations,
                             ts='Jordan'
-                            )
+                            ).order_by(FactApi.gdelt_day).limit(32)
         results = query.all()
         t1 = time.time()
         print(t1 - t0)
         matched = set()
-        for id, content_clean in results:
+        max_day = date.min
+        for id, content_clean, gdelt_day in results:
             self.assertTrue('jordan' in content_clean.lower())
             matched.add(id)
+            max_day = max(max_day, gdelt_day)
 
+        t2 = time.time()
         query = add_filters(self.session.query(FactApi.content_id, DocumentContent.content_clean),
                             fromdate=self.start_date,
                             todate=self.plus_1_yr,
                             locations=self.syria_locations
-                            )
-        for id, content_clean in query.all():
+                            ).filter(FactApi.gdelt_day <= max_day)
+        results = query.all()
+        t3 = time.time()
+        print(t2 - t3)
+        print(len(results))
+        for id, content_clean in results:
             self.assertEqual(id in matched, 'jordan' in content_clean.lower())
 
     def test_urllist(self):
@@ -213,12 +221,15 @@ class TestSyriaYear(TestCase):
         t1 = time.time()
         print(t1 - t0)
         self.assertEqual(32, len(list(result1)))
+        t2 = time.time()
         result2 = get_urllist(self.session,
                               offset=32,
                               limit=100,
                               fromdate=self.start_date,
                               todate=self.plus_1_yr,
                               locations=self.syria_locations)
+        t3 = time.time()
+        print(t3 - t2)
         self.assertEqual(100, len(list(result2)))
         for r1 in result1:
             for r2 in result2:
