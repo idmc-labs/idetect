@@ -151,7 +151,6 @@ class TestSyriaYear(TestCase):
         t1 = time.time()
         print(t1 - t0)
         print(terms)
-        self.assertEqual(len(terms), 20)
         print(len(terms))
 
     def test_none_location(self):
@@ -172,15 +171,16 @@ class TestSyriaYear(TestCase):
                             todate=self.plus_1_yr,
                             locations=self.syria_locations,
                             ts='Jordan'
-                            )
+                            ).order_by(FactApi.gdelt_day).limit(100)
         results = query.all()
         t1 = time.time()
         print(t1 - t0)
         for id, content_clean in results:
-            self.assertTrue('Jordan' in content_clean)
+            self.assertTrue('jordan' in content_clean.lower())
 
     @skip("Too slow in practice")
     def test_filter_ts_exhaustive(self):
+        # make sure that the query found everything that it was supposed to
         t0 = time.time()
         query = add_filters(self.session.query(FactApi.content_id, DocumentContent.content_clean),
                             fromdate=self.start_date,
@@ -193,7 +193,7 @@ class TestSyriaYear(TestCase):
         print(t1 - t0)
         matched = set()
         for id, content_clean in results:
-            self.assertTrue('Jordan' in content_clean)
+            self.assertTrue('jordan' in content_clean.lower())
             matched.add(id)
 
         query = add_filters(self.session.query(FactApi.content_id, DocumentContent.content_clean),
@@ -202,7 +202,7 @@ class TestSyriaYear(TestCase):
                             locations=self.syria_locations
                             )
         for id, content_clean in query.all():
-            self.assertEqual(id in matched, 'Jordan' in content_clean)
+            self.assertEqual(id in matched, 'jordan' in content_clean.lower())
 
     def test_urllist(self):
         t0 = time.time()
