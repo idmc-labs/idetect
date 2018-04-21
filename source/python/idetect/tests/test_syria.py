@@ -1,8 +1,8 @@
 import logging
 import os
 import time
-from unittest import TestCase, skip
 from datetime import date
+from unittest import TestCase, skip
 
 from sqlalchemy import create_engine, func
 
@@ -16,23 +16,23 @@ logging.basicConfig(format="%(asctime)s %(message)s")
 
 
 class TestSyriaYear(TestCase):
-    syria_locations = [127, 270, 281, 284, 307, 332, 372, 412, 429, 431, 531, 591, 612, 618, 644, 671,
-                       764, 807, 905, 958, 996, 1018, 1019, 1188, 1190, 1212, 1352, 1357, 1524, 1678,
-                       1898, 1981, 1990, 2058, 2060, 2272, 2378, 2735, 2933, 3262, 3323, 3327, 3372,
-                       3391, 3404, 3660, 3708, 3725, 3834, 3915, 3924, 4069, 4172, 4399, 4509, 4648,
-                       4824, 4890, 5017, 5285, 5833, 6053, 6070, 6270, 6760, 6832, 7121, 7122, 7151,
-                       7222, 7244, 7248, 7641, 7723, 7749, 7757, 7827, 7919, 7970, 8078, 8107, 8131,
-                       8166, 8176, 8210, 8222, 8240, 8254, 8367, 8442, 8659, 8660, 8730, 8788, 8793,
-                       8941, 9045, 9167, 9285, 9370, 9531, 9606, 9775, 9909, 9913, 9916, 9917, 9933,
-                       10136, 10312, 10464, 10532, 10795, 10971, 11052, 11076, 11174, 11194, 11216,
-                       11250, 11311, 11501, 11703, 11727, 11916, 11933, 12242, 12387, 12990, 13126,
-                       13130, 13142, 13171, 13348, 13531, 13659, 13722, 14225, 14718, 14732, 14737,
-                       14917, 14930, 14988, 15215, 15257, 15984, 15993, 16188, 17034, 17090, 17373,
-                       17404, 17873, 18019, 18131, 18267, 18396, 18403, 18578, 19550, 19641, 19721,
-                       20180, 21339, 21894, 22003, 22022, 22162, 22201, 22850, 23189, 23414, 23532,
-                       23875, 24851, 25171, 25415, 25894, 25927, 26024, 26283, 26458, 26545, 26909,
-                       27027, 27393, 27507, 28185, 28626, 28628, 29703, 29704, 29754, 29942, 30210,
-                       30286, 30302, 30442, 30993, 31492, 31743]
+    syria_location_ids = [127, 270, 281, 284, 307, 332, 372, 412, 429, 431, 531, 591, 612, 618, 644, 671,
+                          764, 807, 905, 958, 996, 1018, 1019, 1188, 1190, 1212, 1352, 1357, 1524, 1678,
+                          1898, 1981, 1990, 2058, 2060, 2272, 2378, 2735, 2933, 3262, 3323, 3327, 3372,
+                          3391, 3404, 3660, 3708, 3725, 3834, 3915, 3924, 4069, 4172, 4399, 4509, 4648,
+                          4824, 4890, 5017, 5285, 5833, 6053, 6070, 6270, 6760, 6832, 7121, 7122, 7151,
+                          7222, 7244, 7248, 7641, 7723, 7749, 7757, 7827, 7919, 7970, 8078, 8107, 8131,
+                          8166, 8176, 8210, 8222, 8240, 8254, 8367, 8442, 8659, 8660, 8730, 8788, 8793,
+                          8941, 9045, 9167, 9285, 9370, 9531, 9606, 9775, 9909, 9913, 9916, 9917, 9933,
+                          10136, 10312, 10464, 10532, 10795, 10971, 11052, 11076, 11174, 11194, 11216,
+                          11250, 11311, 11501, 11703, 11727, 11916, 11933, 12242, 12387, 12990, 13126,
+                          13130, 13142, 13171, 13348, 13531, 13659, 13722, 14225, 14718, 14732, 14737,
+                          14917, 14930, 14988, 15215, 15257, 15984, 15993, 16188, 17034, 17090, 17373,
+                          17404, 17873, 18019, 18131, 18267, 18396, 18403, 18578, 19550, 19641, 19721,
+                          20180, 21339, 21894, 22003, 22022, 22162, 22201, 22850, 23189, 23414, 23532,
+                          23875, 24851, 25171, 25415, 25894, 25927, 26024, 26283, 26458, 26545, 26909,
+                          27027, 27393, 27507, 28185, 28626, 28628, 29703, 29704, 29754, 29942, 30210,
+                          30286, 30302, 30442, 30993, 31492, 31743]
 
     start_date = '2017-01-01'
     plus_1_yr = '2018-01-01'
@@ -70,7 +70,7 @@ class TestSyriaYear(TestCase):
             self.session.query(func.count(FactApi.fact), FactApi.category),
             fromdate=self.start_date,
             todate=self.plus_1_yr,
-            locations=self.syria_locations
+            location_ids=self.syria_location_ids
         ).group_by(FactApi.category)
 
         t0 = time.time()
@@ -86,7 +86,7 @@ class TestSyriaYear(TestCase):
         f_c = get_filter_counts(self.session,
                                 fromdate=self.start_date,
                                 todate=self.plus_1_yr,
-                                locations=self.syria_locations)
+                                location_ids=self.syria_location_ids)
         print(f_c)
         self.assertGreater(len(f_c), 1000)
 
@@ -96,7 +96,7 @@ class TestSyriaYear(TestCase):
             f_c = get_filter_counts(self.session,
                                     fromdate=self.start_date,
                                     todate=end_date,
-                                    locations=self.syria_locations)
+                                    location_ids=self.syria_location_ids)
             t1 = time.time()
             print('{} - {}: {}s'.format(self.start_date, end_date, t1 - t0))
             self.assertLess(t1 - t0, 1.0, 'Calculating filter counts {} - {} took too long'.format(
@@ -107,7 +107,7 @@ class TestSyriaYear(TestCase):
         counts = get_timeline_counts(self.session,
                                      fromdate=self.start_date,
                                      todate=self.plus_1_yr,
-                                     locations=self.syria_locations)
+                                     location_ids=self.syria_location_ids)
         t1 = time.time()
 
         days = {t['gdelt_day'] for t in counts}
@@ -126,7 +126,7 @@ class TestSyriaYear(TestCase):
         counts = get_histogram_counts(self.session,
                                       fromdate=self.start_date,
                                       todate=self.plus_1_yr,
-                                      locations=self.syria_locations)
+                                      location_ids=self.syria_location_ids)
         t1 = time.time()
         print(len(counts))
 
@@ -148,7 +148,7 @@ class TestSyriaYear(TestCase):
                               self.engine,
                               fromdate=self.start_date,
                               todate=self.plus_1_yr,
-                              locations=self.syria_locations)
+                              location_ids=self.syria_location_ids)
         t1 = time.time()
         print(t1 - t0)
         print(terms)
@@ -156,13 +156,13 @@ class TestSyriaYear(TestCase):
 
     def test_none_location(self):
         # TODO this isn't about Syria, move it somewhere else
-        counts = get_filter_counts(self.session, locations=['NULL'])
+        counts = get_filter_counts(self.session, location_ids=['NULL'])
         self.assertGreater(len(counts), 1000)
 
-        self.assertEqual(counts, get_filter_counts(self.session, locations=['null']))
-        self.assertEqual(counts, get_filter_counts(self.session, locations=[None]))
+        self.assertEqual(counts, get_filter_counts(self.session, location_ids=['null']))
+        self.assertEqual(counts, get_filter_counts(self.session, location_ids=[None]))
 
-        counts2 = get_filter_counts(self.session, locations=['NULL', 1])
+        counts2 = get_filter_counts(self.session, location_ids=['NULL', 1])
         self.assertGreater(len(counts2), len(counts))
 
     def test_filter_ts(self):
@@ -170,7 +170,7 @@ class TestSyriaYear(TestCase):
         query = add_filters(self.session.query(FactApi.content_id, DocumentContent.content_clean),
                             fromdate=self.start_date,
                             todate=self.plus_1_yr,
-                            locations=self.syria_locations,
+                            location_ids=self.syria_location_ids,
                             ts='Jordan'
                             ).order_by(FactApi.gdelt_day).limit(32)
         results = query.all()
@@ -186,7 +186,7 @@ class TestSyriaYear(TestCase):
         query = add_filters(self.session.query(FactApi.content_id, DocumentContent.content_clean, FactApi.gdelt_day),
                             fromdate=self.start_date,
                             todate=self.plus_1_yr,
-                            locations=self.syria_locations,
+                            location_ids=self.syria_location_ids,
                             ts='Jordan'
                             ).order_by(FactApi.gdelt_day).limit(32)
         results = query.all()
@@ -203,7 +203,7 @@ class TestSyriaYear(TestCase):
         query = add_filters(self.session.query(FactApi.content_id, DocumentContent.content_clean),
                             fromdate=self.start_date,
                             todate=self.plus_1_yr,
-                            locations=self.syria_locations
+                            location_ids=self.syria_location_ids
                             ).filter(FactApi.gdelt_day <= max_day)
         results = query.all()
         t3 = time.time()
@@ -217,7 +217,7 @@ class TestSyriaYear(TestCase):
         result1 = get_urllist(self.session,
                               fromdate=self.start_date,
                               todate=self.plus_1_yr,
-                              locations=self.syria_locations)
+                              location_ids=self.syria_location_ids)
         t1 = time.time()
         print(t1 - t0)
         self.assertEqual(32, len(list(result1)))
@@ -227,7 +227,7 @@ class TestSyriaYear(TestCase):
                               limit=100,
                               fromdate=self.start_date,
                               todate=self.plus_1_yr,
-                              locations=self.syria_locations)
+                              location_ids=self.syria_location_ids)
         t3 = time.time()
         print(t3 - t2)
         self.assertEqual(100, len(list(result2)))

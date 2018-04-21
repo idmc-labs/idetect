@@ -56,18 +56,36 @@ def filter_by_locations(query, locations):
     return query
 
 
+def parse_list(array_string):
+    '''Turn "{Item1,Item2}" string into list'''
+    return array_string.lstrip('{').rstrip('}').split(',')
+
+
+def filter_params(form):
+    return {p: parse_list(form.get(p)) for p in [
+        "location_ids",
+        "specific_reported_figures",
+        "categories",
+        "units",
+        "iso3s",
+        "terms",
+        "source_common_names"
+    ]}
+
+
 def add_filters(query,
-                fromdate=None, todate=None, locations=None,
+                fromdate=None, todate=None, location_ids=None,
                 categories=None, units=None, sources=None,
-                terms=None, iso3s=None, figures=None, ts=None):
+                terms=None, iso3s=None, specific_reported_figures=None, ts=None):
     '''Add some of the known filters to the query'''
+    # if there are multiple facts for a single analysis, we only want one row
     query = query.distinct()
     if fromdate:
         query = query.filter(FactApi.gdelt_day >= fromdate)
     if todate:
         query = query.filter(FactApi.gdelt_day <= todate)
-    if locations:
-        query = filter_by_locations(query, locations)
+    if location_ids:
+        query = filter_by_locations(query, location_ids)
     if categories:
         query = query.filter(FactApi.category.in_(categories))
     if units:
@@ -78,11 +96,11 @@ def add_filters(query,
         query = query.filter(FactApi.term.in_(terms))
     if iso3s:
         query = query.filter(FactApi.iso3.in_(iso3s))
-    if figures:
+    if specific_reported_figures:
         # figures are typically passed in as all values in a range
         # it's more efficient to just test the endpoints of the range
-        least = min(figures)
-        greatest = max(figures)
+        least = min(specific_reported_figures)
+        greatest = max(specific_reported_figures)
         query = query.filter(FactApi.specific_reported_figure.between(least, greatest))
     if ts:
         query = (
@@ -142,8 +160,8 @@ def get_wordcloud(session, engine, **filters):
 def get_urllist(session, limit=32, offset=0, **filters):
     query = (
         add_filters(session.query(FactApi), **filters)
-        .order_by(FactApi.gdelt_day, FactApi.gkg_id)
-        .limit(limit)
-        .offset(offset)
+            .order_by(FactApi.gdelt_day, FactApi.gkg_id)
+            .limit(limit)
+            .offset(offset)
     )
     return query.all()

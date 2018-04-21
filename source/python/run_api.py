@@ -89,8 +89,8 @@ def utility_processor():
 
     return dict(format_date=format_date)
 
-# hmm
-from idetect.api_queries import ApiFiltered, filter_params, create_temp_filters_table
+from idetect.fact_api import FactApi, get_filter_counts, get_histogram_counts, get_timeline_counts, \
+    get_urllist, get_wordcloud
 
 
 @app.route('/filters', methods=['POST'])
