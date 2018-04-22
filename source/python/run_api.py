@@ -90,28 +90,69 @@ def utility_processor():
     return dict(format_date=format_date)
 
 from idetect.fact_api import FactApi, get_filter_counts, get_histogram_counts, get_timeline_counts, \
-    get_urllist, get_wordcloud
+    get_urllist, get_wordcloud, filter_params
 
 
 @app.route('/filters', methods=['POST'])
 def filters():
-    from_date = request.form['fromdate']
-    to_date = request.form['todate']
-    extra_filters = filter_params(request.form)
     session = Session()
     try:
-        create_temp_filters_table(session, from_date, to_date, **extra_filters)
-        result = []
-        for column in (ApiFiltered.category,
-                       ApiFiltered.unit,
-                       ApiFiltered.source_common_name,
-                       ApiFiltered.term,
-                       ApiFiltered.iso3,
-                       ApiFiltered.specific_reported_figure
-                       ):
-            counts = session.query(column, func.count(ApiFiltered.category)).group_by(column).all()
-            result += [{'count': count, 'value': value, 'filter_type': column.name}
-                       for value, count in counts]
+        filters = filter_params(request.form)
+        result = get_filter_counts(session, **filters)
+        resp = jsonify(result)
+        resp.status_code = 200
+        return resp
+    finally:
+        session.close()
+
+
+@app.route('/timeline', methods=['POST'])
+def timeline():
+    session = Session()
+    try:
+        filters = filter_params(request.form)
+        result = get_timeline_counts(session, **filters)
+        resp = jsonify(result)
+        resp.status_code = 200
+        return resp
+    finally:
+        session.close()
+
+
+@app.route('/histogram', methods=['POST'])
+def histogram():
+    session = Session()
+    try:
+        filters = filter_params(request.form)
+        result = get_histogram_counts(session, **filters)
+        resp = jsonify(result)
+        resp.status_code = 200
+        return resp
+    finally:
+        session.close()
+
+
+@app.route('/wordcloud', methods=['POST'])
+def wordcloud():
+    session = Session()
+    try:
+        filters = filter_params(request.form)
+        result = get_wordcloud(session, engine, **filters)
+        resp = jsonify(result)
+        resp.status_code = 200
+        return resp
+    finally:
+        session.close()
+
+
+@app.route('/urllist', methods=['POST'])
+def urllist():
+    session = Session()
+    try:
+        filters = filter_params(request.form)
+        limit = request.form.get('limit', 32)
+        offset = request.form.get('offset', 0)
+        result = get_urllist(session, limit=limit, offset=offset, **filters)
         resp = jsonify(result)
         resp.status_code = 200
         return resp

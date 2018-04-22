@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, column, func, or_, text
 
-from idetect.model import Base, DocumentContent
+from idetect.model import Base, DocumentContent, Analysis, analysis_fact, Location
 from idetect.values import values
 
 
@@ -28,6 +28,29 @@ class FactApi(Base):
                     primary_key=True)
     category = Column(String)
     content_id = Column(Integer, ForeignKey('idetect_document_contents.id'))
+
+
+class Validation(Base):
+    __tablename__ = 'idetect_validation'
+    fact_id = Column(Integer,
+                     ForeignKey('idetect_facts.id'),
+                     primary_key=True)
+    status = Column(String)
+    missing = Column(String)
+    wrong = Column(String)
+    assigned_to = Column(String)
+    created_by = Column(String)
+    created_at = Column(Date)
+
+
+class ValidationValues(Base):
+    __tablename__ = 'idetect_validation_values'
+    idetect_validation_key_id = Column(Integer)
+    idetect_validation_key_value = Column(String)
+    status = Column(String, primary_key=True)
+    missing = Column(String)
+    wrong = Column(String)
+    display_color = Column(String)
 
 
 def filter_by_locations(query, locations):
@@ -58,11 +81,13 @@ def filter_by_locations(query, locations):
 
 def parse_list(array_string):
     '''Turn "{Item1,Item2}" string into list'''
+    if array_string is None:
+        return None
     return array_string.lstrip('{').rstrip('}').split(',')
 
 
 def filter_params(form):
-    return {p: parse_list(form.get(p)) for p in [
+    filters = {p: parse_list(form.get(p)) for p in [
         "location_ids",
         "specific_reported_figures",
         "categories",
@@ -71,11 +96,14 @@ def filter_params(form):
         "terms",
         "source_common_names"
     ]}
+    filters['fromdate'] = form.get('fromdate')
+    filters['todate'] = form.get('todate')
+    return filters
 
 
 def add_filters(query,
                 fromdate=None, todate=None, location_ids=None,
-                categories=None, units=None, sources=None,
+                categories=None, units=None, source_common_names=None,
                 terms=None, iso3s=None, specific_reported_figures=None, ts=None):
     '''Add some of the known filters to the query'''
     # if there are multiple facts for a single analysis, we only want one row
@@ -90,8 +118,8 @@ def add_filters(query,
         query = query.filter(FactApi.category.in_(categories))
     if units:
         query = query.filter(FactApi.unit.in_(units))
-    if sources:
-        query = query.filter(FactApi.source_common_name.in_(sources))
+    if source_common_names:
+        query = query.filter(FactApi.source_common_name.in_(source_common_names))
     if terms:
         query = query.filter(FactApi.term.in_(terms))
     if iso3s:
@@ -159,7 +187,32 @@ def get_wordcloud(session, engine, **filters):
 
 def get_urllist(session, limit=32, offset=0, **filters):
     query = (
-        add_filters(session.query(FactApi), **filters)
+        add_filters(session.query(
+            FactApi.document_identifier,
+            FactApi.fact,
+            FactApi.gdelt_day,
+            FactApi.iso3,
+            FactApi.location,
+            FactApi.source_common_name,
+            FactApi.specific_reported_figure,
+            FactApi.term,
+            FactApi.unit,
+            FactApi.vague_reported_figure,
+            Analysis.authors,
+            Analysis.category,
+            Analysis.gkg_id,
+            Analysis.title,
+            Location.location_name,
+            Validation.assigned_to,
+            Validation.missing,
+            Validation.status,
+            Validation.wrong,
+        ), **filters)
+            .join(analysis_fact, FactApi.fact == analysis_fact.c.fact)
+            .join(Analysis, Analysis.gkg_id == analysis_fact.c.analysis)
+            .join(Location, FactApi.location == Location.id)
+            .outerjoin(Validation, FactApi.fact == Validation.fact_id)
+            .outerjoin(ValidationValues, Validation.status == ValidationValues.status)
             .order_by(FactApi.gdelt_day, FactApi.gkg_id)
             .limit(limit)
             .offset(offset)
