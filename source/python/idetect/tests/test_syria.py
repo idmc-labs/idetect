@@ -53,7 +53,7 @@ class TestSyriaYear(TestCase):
 
         db_url = 'postgresql://{user}:{passwd}@{db_host}:{db_port}/{db}'.format(
             user=db_user, passwd=db_pass, db_host=db_host, db_port=db_port, db='idetect')
-        self.engine = create_engine(db_url, echo=False)
+        self.engine = create_engine(db_url, echo=True)
         Session.configure(bind=self.engine)
         self.session = Session()
         self.session.query(FactApi).count()
@@ -228,6 +228,32 @@ class TestSyriaYear(TestCase):
                               fromdate=self.start_date,
                               todate=self.plus_1_yr,
                               location_ids=self.syria_location_ids)
+        t3 = time.time()
+        print(t3 - t2)
+        self.assertEqual(100, len(list(result2)))
+        for r1 in result1:
+            # print(r1)
+            for r2 in result2:
+                self.assertLessEqual((r1['gdelt_day'], r1['gkg_id']), (r2['gdelt_day'], r2['gkg_id']), )
+
+    def test_urllist_ts(self):
+        t0 = time.time()
+        result1 = get_urllist(self.session,
+                              fromdate=self.start_date,
+                              todate=self.plus_1_yr,
+                              location_ids=self.syria_location_ids,
+                              ts='Jordan')
+        t1 = time.time()
+        print(t1 - t0)
+        self.assertEqual(32, len(list(result1)))
+        t2 = time.time()
+        result2 = get_urllist(self.session,
+                              offset=32,
+                              limit=100,
+                              fromdate=self.start_date,
+                              todate=self.plus_1_yr,
+                              location_ids=self.syria_location_ids,
+                              ts='Jordan')
         t3 = time.time()
         print(t3 - t2)
         self.assertEqual(100, len(list(result2)))

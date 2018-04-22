@@ -26,6 +26,7 @@ CREATE INDEX idetect_fact_api_day_loc_idx on idetect_fact_api (gdelt_day, locati
 CREATE INDEX idetect_fact_api_loc_idx on idetect_fact_api (location, category);
 CREATE INDEX idetect_fact_api_day_idx on idetect_fact_api (gdelt_day, category);
 CREATE INDEX idetect_fact_api_category_idx on idetect_fact_api (category);
+create INDEX idetect_fact_api_fact_hash ON idetect_fact_api USING HASH (fact);
 
 -- wordcloud
 

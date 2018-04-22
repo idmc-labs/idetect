@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, column, func, or_, text
 
-from idetect.model import Base, DocumentContent, Analysis, analysis_fact, Location
+from idetect.model import Base, DocumentContent, Analysis, Location
 from idetect.values import values
 
 
@@ -133,7 +133,7 @@ def add_filters(query,
     if ts:
         query = (
             query
-                .filter(DocumentContent.id == FactApi.content_id)
+                .join(DocumentContent, DocumentContent.id == FactApi.content_id)
                 .filter(DocumentContent.content_ts.match(ts, postgresql_regconfig='simple_english'))
         )
     return query
@@ -188,37 +188,41 @@ def get_wordcloud(session, engine, **filters):
 def get_count(session, **filters):
     return add_filters(session.query(FactApi)).count()
 
+
 def get_urllist(session, limit=32, offset=0, **filters):
+    # filter the documents before doing any joins, makes a huge difference with limit
+    filtered = (
+        add_filters(session.query(FactApi), **filters)
+            .order_by(FactApi.gdelt_day, FactApi.gkg_id)
+            .limit(limit)
+            .offset(offset)
+            .subquery()
+    )
     query = (
-        add_filters(session.query(
-            FactApi.document_identifier.label('document_identifier'),
-            FactApi.fact.label('fact_id'),
-            FactApi.gdelt_day.label('gdelt_day'),
-            FactApi.iso3.label('iso3'),
-            FactApi.location.label('location_id'),
-            FactApi.source_common_name.label('source_common_name'),
-            FactApi.specific_reported_figure.label('specific_reported_figure'),
-            FactApi.term.label('term'),
-            FactApi.unit.label('unit'),
-            FactApi.vague_reported_figure.label('vague_reported_figure'),
+        session.query(
+            filtered.c.document_identifier.label('document_identifier'),
+            filtered.c.fact.label('fact_id'),
+            filtered.c.gdelt_day.label('gdelt_day'),
+            filtered.c.iso3.label('iso3'),
+            filtered.c.location.label('location_id'),
+            filtered.c.source_common_name.label('source_common_name'),
+            filtered.c.specific_reported_figure.label('specific_reported_figure'),
+            filtered.c.term.label('term'),
+            filtered.c.unit.label('unit'),
+            filtered.c.vague_reported_figure.label('vague_reported_figure'),
+            filtered.c.category.label('category'),
+            filtered.c.gkg_id.label('gkg_id'),
             Analysis.authors.label('authors'),
-            Analysis.category.label('category'),
-            Analysis.gkg_id.label('gkg_id'),
             Analysis.title.label('title'),
             Location.location_name.label('location_name'),
             Validation.assigned_to.label('assigned_to'),
             Validation.missing.label('missing'),
             Validation.status.label('status'),
             Validation.wrong.label('wrong'),
-        ), **filters)
-            .join(analysis_fact, FactApi.fact == analysis_fact.c.fact)
-            .join(Analysis, Analysis.gkg_id == analysis_fact.c.analysis)
-            .join(Location, FactApi.location == Location.id)
-            .outerjoin(Validation, FactApi.fact == Validation.fact_id)
+        )
+            .join(Analysis, filtered.c.gkg_id == Analysis.gkg_id)
+            .join(Location, filtered.c.location == Location.id)
+            .outerjoin(Validation, filtered.c.fact == Validation.fact_id)
             .outerjoin(ValidationValues, Validation.status == ValidationValues.status)
-            .distinct()
-            .order_by(FactApi.gdelt_day, FactApi.gkg_id)
-            .limit(limit)
-            .offset(offset)
     )
     return [dict(r.items()) for r in session.execute(query)]
