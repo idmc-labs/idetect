@@ -185,36 +185,40 @@ def get_wordcloud(session, engine, **filters):
     return [{"word": r.word, "nentry": r.nentry, "ndoc": r.ndoc} for r in session.execute(ts_stat)]
 
 
+def get_count(session, **filters):
+    return add_filters(session.query(FactApi)).count()
+
 def get_urllist(session, limit=32, offset=0, **filters):
     query = (
         add_filters(session.query(
-            FactApi.document_identifier,
-            FactApi.fact,
-            FactApi.gdelt_day,
-            FactApi.iso3,
-            FactApi.location,
-            FactApi.source_common_name,
-            FactApi.specific_reported_figure,
-            FactApi.term,
-            FactApi.unit,
-            FactApi.vague_reported_figure,
-            Analysis.authors,
-            Analysis.category,
-            Analysis.gkg_id,
-            Analysis.title,
-            Location.location_name,
-            Validation.assigned_to,
-            Validation.missing,
-            Validation.status,
-            Validation.wrong,
+            FactApi.document_identifier.label('document_identifier'),
+            FactApi.fact.label('fact_id'),
+            FactApi.gdelt_day.label('gdelt_day'),
+            FactApi.iso3.label('iso3'),
+            FactApi.location.label('location_id'),
+            FactApi.source_common_name.label('source_common_name'),
+            FactApi.specific_reported_figure.label('specific_reported_figure'),
+            FactApi.term.label('term'),
+            FactApi.unit.label('unit'),
+            FactApi.vague_reported_figure.label('vague_reported_figure'),
+            Analysis.authors.label('authors'),
+            Analysis.category.label('category'),
+            Analysis.gkg_id.label('gkg_id'),
+            Analysis.title.label('title'),
+            Location.location_name.label('location_name'),
+            Validation.assigned_to.label('assigned_to'),
+            Validation.missing.label('missing'),
+            Validation.status.label('status'),
+            Validation.wrong.label('wrong'),
         ), **filters)
             .join(analysis_fact, FactApi.fact == analysis_fact.c.fact)
             .join(Analysis, Analysis.gkg_id == analysis_fact.c.analysis)
             .join(Location, FactApi.location == Location.id)
             .outerjoin(Validation, FactApi.fact == Validation.fact_id)
             .outerjoin(ValidationValues, Validation.status == ValidationValues.status)
+            .distinct()
             .order_by(FactApi.gdelt_day, FactApi.gkg_id)
             .limit(limit)
             .offset(offset)
     )
-    return query.all()
+    return [dict(r.items()) for r in session.execute(query)]

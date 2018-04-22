@@ -232,5 +232,6 @@ class TestSyriaYear(TestCase):
         print(t3 - t2)
         self.assertEqual(100, len(list(result2)))
         for r1 in result1:
+            # print(r1)
             for r2 in result2:
-                self.assertLessEqual((r1.gdelt_day, r1.gkg_id), (r2.gdelt_day, r2.gkg_id), )
+                self.assertLessEqual((r1['gdelt_day'], r1['gkg_id']), (r2['gdelt_day'], r2['gkg_id']), )

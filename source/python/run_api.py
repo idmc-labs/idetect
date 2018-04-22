@@ -90,7 +90,7 @@ def utility_processor():
     return dict(format_date=format_date)
 
 from idetect.fact_api import FactApi, get_filter_counts, get_histogram_counts, get_timeline_counts, \
-    get_urllist, get_wordcloud, filter_params
+    get_urllist, get_wordcloud, filter_params, get_count
 
 
 @app.route('/filters', methods=['POST'])
@@ -152,8 +152,9 @@ def urllist():
         filters = filter_params(request.form)
         limit = request.form.get('limit', 32)
         offset = request.form.get('offset', 0)
-        result = get_urllist(session, limit=limit, offset=offset, **filters)
-        resp = jsonify(result)
+        entries = get_urllist(session, limit=limit, offset=offset, **filters)
+        count = get_count(session, **filters)
+        resp = jsonify({'entries': entries, 'nentries': count})
         resp.status_code = 200
         return resp
     finally:
