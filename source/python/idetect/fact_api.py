@@ -83,7 +83,7 @@ def parse_list(array_string):
     '''Turn "{Item1,Item2}" string into list'''
     if array_string is None:
         return None
-    return array_string.lstrip('{').rstrip('}').split(',')
+    return array_string.strip().lstrip('{').rstrip('}').split(',')
 
 
 def filter_params(form):
@@ -186,7 +186,7 @@ def get_wordcloud(session, engine, **filters):
 
 
 def get_count(session, **filters):
-    return add_filters(session.query(FactApi)).count()
+    return add_filters(session.query(FactApi), **filters).count()
 
 
 def get_urllist(session, limit=32, offset=0, **filters):

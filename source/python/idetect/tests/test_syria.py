@@ -7,7 +7,7 @@ from unittest import TestCase, skip
 from sqlalchemy import create_engine, func
 
 from idetect.fact_api import FactApi, add_filters, get_filter_counts, get_timeline_counts, get_histogram_counts, \
-    get_wordcloud, get_urllist
+    get_wordcloud, get_urllist, get_count
 from idetect.model import Session, DocumentContent
 
 logger = logging.getLogger(__name__)
@@ -261,3 +261,16 @@ class TestSyriaYear(TestCase):
             # print(r1)
             for r2 in result2:
                 self.assertLessEqual((r1['gdelt_day'], r1['gkg_id']), (r2['gdelt_day'], r2['gkg_id']), )
+
+    def test_count_ts(self):
+        t0 = time.time()
+        c = get_count(self.session,
+                      fromdate=self.start_date,
+                      todate=self.plus_1_yr,
+                      location_ids=self.syria_location_ids,
+                      ts='Jordan'
+                      )
+        t1 = time.time()
+        print(t1 - t0)
+        self.assertGreater(c, 5000)
+        self.assertLess(c, 10000)
