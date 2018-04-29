@@ -5,6 +5,7 @@ from datetime import date
 from unittest import TestCase, skip
 
 from sqlalchemy import create_engine, func
+from tabulate import tabulate
 
 from idetect.fact_api import FactApi, add_filters, get_filter_counts, get_timeline_counts, get_histogram_counts, \
     get_wordcloud, get_urllist, get_count
@@ -151,8 +152,11 @@ class TestSyriaYear(TestCase):
                               location_ids=self.syria_location_ids)
         t1 = time.time()
         print(t1 - t0)
-        print(terms)
         print(len(terms))
+        print(tabulate(terms))
+        self.assertLess(t1 - t0, 5.0, 'Calculating wordcloud {} - {} took too long'.format(
+            self.start_date, self.plus_1_yr
+        ))
 
     def test_none_location(self):
         # TODO this isn't about Syria, move it somewhere else

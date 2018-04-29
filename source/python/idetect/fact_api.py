@@ -104,7 +104,8 @@ def filter_params(form):
 def add_filters(query,
                 fromdate=None, todate=None, location_ids=None,
                 categories=None, units=None, source_common_names=None,
-                terms=None, iso3s=None, specific_reported_figures=None, ts=None):
+                terms=None, iso3s=None, specific_reported_figures=None,
+                ts=None):
     '''Add some of the known filters to the query'''
     # if there are multiple facts for a single analysis, we only want one row
     query = query.distinct()
@@ -175,13 +176,21 @@ def get_histogram_counts(session, **filters):
             for count, unit, specific_reported_figure in query.all()]
 
 
-def get_wordcloud(session, engine, **filters):
-    query = add_filters(session.query(DocumentContent.content_ts).join(FactApi),
-                        **filters)
+def get_wordcloud(session, engine, sample=1000, **filters):
+    # select a random sampling of matching facts
+    sample = (
+        add_filters(session.query(FactApi.content_id), **filters)
+            .order_by(func.random())
+            .limit(sample)
+    ).subquery()
+    query = (
+        session.query(DocumentContent.content_ts)
+            .join(sample, sample.c.content_id == DocumentContent.id)
+    )
     literal_query = query.statement.compile(engine, compile_kwargs={"literal_binds": True})
     ts_stat = text('''SELECT * FROM ts_stat($${}$$)
-                      ORDER BY nentry DESC, ndoc DESC, word
-                      LIMIT 20'''.format(literal_query))
+                          ORDER BY nentry DESC, ndoc DESC, word
+                          LIMIT 100'''.format(literal_query))
     return [{"word": r.word, "nentry": r.nentry, "ndoc": r.ndoc} for r in session.execute(ts_stat)]
 
 
