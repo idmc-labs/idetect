@@ -6,6 +6,7 @@ import string
 from sqlalchemy import Column, BigInteger, Integer, String, Date, DateTime, Boolean, \
     Numeric, ForeignKey, Table, Index, Text, UniqueConstraint
 from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, object_session, relationship
 from sqlalchemy.orm.exc import NoResultFound
@@ -100,10 +101,19 @@ def cleanup(text):
     text = re.sub(r'(IMPACT|RESPONSE)([a-zA-Z0-9])', r'\1. \2', text)
     text = re.sub(r'([a-zA-Z])(\d)', r'\1. \2', text) 
     text = re.sub(r'(\d)\s(\d)', r'\1\2', text)
-    text = text.replace('\s+', ' ')
+    text = re.sub(r'\s+', ' ', text)
     text = text.replace("peole", "people")
     output = ''.join([c for c in text if c in string.printable])
     return output
+
+
+def remove_wordcloud_stopwords(text):
+    """
+    Remove certain stopwords from the text for wordclouds
+    :param text:
+    :return:
+    """
+    return re.sub(r'[0-9]|said|year|people|says|one|two', '', text)
 
 
 class Analysis(Base):
@@ -284,6 +294,7 @@ class DocumentContent(Base):
     content = Column(String)
     content_clean = Column(String)
     content_type = Column(String)
+    content_ts = Column(TSVECTOR)
 
 
 class FactUnit:

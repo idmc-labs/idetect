@@ -12,11 +12,12 @@ from pdfminer.converter import TextConverter
 from pdfminer.layout import LAParams
 from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
 from pdfminer.pdfpage import PDFPage
+from sqlalchemy import func
 from sqlalchemy.orm import object_session
 from langdetect import detect
 from langdetect.lang_detect_exception import LangDetectException
 
-from idetect.model import DocumentContent, cleanup
+from idetect.model import DocumentContent, cleanup, remove_wordcloud_stopwords
 
 
 def scrape(analysis, scrape_pdfs=True):
@@ -103,6 +104,7 @@ def scrape_html(analysis):
         if len(text) == 0:
             raise Exception("Content is empty")
         text_clean = cleanup(text) # Clean text for analysis steps
+        text_ts = remove_wordcloud_stopwords(text_clean)
         try:
             analysis.language = detect(text)
         except LangDetectException:
@@ -110,7 +112,12 @@ def scrape_html(analysis):
         if analysis.language != 'en':
             session.commit()
             raise Exception("Article not in English")
-        content = DocumentContent(analysis=[analysis], content=text, content_clean=text_clean, content_type='text')
+        content = DocumentContent(analysis=[analysis],
+                                  content=text,
+                                  content_clean=text_clean,
+                                  content_type='text',
+                                  content_ts=func.to_tsvector(text_ts)
+                                  )
         session = object_session(analysis)
         session.add(content)
         session.commit()

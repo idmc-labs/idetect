@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from sqlalchemy import create_engine
 
-from idetect.model import Base, Session, Status, Gkg, Analysis
+from idetect.model import Base, Session, Status, Gkg, Analysis, DocumentContent
 from idetect.scraper import scrape
 
 
@@ -25,7 +25,8 @@ class TestScraper(TestCase):
         self.session.commit()
 
     def test_scrape_html(self):
-        gkg = Gkg(document_identifier="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
+        gkg = Gkg(
+            document_identifier="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
         analysis = Analysis(gkg=gkg, status=Status.NEW)
         self.session.add(analysis)
         self.session.commit()
@@ -35,9 +36,16 @@ class TestScraper(TestCase):
         self.assertTrue("Katrina" in content.content_clean)
         self.assertTrue("Louisiana" in content.content_clean)
         self.assertTrue("\n" not in content.content_clean)
+        self.assertTrue(content.content_ts is not None)
+        matches = (
+            self.session.query(DocumentContent)
+                .filter(DocumentContent.content_ts.match('Katrina & Louisiana')).all()
+        )
+        self.assertIn(content, matches)
 
     def test_scrape_pdf(self):
-        gkg = Gkg(document_identifier="https://www1.ncdc.noaa.gov/pub/data/extremeevents/specialreports/Hurricane-Katrina.pdf")
+        gkg = Gkg(
+            document_identifier="https://www1.ncdc.noaa.gov/pub/data/extremeevents/specialreports/Hurricane-Katrina.pdf")
         analysis = Analysis(gkg=gkg, status=Status.NEW)
         self.session.add(analysis)
         self.session.commit()
