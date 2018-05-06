@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import time
@@ -7,7 +8,7 @@ from sqlalchemy import create_engine
 from tabulate import tabulate
 
 from idetect.fact_api import FactApi, get_timeline_counts, get_histogram_counts, \
-    get_wordcloud
+    get_wordcloud, get_map_week
 from idetect.model import Session
 
 logger = logging.getLogger(__name__)
@@ -35,7 +36,7 @@ class TestManager(TestCase):
 
         db_url = 'postgresql://{user}:{passwd}@{db_host}:{db_port}/{db}'.format(
             user=db_user, passwd=db_pass, db_host=db_host, db_port=db_port, db='idetect')
-        self.engine = create_engine(db_url, echo=True)
+        self.engine = create_engine(db_url, echo=False)
         Session.configure(bind=self.engine)
         self.session = Session()
         self.session.query(FactApi).count()
@@ -144,3 +145,13 @@ class TestManager(TestCase):
         self.assertLess(t1 - t0, 5.0, 'Calculating wordcloud {} - {} took too long'.format(
             self.start_date, self.plus_1_yr
         ))
+
+    def test_map_week(self):
+        print("hello")
+        t0 = time.time()
+        entries = get_map_week(self.session)
+        t1 = time.time()
+        print(t1 - t0)
+        print(json.dumps(entries, indent=2))
+        self.assertEqual(len(entries), 1)
+        self.assertIsNotNone(entries[0].get('entries'))

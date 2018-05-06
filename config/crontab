@@ -1,0 +1,1 @@
+17 2 * * *   idetect     /home/idetect/scripts/update_mviews.bash

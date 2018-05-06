@@ -1,3 +1,4 @@
+import errno
 import logging
 import os
 import random
@@ -113,6 +114,27 @@ class TestWorker(TestCase):
         analysis2 = analysis.get_updated_version()
         self.assertEqual(analysis2.status, Status.SCRAPING_FAILED)
         self.assertIn("Nope", analysis2.error_msg)
+        self.assertIsNotNone(analysis2.processing_time)
+
+        self.assertFalse(worker.work(), "Worker found work")
+
+    @staticmethod
+    def snooze_fn(analysis):
+        time.sleep(5)
+
+    def test_work_timeout(self):
+        worker = Worker(scraping_filter, Status.SCRAPING, Status.SCRAPED, Status.SCRAPING_FAILED,
+                        TestWorker.snooze_fn, self.engine, timeout_seconds=3)
+        gkg = Gkg(
+            document_identifier="http://www.cnn.com/2013/08/23/us/hurricane-katrina-statistics-fast-facts/index.html")
+        analysis = Analysis(gkg=gkg, status=Status.NEW)
+        self.session.add(analysis)
+        self.session.commit()
+        self.assertTrue(worker.work(), "Worker didn't find work")
+
+        analysis2 = analysis.get_updated_version()
+        self.assertEqual(analysis2.status, Status.SCRAPING_FAILED)
+        self.assertIn(os.strerror(errno.ETIME), analysis2.error_msg)
         self.assertIsNotNone(analysis2.processing_time)
 
         self.assertFalse(worker.work(), "Worker found work")
