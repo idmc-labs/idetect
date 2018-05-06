@@ -2,9 +2,9 @@ import json
 import logging
 
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
-from sqlalchemy import create_engine, desc, func
+from sqlalchemy import create_engine, desc
 
-from idetect.model import db_url, Base, Analysis, Session, Gkg
+from idetect.model import db_url, Analysis, Session, Gkg
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -16,7 +16,9 @@ app.secret_key = 'my unobvious secret key'
 
 engine = create_engine(db_url())
 Session.configure(bind=engine)
-#Base.metadata.create_all(engine)
+
+
+# Base.metadata.create_all(engine)
 
 
 @app.route('/')
@@ -89,8 +91,9 @@ def utility_processor():
 
     return dict(format_date=format_date)
 
-from idetect.fact_api import FactApi, get_filter_counts, get_histogram_counts, get_timeline_counts, \
-    get_urllist, get_wordcloud, filter_params, get_count
+
+from idetect.fact_api import get_filter_counts, get_histogram_counts, get_timeline_counts, \
+    get_urllist, get_wordcloud, filter_params, get_count, get_map_week
 
 
 @app.route('/filters', methods=['POST'])
@@ -159,6 +162,19 @@ def urllist():
         return resp
     finally:
         session.close()
+
+
+@app.route('/map_week_mview', methods=['GET'])
+def map_week_mview():
+    session = Session()
+    try:
+        entries = get_map_week(session)
+        resp = jsonify(entries)
+        resp.status_code = 200
+        return resp
+    finally:
+        session.close()
+
 
 if __name__ == "__main__":
     # Start flask app

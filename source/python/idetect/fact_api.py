@@ -235,3 +235,8 @@ def get_urllist(session, limit=32, offset=0, **filters):
             .outerjoin(ValidationValues, Validation.status == ValidationValues.status)
     )
     return [dict(r.items()) for r in session.execute(query)]
+
+
+def get_map_week(session):
+    query = text("SELECT * FROM idetect_map_week_mview")
+    return [{'entries': session.execute(query).first()[0]}]
