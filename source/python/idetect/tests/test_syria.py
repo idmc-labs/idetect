@@ -54,7 +54,7 @@ class TestSyriaYear(TestCase):
 
         db_url = 'postgresql://{user}:{passwd}@{db_host}:{db_port}/{db}'.format(
             user=db_user, passwd=db_pass, db_host=db_host, db_port=db_port, db='idetect')
-        self.engine = create_engine(db_url, echo=True)
+        self.engine = create_engine(db_url, echo=False)
         Session.configure(bind=self.engine)
         self.session = Session()
         self.session.query(FactApi).count()

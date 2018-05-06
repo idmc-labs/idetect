@@ -1,3 +1,4 @@
+import errno
 import logging
 import os
 import random
@@ -12,7 +13,8 @@ logger.setLevel(logging.INFO)
 
 
 class Worker:
-    def __init__(self, filter_function, working_status, success_status, failure_status, function, engine, max_sleep=60):
+    def __init__(self, filter_function, working_status, success_status, failure_status, function, engine,
+                 max_sleep=60, timeout_seconds=300):
         """
         Create a Worker that looks for Analyses with a given status. When it finds one, it marks it with
         working_status and runs a function. If the function returns without an exception, it advances the Analysis to
@@ -26,12 +28,18 @@ class Worker:
         self.engine = engine
         self.terminated = False
         self.max_sleep = max_sleep
+        self.timeout_seconds = timeout_seconds
         signal.signal(signal.SIGINT, self.terminate)
         signal.signal(signal.SIGTERM, self.terminate)
+        signal.signal(signal.SIGALRM, self.timeout)
 
     def terminate(self, signum, frame):
         logger.warning("Worker {} terminated".format(os.getpid()))
         self.terminated = True
+
+    def timeout(self, signum, frame):
+        logger.warning("Worker {} timed out".format(os.getpid()))
+        raise TimeoutError(os.strerror(errno.ETIME))
 
     def work(self):
         """
@@ -62,6 +70,8 @@ class Worker:
 
         start = time.time()
         try:
+            # set a timeout so if this worker stalls, we recover
+            signal.alarm(self.timeout_seconds)
             # actually run the work function on this analysis
             self.function(analysis)
             delta = time.time() - start
@@ -80,6 +90,8 @@ class Worker:
             analysis.create_new_version(self.failure_status)
             session.commit()
         finally:
+            # clear the timeout
+            signal.alarm(0)
             if session is not None:
                 session.rollback()
                 session.close()
