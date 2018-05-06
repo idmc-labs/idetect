@@ -1,3 +1,3 @@
 #!/bin/bash
 
-echo "Hello World" | tee -a /tmp/update_mviews.log
+echo "REFRESH MATERIALIZED VIEW idetect_fact_api" | psql -h localdb -U idetect
