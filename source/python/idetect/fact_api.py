@@ -228,11 +228,12 @@ def get_urllist(session, limit=32, offset=0, **filters):
             Validation.missing.label('missing'),
             Validation.status.label('status'),
             Validation.wrong.label('wrong'),
+            ValidationValues.display_color.label('display_color'),
         )
             .join(Analysis, filtered.c.gkg_id == Analysis.gkg_id)
             .join(Location, filtered.c.location == Location.id)
             .outerjoin(Validation, filtered.c.fact == Validation.fact_id)
-            .outerjoin(ValidationValues, Validation.status == ValidationValues.status)
+            .outerjoin(ValidationValues, Validation.status == ValidationValues.idetect_validation_key_value)
     )
     return [dict(r.items()) for r in session.execute(query)]
 

@@ -239,6 +239,7 @@ class TestSyriaYear(TestCase):
             # print(r1)
             for r2 in result2:
                 self.assertLessEqual((r1['gdelt_day'], r1['gkg_id']), (r2['gdelt_day'], r2['gkg_id']), )
+        self.assertIn('display_color', result1[0])
 
     def test_urllist_ts(self):
         t0 = time.time()
