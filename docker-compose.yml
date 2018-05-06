@@ -69,3 +69,18 @@ services:
       - localdb
     env_file: docker.env
     user: ${UID}
+  cron:
+    build:
+      context: .
+      dockerfile: ./docker/idetect/Dockerfile
+      args:
+        - UID=${UID}
+    image: idetect
+    user: root
+    command: cron -f -L 6
+    volumes:
+      - ./source:/home/idetect
+      - ./config/crontab:/etc/cron.d/idetect
+    depends_on:
+      - localdb
+    env_file: docker.env
