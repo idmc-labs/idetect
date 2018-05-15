@@ -97,7 +97,7 @@ def scrape_html(analysis):
         a.parse()
         analysis.title = a.title
         analysis.authors = a.authors
-        analysis.publication_date = a.publish_date
+        analysis.publication_date = a.publish_date or None
 
         text = re.sub('\s+', ' ', a.text)  # collapse all whitespace
         # Scraping should fail if text is length 0
@@ -156,7 +156,7 @@ def scrape_pdf(url, analysis):
         text = re.sub('\s+', ' ', text)  # collapse all whitespace
         text_clean = cleanup(text) # Clean text for analysis steps
         analysis.domain = urlparse(url).hostname
-        analysis.publication_date = last_modified
+        analysis.publication_date = last_modified or None
         try:
             analysis.language = detect(text)
         except LangDetectException:
