@@ -19,7 +19,7 @@ RUN apt-get -y install postgresql libpq-dev git
 
 # install the big packages and the ones with complex dependencies
 # sklearn version needs to be the same as was used for model creation
-RUN pip3 install --upgrade pip && \
+RUN pip3 install --upgrade 'pip<10' && \
     pip3 install NumPy==1.13.1 SciPy==0.19.1 spacy==1.9.0 scikit-learn==0.19.0 pandas==0.20.3 nltk==3.2.4 \
     gensim==2.3.0 pdfminer.six==20170720 pycountry==17.5.14
 
