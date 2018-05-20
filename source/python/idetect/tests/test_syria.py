@@ -8,7 +8,7 @@ from sqlalchemy import create_engine, func
 from tabulate import tabulate
 
 from idetect.fact_api import FactApi, add_filters, get_filter_counts, get_timeline_counts, get_histogram_counts, \
-    get_wordcloud, get_urllist, get_count
+    get_wordcloud, get_urllist, get_count, get_urllist_grouped
 from idetect.model import Session, DocumentContent
 
 logger = logging.getLogger(__name__)
@@ -279,3 +279,22 @@ class TestSyriaYear(TestCase):
         print(t1 - t0)
         self.assertGreater(c, 5000)
         self.assertLess(c, 10000)
+
+    def test_urllist_grouped(self):
+        t0 = time.time()
+        result = get_urllist_grouped(self.session,
+                                      fromdate=self.start_date,
+                                      todate=self.plus_1_yr,
+                                      location_ids=self.syria_location_ids)
+        t1 = time.time()
+        print(t1 - t0)
+        print(f"{result['nentries']} entries")
+        self.assertEqual(result['nentries'], len(result['entries']))
+        for entry in result['entries']:
+            self.assertEqual(entry['nfacts'], len(entry['entry']))
+            for fact in entry['entry']:
+                self.assertEqual(entry['specific_reported_figure'], fact['specific_reported_figure'])
+                self.assertEqual(entry['unit'], fact['unit'])
+                self.assertEqual(entry['term'], fact['term'])
+            fact_ids = [f['fact'] for f in entry['entry']]
+            self.assertEqual(len(fact_ids), len(set(fact_ids)), "fact repeated")

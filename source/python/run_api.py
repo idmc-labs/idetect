@@ -4,6 +4,8 @@ import logging
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
 from sqlalchemy import create_engine, desc
 
+from idetect.fact_api import get_filter_counts, get_histogram_counts, get_timeline_counts, \
+    get_urllist, get_wordcloud, filter_params, get_count, get_map_week, get_urllist_grouped
 from idetect.model import db_url, Analysis, Session, Gkg
 
 logger = logging.getLogger(__name__)
@@ -92,10 +94,6 @@ def utility_processor():
     return dict(format_date=format_date)
 
 
-from idetect.fact_api import get_filter_counts, get_histogram_counts, get_timeline_counts, \
-    get_urllist, get_wordcloud, filter_params, get_count, get_map_week
-
-
 @app.route('/filters', methods=['POST'])
 def filters():
     session = Session()
@@ -158,6 +156,19 @@ def urllist():
         entries = get_urllist(session, limit=limit, offset=offset, **filters)
         count = get_count(session, **filters)
         resp = jsonify({'entries': entries, 'nentries': count})
+        resp.status_code = 200
+        return resp
+    finally:
+        session.close()
+
+
+@app.route('/urllist_grouped', methods=['POST'])
+def urllist_grouped():
+    session = Session()
+    try:
+        filters = filter_params(request.form)
+        entries = get_urllist_grouped(session, **filters)
+        resp = jsonify(entries)
         resp.status_code = 200
         return resp
     finally:

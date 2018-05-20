@@ -1,6 +1,6 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, column, func, or_, text
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, column, func, or_, text, literal_column
 
-from idetect.model import Base, DocumentContent, Analysis, Location
+from idetect.model import Base, DocumentContent, Analysis, Location, fact_location
 from idetect.values import values
 
 
@@ -236,6 +236,69 @@ def get_urllist(session, limit=32, offset=0, **filters):
             .outerjoin(ValidationValues, Validation.status == ValidationValues.idetect_validation_key_value)
     )
     return [dict(r.items()) for r in session.execute(query)]
+
+
+def get_urllist_grouped(session, **filters):
+    # select the things we want to group on: SRF, term, unit
+    facts = (
+        add_filters(session.query(
+            FactApi.fact,
+            FactApi.specific_reported_figure,
+            FactApi.term,
+            FactApi.unit
+        ), **filters)
+            .subquery()
+    )
+
+    # find all of the locations for the matching facts. this can't be done in the
+    # query above because there may be some location filters that interfere
+    # note: location names and ids are not always in the same order
+    facts_locations = (
+        session.query(facts,
+                      func.sort(func.array_agg(Location.id)).label('location_ids'),
+                      func.array_agg(Location.location_name).label('location_names'))
+            .join(fact_location, facts.c.fact == fact_location.c.fact)
+            .join(Location, fact_location.c.location == Location.id)
+            .group_by(facts.c.fact,
+                      facts.c.specific_reported_figure,
+                      facts.c.term,
+                      facts.c.unit)
+            .subquery()
+    )
+
+    # join in the validation information for each fact
+    fact_validation = (
+        session.query(FactApi,
+                      Validation.assigned_to.label('assigned_to'),
+                      Validation.missing.label('missing'),
+                      Validation.status.label('status'),
+                      Validation.wrong.label('wrong'),
+                      ValidationValues.display_color.label('display_color'))
+            .distinct(FactApi.fact)
+            .outerjoin(Validation, FactApi.fact == Validation.fact_id)
+            .outerjoin(ValidationValues, Validation.status == ValidationValues.idetect_validation_key_value)
+            .subquery().alias('fact')
+    )
+
+    # form each of the groups
+    facts_grouped = (
+        session.query(
+            facts_locations.c.specific_reported_figure.label('specific_reported_figure'),
+            facts_locations.c.term.label('term'),
+            facts_locations.c.unit.label('unit'),
+            facts_locations.c.location_ids.label('location_ids'),
+            func.min(facts_locations.c.location_names).label('location_names'),
+            func.json_agg(literal_column('fact.*')).label('entry'),
+            func.count(1).label('nfacts')
+        )
+            .join(fact_validation, facts_locations.c.fact == fact_validation.c.fact)
+            .group_by(facts_locations.c.specific_reported_figure,
+                      facts_locations.c.term,
+                      facts_locations.c.unit,
+                      facts_locations.c.location_ids)
+    )
+    result = [dict(r.items()) for r in session.execute(facts_grouped)]
+    return {'entries': result, 'nentries': len(result)}
 
 
 def get_map_week(session):
