@@ -98,7 +98,8 @@ def utility_processor():
 def filters():
     session = Session()
     try:
-        filters = filter_params(request.form)
+        data = request.get_json(silent=True) or request.form
+        filters = filter_params(data)
         result = get_filter_counts(session, **filters)
         resp = jsonify(result)
         resp.status_code = 200
@@ -111,7 +112,8 @@ def filters():
 def timeline():
     session = Session()
     try:
-        filters = filter_params(request.form)
+        data = request.get_json(silent=True) or request.form
+        filters = filter_params(data)
         result = get_timeline_counts(session, **filters)
         resp = jsonify(result)
         resp.status_code = 200
@@ -124,7 +126,8 @@ def timeline():
 def histogram():
     session = Session()
     try:
-        filters = filter_params(request.form)
+        data = request.get_json(silent=True) or request.form
+        filters = filter_params(data)
         result = get_histogram_counts(session, **filters)
         resp = jsonify(result)
         resp.status_code = 200
@@ -137,7 +140,8 @@ def histogram():
 def wordcloud():
     session = Session()
     try:
-        filters = filter_params(request.form)
+        data = request.get_json(silent=True) or request.form
+        filters = filter_params(data)
         result = get_wordcloud(session, engine, **filters)
         resp = jsonify(result)
         resp.status_code = 200
@@ -150,9 +154,10 @@ def wordcloud():
 def urllist():
     session = Session()
     try:
-        filters = filter_params(request.form)
-        limit = request.form.get('limit', 32)
-        offset = request.form.get('offset', 0)
+        data = request.get_json(silent=True) or request.form
+        filters = filter_params(data)
+        limit = data.get('limit')
+        offset = data.get('offset')
         entries = get_urllist(session, limit=limit, offset=offset, **filters)
         count = get_count(session, **filters)
         resp = jsonify({'entries': entries, 'nentries': count})
@@ -166,8 +171,11 @@ def urllist():
 def urllist_grouped():
     session = Session()
     try:
-        filters = filter_params(request.form)
-        entries = get_urllist_grouped(session, **filters)
+        data = request.get_json(silent=True) or request.form
+        filters = filter_params(data)
+        limit = data.get('limit')
+        offset = data.get('offset')
+        entries = get_urllist_grouped(session, limit=limit, offset=offset, **filters)
         resp = jsonify(entries)
         resp.status_code = 200
         return resp

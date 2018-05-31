@@ -283,12 +283,15 @@ class TestSyriaYear(TestCase):
     def test_urllist_grouped(self):
         t0 = time.time()
         result = get_urllist_grouped(self.session,
-                                      fromdate=self.start_date,
-                                      todate=self.plus_1_yr,
-                                      location_ids=self.syria_location_ids)
+                                     fromdate=self.start_date,
+                                     todate=self.plus_1_yr,
+                                     location_ids=self.syria_location_ids,
+                                     limit=100
+                                     )
         t1 = time.time()
         print(t1 - t0)
         print(f"{result['nentries']} entries")
+        self.assertEqual(result['nentries'], 100)
         self.assertEqual(result['nentries'], len(result['entries']))
         for entry in result['entries']:
             self.assertEqual(entry['nfacts'], len(entry['entry']))
