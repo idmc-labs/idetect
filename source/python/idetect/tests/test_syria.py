@@ -77,7 +77,7 @@ class TestSyriaYear(TestCase):
         t0 = time.time()
         result = {category: count for count, category in syr_year_by_category.all()}
         t1 = time.time()
-        print(result)
+        # print(result)
         self.assertEqual(set(result.keys()), {'Conflict', 'Disaster', 'Other'})
         # print(explain_text(self.session, syr_year_by_category))
         print(t1 - t0)
@@ -88,7 +88,7 @@ class TestSyriaYear(TestCase):
                                 fromdate=self.start_date,
                                 todate=self.plus_1_yr,
                                 location_ids=self.syria_location_ids)
-        print(f_c)
+        # print(f_c)
         self.assertGreater(len(f_c), 1000)
 
     def test_filter_counts_speed(self):
@@ -283,12 +283,15 @@ class TestSyriaYear(TestCase):
     def test_urllist_grouped(self):
         t0 = time.time()
         result = get_urllist_grouped(self.session,
-                                      fromdate=self.start_date,
-                                      todate=self.plus_1_yr,
-                                      location_ids=self.syria_location_ids)
+                                     fromdate=self.start_date,
+                                     todate=self.plus_1_yr,
+                                     location_ids=self.syria_location_ids,
+                                     limit=100
+                                     )
         t1 = time.time()
         print(t1 - t0)
         print(f"{result['nentries']} entries")
+        self.assertEqual(result['nentries'], 100)
         self.assertEqual(result['nentries'], len(result['entries']))
         for entry in result['entries']:
             self.assertEqual(entry['nfacts'], len(entry['entry']))

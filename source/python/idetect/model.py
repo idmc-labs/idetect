@@ -225,10 +225,8 @@ class Analysis(Base):
             else:
                 # Create a new merged span and add it to the end of the result
                 current_last_span = non_overlapping_spans[-1]
-                new_span = {}
-                new_span['type'] = ", ".join([current_last_span['type'], span['type']])
-                new_span['start'] = current_last_span['start']
-                new_span['end'] = max(current_last_span['end'], span['end'])
+                new_span = {'type': ", ".join([current_last_span['type'], span['type']]),
+                            'start': current_last_span['start'], 'end': max(current_last_span['end'], span['end'])}
                 non_overlapping_spans[-1] = new_span
                 current_end = new_span['end']
 

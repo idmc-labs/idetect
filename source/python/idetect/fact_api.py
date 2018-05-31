@@ -86,8 +86,8 @@ def parse_list(array_string):
     return array_string.strip().lstrip('{').rstrip('}').split(',')
 
 
-def filter_params(form):
-    filters = {p: parse_list(form.get(p)) for p in [
+def filter_params(data):
+    filters = {p: parse_list(data.get(p)) for p in [
         "location_ids",
         "specific_reported_figures",
         "categories",
@@ -96,8 +96,9 @@ def filter_params(form):
         "terms",
         "source_common_names"
     ]}
-    filters['fromdate'] = form.get('fromdate')
-    filters['todate'] = form.get('todate')
+    filters['fromdate'] = data.get('fromdate')
+    filters['todate'] = data.get('todate')
+    filters['ts'] = data.get('text_in_content')
     return filters
 
 
@@ -238,7 +239,7 @@ def get_urllist(session, limit=32, offset=0, **filters):
     return [dict(r.items()) for r in session.execute(query)]
 
 
-def get_urllist_grouped(session, **filters):
+def get_urllist_grouped(session, limit=32, offset=0, **filters):
     # select the things we want to group on: SRF, term, unit
     facts = (
         add_filters(session.query(
@@ -296,6 +297,10 @@ def get_urllist_grouped(session, **filters):
                       facts_locations.c.term,
                       facts_locations.c.unit,
                       facts_locations.c.location_ids)
+
+            .order_by(facts_locations.c.specific_reported_figure)
+            .limit(limit)
+            .offset(offset)
     )
     result = [dict(r.items()) for r in session.execute(facts_grouped)]
     return {'entries': result, 'nentries': len(result)}

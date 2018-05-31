@@ -578,10 +578,7 @@ class Interpreter(object):
             # Make sure that the fact is not None (specifically for the case of
             # Quantities)
             elif f.token:
-                span = {}
-                span['type'] = f.type_
-                span['start'] = f.start_idx
-                span['end'] = f.end_idx
+                span = {'type': f.type_, 'start': f.start_idx, 'end': f.end_idx}
                 report_span.append(span)
         return report_span
 
@@ -713,7 +710,7 @@ class Interpreter(object):
             return FactTerm.HOMELESS
         elif "camp" in reporting_term:
             return FactTerm.CAMP
-        elif len(set(reporting_term) & set(["shelter", "accommodate"])) > 0:
+        elif len(set(reporting_term) & {"shelter", "accommodate"}) > 0:
             return FactTerm.SHELTERED
         elif "relocate" in reporting_term:
             return FactTerm.RELOCATED
@@ -781,8 +778,10 @@ class Fact(object):
 class Report(object):
     '''Wrapper for reports extracted using rules'''
 
-    def __init__(self, reporting_unit, reporting_term, locations, sentence_start, sentence_end, tag_spans=[],
+    def __init__(self, reporting_unit, reporting_term, locations, sentence_start, sentence_end, tag_spans=None,
                  quantity=None):
+        if tag_spans is None:
+            tag_spans = []
         self.reporting_unit = convert_tokens_to_strings(reporting_unit)
         self.reporting_term = convert_tokens_to_strings(reporting_term)
         if quantity:
