@@ -152,6 +152,6 @@ class TestManager(TestCase):
         entries = get_map_week(self.session)
         t1 = time.time()
         print(t1 - t0)
-        print(json.dumps(entries, indent=2))
+        # print(json.dumps(entries, indent=2))
         self.assertEqual(len(entries), 1)
         self.assertIsNotNone(entries[0].get('entries'))

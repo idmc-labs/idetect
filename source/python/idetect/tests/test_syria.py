@@ -77,7 +77,7 @@ class TestSyriaYear(TestCase):
         t0 = time.time()
         result = {category: count for count, category in syr_year_by_category.all()}
         t1 = time.time()
-        print(result)
+        # print(result)
         self.assertEqual(set(result.keys()), {'Conflict', 'Disaster', 'Other'})
         # print(explain_text(self.session, syr_year_by_category))
         print(t1 - t0)
@@ -88,7 +88,7 @@ class TestSyriaYear(TestCase):
                                 fromdate=self.start_date,
                                 todate=self.plus_1_yr,
                                 location_ids=self.syria_location_ids)
-        print(f_c)
+        # print(f_c)
         self.assertGreater(len(f_c), 1000)
 
     def test_filter_counts_speed(self):
