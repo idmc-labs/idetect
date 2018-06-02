@@ -156,8 +156,8 @@ def urllist():
     try:
         data = request.get_json(silent=True) or request.form
         filters = filter_params(data)
-        limit = data.get('limit')
-        offset = data.get('offset')
+        limit = data.get('limit', 32)
+        offset = data.get('offset', 0)
         entries = get_urllist(session, limit=limit, offset=offset, **filters)
         count = get_count(session, **filters)
         resp = jsonify({'entries': entries, 'nentries': count})
@@ -173,10 +173,11 @@ def urllist_grouped():
     try:
         data = request.get_json(silent=True) or request.form
         filters = filter_params(data)
-        limit = data.get('limit')
-        offset = data.get('offset')
+        limit = data.get('limit', 32)
+        offset = data.get('offset', 0)
         entries = get_urllist_grouped(session, limit=limit, offset=offset, **filters)
-        resp = jsonify(entries)
+        count = get_count(session, **filters)
+        resp = jsonify({'entries': entries, 'nentries': count})
         resp.status_code = 200
         return resp
     finally:
