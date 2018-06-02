@@ -302,8 +302,7 @@ def get_urllist_grouped(session, limit=32, offset=0, **filters):
             .limit(limit)
             .offset(offset)
     )
-    result = [dict(r.items()) for r in session.execute(facts_grouped)]
-    return {'entries': result, 'nentries': len(result)}
+    return [dict(r.items()) for r in session.execute(facts_grouped)]
 
 
 def get_map_week(session):
