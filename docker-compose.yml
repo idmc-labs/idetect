@@ -77,10 +77,10 @@ services:
         - UID=${UID}
     image: idetect
     user: root
-    command: cron -f -L 6
+    command: sh -c 'cp /tmp/crontab /etc/cron.d/idetect ; cron -f -L 7'
     volumes:
       - ./source:/home/idetect
-      - ./config/crontab:/etc/cron.d/idetect
+      - ./config/crontab:/tmp/crontab
     depends_on:
       - localdb
     env_file: docker.env
