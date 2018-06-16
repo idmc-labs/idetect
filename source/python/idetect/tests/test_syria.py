@@ -276,6 +276,19 @@ class TestSyriaYear(TestCase):
                 self.assertLessEqual((r1['gdelt_day'], r1['gkg_id']), (r2['gdelt_day'], r2['gkg_id']), )
         self.assertIn('display_color', result1[0])
 
+    def test_urllist_unique_fact_id(self):
+        t0 = time.time()
+        result1 = get_urllist(self.session,
+                              fromdate=self.start_date,
+                              todate=self.plus_1_yr,
+                              limit=1000000,
+                              location_ids=self.syria_location_ids)
+        t1 = time.time()
+        print(t1 - t0)
+        ids = [f['fact_id'] for f in result1]
+        self.assertGreater(len(ids),1000)
+        self.assertEqual(len(ids), len(set(ids)))
+
     def test_urllist_ts(self):
         t0 = time.time()
         result1 = get_urllist(self.session,
