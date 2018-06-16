@@ -32,9 +32,16 @@ RUN apt-get -y install supervisor && \
     mkdir /var/log/workers && \
     chmod 777 /var/log/workers
 
+RUN apt-get -y install nginx
+COPY ./config/nginx.conf /etc/nginx/nginx.conf
+RUN pip install uwsgi
+COPY ./config/uwsgi.ini /etc/uwsgi/uwsgi.ini
+
 ARG UID
 RUN useradd -ms /bin/bash -u $UID idetect
+RUN mkdir -p /var/log/nginx && chown -R idetect /var/log/nginx && \
+    mkdir -p /var/lib/nginx && chown -R idetect /var/lib/nginx
+
 USER idetect
 WORKDIR /home/idetect
 COPY ./source /home/idetect
-COPY ./config/supervisord.conf /etc/supervisord.conf
