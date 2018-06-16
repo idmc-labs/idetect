@@ -79,6 +79,20 @@ def filter_by_locations(query, locations):
     return query
 
 
+def filter_by_specific_reported_figures(query, figures):
+    filters = []
+    if None in figures or 'NULL' in figures or 'null' in figures:
+        filters.append(FactApi.specific_reported_figure == None)
+        figures = [l for l in figures if isinstance(l, int)]
+    if figures:
+        # figures are typically passed in as all values in a range
+        # it's more efficient to just test the endpoints of the range
+        least = min(figures)
+        greatest = max(figures)
+        filters.append(FactApi.specific_reported_figure.between(least, greatest))
+    return query.filter(or_(*filters))
+
+
 def parse_list(array_string):
     '''Turn "{Item1,Item2}" string into list'''
     if array_string is None:
@@ -127,11 +141,7 @@ def add_filters(query,
     if iso3s:
         query = query.filter(FactApi.iso3.in_(iso3s))
     if specific_reported_figures:
-        # figures are typically passed in as all values in a range
-        # it's more efficient to just test the endpoints of the range
-        least = min(specific_reported_figures)
-        greatest = max(specific_reported_figures)
-        query = query.filter(FactApi.specific_reported_figure.between(least, greatest))
+        query = filter_by_specific_reported_figures(query, specific_reported_figures)
     if ts:
         query = (
             query

@@ -170,6 +170,40 @@ class TestSyriaYear(TestCase):
         counts2 = get_filter_counts(self.session, location_ids=['NULL', 1])
         self.assertGreater(len(counts2), len(counts))
 
+    def test_none_specific_reported_figure_1(self):
+        # TODO this isn't about Syria, move it somewhere else
+        counts = get_filter_counts(self.session, specific_reported_figures=['NULL'])
+        srf_counts = [c for c in counts if c['filter_type'] == 'specific_reported_figure']
+        self.assertEqual(len(srf_counts), 1)
+        self.assertTrue([c for c in srf_counts if c['value'] is None])
+
+        self.assertEqual(counts, get_filter_counts(self.session, specific_reported_figures=['null']))
+        self.assertEqual(counts, get_filter_counts(self.session, specific_reported_figures=[None]))
+
+    def test_none_specific_reported_figure_2(self):
+        # TODO this isn't about Syria, move it somewhere else
+        counts = get_filter_counts(self.session, specific_reported_figures=['NULL', 1])
+        srf_counts = [c for c in counts if c['filter_type'] == 'specific_reported_figure']
+        self.assertEqual(len(srf_counts), 2)
+        self.assertTrue([c for c in srf_counts if c['value'] is None])
+        self.assertTrue([c for c in srf_counts if c['value'] == 1])
+
+    def test_none_specific_reported_figure_3(self):
+        # TODO this isn't about Syria, move it somewhere else
+        counts = get_filter_counts(self.session, specific_reported_figures=['NULL', 1, 1000])
+        srf_counts = [c for c in counts if c['filter_type'] == 'specific_reported_figure']
+        self.assertGreater(len(srf_counts), 2)
+        self.assertTrue([c for c in srf_counts if c['value'] is None])
+        self.assertTrue([c for c in srf_counts if c['value'] == 1])
+
+    def test_specific_reported_figure(self):
+        # TODO this isn't about Syria, move it somewhere else
+        counts = get_filter_counts(self.session, specific_reported_figures=[1, 1000])
+        srf_counts = [c for c in counts if c['filter_type'] == 'specific_reported_figure']
+        self.assertGreater(len(srf_counts), 2)
+        self.assertFalse([c for c in srf_counts if c['value'] is None])
+        self.assertTrue([c for c in srf_counts if c['value'] == 1])
+
     def test_filter_ts(self):
         t0 = time.time()
         query = add_filters(self.session.query(FactApi.content_id, DocumentContent.content_clean),
