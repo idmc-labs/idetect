@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, column, func, or_, text, literal_column
 
-from idetect.model import Base, DocumentContent, Analysis, Location, fact_location
+from idetect.model import Base, DocumentContent, Analysis, Location, Fact, fact_location
 from idetect.values import values
 
 
@@ -224,6 +224,7 @@ def get_urllist(session, limit=32, offset=0, **filters):
             FactApi.vague_reported_figure,
             FactApi.category,
             FactApi.gkg_id,
+            FactApi.content_id,
         ), **filters)
             .order_by(FactApi.gdelt_day, FactApi.gkg_id)
             .limit(limit)
@@ -261,6 +262,10 @@ def get_urllist(session, limit=32, offset=0, **filters):
             facts_locations.c.location_names.label('location_names'),
             Analysis.authors.label('authors'),
             Analysis.title.label('title'),
+            DocumentContent.content_clean.label('content_clean'),
+            Fact.tag_locations.label('tags'),
+            Fact.excerpt_start.label('excerpt_start'),
+            Fact.excerpt_end.label('excerpt_end'),
             Validation.assigned_to.label('assigned_to'),
             Validation.missing.label('missing'),
             Validation.status.label('status'),
@@ -268,6 +273,9 @@ def get_urllist(session, limit=32, offset=0, **filters):
             ValidationValues.display_color.label('display_color'),
         )
             .join(Analysis, facts_locations.c.gkg_id == Analysis.gkg_id)
+            .join(DocumentContent, facts_locations.c.content_id == DocumentContent.id)
+            .join(Fact, facts_locations.c.fact == Fact.id)
+
             .outerjoin(Validation, facts_locations.c.fact == Validation.fact_id)
             .outerjoin(ValidationValues, Validation.status == ValidationValues.idetect_validation_key_value)
     )
@@ -305,12 +313,18 @@ def get_urllist_grouped(session, limit=32, offset=0, **filters):
     # join in the validation information for each fact
     fact_validation = (
         session.query(FactApi,
+                      DocumentContent.content_clean.label('content_clean'),
+                      Fact.tag_locations.label('tags'),
+                      Fact.excerpt_start.label('excerpt_start'),
+                      Fact.excerpt_end.label('excerpt_end'),
                       Validation.assigned_to.label('assigned_to'),
                       Validation.missing.label('missing'),
                       Validation.status.label('status'),
                       Validation.wrong.label('wrong'),
                       ValidationValues.display_color.label('display_color'))
             .distinct(FactApi.fact)
+            .join(DocumentContent, FactApi.content_id == DocumentContent.id)
+            .join(Fact, FactApi.fact == Fact.id)
             .outerjoin(Validation, FactApi.fact == Validation.fact_id)
             .outerjoin(ValidationValues, Validation.status == ValidationValues.idetect_validation_key_value)
             .subquery().alias('fact')
