@@ -14,9 +14,10 @@ services:
       args:
         - UID=${UID}
     image: idetect
-    command: sh -c "sleep 5; python3 /home/idetect/python/run_api.py"
+    command: sh -c "sleep 5; /usr/bin/supervisord"
     volumes:
       - ./source:/home/idetect
+      - ./config/api-supervisord.conf:/etc/supervisord.conf
     ports:
       - 5001:5001
     depends_on:
@@ -34,7 +35,7 @@ services:
     volumes:
       - ./source:/home/idetect
       - ./logs:/var/log
-      - ./config/supervisord.conf:/etc/supervisord.conf
+      - ./config/worker-supervisord.conf:/etc/supervisord.conf
     depends_on:
       - localdb
     env_file: docker.env

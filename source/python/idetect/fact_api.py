@@ -210,40 +210,65 @@ def get_count(session, **filters):
 
 
 def get_urllist(session, limit=32, offset=0, **filters):
-    # filter the documents before doing any joins, makes a huge difference with limit
-    filtered = (
-        add_filters(session.query(FactApi), **filters)
+    # select the facts that match the filters
+    facts = (
+        add_filters(session.query(
+            FactApi.document_identifier,
+            FactApi.fact,
+            FactApi.gdelt_day,
+            FactApi.iso3,
+            FactApi.source_common_name,
+            FactApi.specific_reported_figure,
+            FactApi.term,
+            FactApi.unit,
+            FactApi.vague_reported_figure,
+            FactApi.category,
+            FactApi.gkg_id,
+        ), **filters)
             .order_by(FactApi.gdelt_day, FactApi.gkg_id)
             .limit(limit)
             .offset(offset)
             .subquery()
     )
+
+    # find all of the locations for the matching facts. this can't be done in the
+    # query above because there may be some location filters that interfere
+    # note: location names and ids are not always in the same order
+    facts_locations = (
+        session.query(facts,
+                      func.sort(func.array_agg(Location.id)).label('location_ids'),
+                      func.array_agg(Location.location_name).label('location_names'))
+            .join(fact_location, facts.c.fact == fact_location.c.fact)
+            .join(Location, fact_location.c.location == Location.id)
+            .group_by(facts)
+            .subquery()
+    )
+
     query = (
         session.query(
-            filtered.c.document_identifier.label('document_identifier'),
-            filtered.c.fact.label('fact_id'),
-            filtered.c.gdelt_day.label('gdelt_day'),
-            filtered.c.iso3.label('iso3'),
-            filtered.c.location.label('location_id'),
-            filtered.c.source_common_name.label('source_common_name'),
-            filtered.c.specific_reported_figure.label('specific_reported_figure'),
-            filtered.c.term.label('term'),
-            filtered.c.unit.label('unit'),
-            filtered.c.vague_reported_figure.label('vague_reported_figure'),
-            filtered.c.category.label('category'),
-            filtered.c.gkg_id.label('gkg_id'),
+            facts_locations.c.document_identifier.label('document_identifier'),
+            facts_locations.c.fact.label('fact_id'),
+            facts_locations.c.gdelt_day.label('gdelt_day'),
+            facts_locations.c.iso3.label('iso3'),
+            facts_locations.c.source_common_name.label('source_common_name'),
+            facts_locations.c.specific_reported_figure.label('specific_reported_figure'),
+            facts_locations.c.term.label('term'),
+            facts_locations.c.unit.label('unit'),
+            facts_locations.c.vague_reported_figure.label('vague_reported_figure'),
+            facts_locations.c.category.label('category'),
+            facts_locations.c.gkg_id.label('gkg_id'),
+            facts_locations.c.location_ids.label('location_ids'),
+            facts_locations.c.location_names.label('location_names'),
             Analysis.authors.label('authors'),
             Analysis.title.label('title'),
-            Location.location_name.label('location_name'),
             Validation.assigned_to.label('assigned_to'),
             Validation.missing.label('missing'),
             Validation.status.label('status'),
             Validation.wrong.label('wrong'),
             ValidationValues.display_color.label('display_color'),
         )
-            .join(Analysis, filtered.c.gkg_id == Analysis.gkg_id)
-            .join(Location, filtered.c.location == Location.id)
-            .outerjoin(Validation, filtered.c.fact == Validation.fact_id)
+            .join(Analysis, facts_locations.c.gkg_id == Analysis.gkg_id)
+            .outerjoin(Validation, facts_locations.c.fact == Validation.fact_id)
             .outerjoin(ValidationValues, Validation.status == ValidationValues.idetect_validation_key_value)
     )
     return [dict(r.items()) for r in session.execute(query)]
