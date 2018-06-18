@@ -74,7 +74,11 @@ class Gkg(Base):
     id = Column(BigInteger, primary_key=True)
     gkgrecordid = Column(Text)
     date = Column(BigInteger)
+    source_common_name = Column(Text)
     document_identifier = Column(Text)
+    locations = Column(Text)
+    v2_counts = Column(Text)
+    v2_themes = Column(Text)
 
 
 
