@@ -345,5 +345,6 @@ class TestSyriaYear(TestCase):
                 self.assertEqual(entry['specific_reported_figure'], fact['specific_reported_figure'])
                 self.assertEqual(entry['unit'], fact['unit'])
                 self.assertEqual(entry['term'], fact['term'])
+                self.assertGreater(len(fact['content_clean']), 0)
             fact_ids = [f['fact'] for f in entry['entry']]
             self.assertEqual(len(fact_ids), len(set(fact_ids)), "fact repeated")

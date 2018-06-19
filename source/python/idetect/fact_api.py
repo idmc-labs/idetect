@@ -313,7 +313,6 @@ def get_urllist_grouped(session, limit=32, offset=0, **filters):
     # join in the validation information for each fact
     fact_validation = (
         session.query(FactApi,
-                      DocumentContent.content_clean.label('content_clean'),
                       Fact.tag_locations.label('tags'),
                       Fact.excerpt_start.label('excerpt_start'),
                       Fact.excerpt_end.label('excerpt_end'),
@@ -323,12 +322,21 @@ def get_urllist_grouped(session, limit=32, offset=0, **filters):
                       Validation.wrong.label('wrong'),
                       ValidationValues.display_color.label('display_color'))
             .distinct(FactApi.fact)
-            .join(DocumentContent, FactApi.content_id == DocumentContent.id)
             .join(Fact, FactApi.fact == Fact.id)
             .outerjoin(Validation, FactApi.fact == Validation.fact_id)
             .outerjoin(ValidationValues, Validation.status == ValidationValues.idetect_validation_key_value)
             .subquery().alias('fact')
     )
+
+    # make a list of all of the columns we want to call json_build_object on
+    # because we don't want to include content_clean in fact_validation above
+    # for performance reasons
+    json_labels = ["'{}'".format(c.name) for c in fact_validation.c]
+    json_labels.append("'content_clean'")
+    json_fields = ['fact.{}'.format(c.name) for c in fact_validation.c]
+    json_fields.append('{}.{}'.format(DocumentContent.__tablename__, DocumentContent.content_clean.name))
+    json_zip = zip(json_labels, json_fields)
+    json_build = ", ".join(["{}, {}".format(l, f) for l, f in json_zip])
 
     # form each of the groups
     facts_grouped = (
@@ -338,7 +346,7 @@ def get_urllist_grouped(session, limit=32, offset=0, **filters):
             facts_locations.c.unit.label('unit'),
             facts_locations.c.location_ids.label('location_ids'),
             func.min(facts_locations.c.location_names).label('location_names'),
-            func.json_agg(literal_column('fact.*')).label('entry'),
+            func.json_agg(func.json_build_object(literal_column(json_build))).label('entry'),
             func.count(1).label('nfacts')
         )
             .join(fact_validation, facts_locations.c.fact == fact_validation.c.fact)
@@ -346,6 +354,7 @@ def get_urllist_grouped(session, limit=32, offset=0, **filters):
                       facts_locations.c.term,
                       facts_locations.c.unit,
                       facts_locations.c.location_ids)
+            .join(DocumentContent, fact_validation.c.content_id == DocumentContent.id)
 
             .order_by(facts_locations.c.specific_reported_figure)
             .limit(limit)
