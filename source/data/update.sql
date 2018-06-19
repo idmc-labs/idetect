@@ -40,3 +40,5 @@ SET content_ts = to_tsvector('simple_english',
 REGEXP_REPLACE(content_clean,'[0-9]|said|year|people|says|one|two', '','g'))
 WHERE content_clean IS NOT NULL
 AND content_ts IS NULL;
+
+CREATE EXTENSION intarray;

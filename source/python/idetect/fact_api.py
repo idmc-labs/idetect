@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, column, func, or_, text, literal_column
 
-from idetect.model import Base, DocumentContent, Analysis, Location, fact_location
+from idetect.model import Base, DocumentContent, Analysis, Location, Fact, fact_location
 from idetect.values import values
 
 
@@ -224,6 +224,7 @@ def get_urllist(session, limit=32, offset=0, **filters):
             FactApi.vague_reported_figure,
             FactApi.category,
             FactApi.gkg_id,
+            FactApi.content_id,
         ), **filters)
             .order_by(FactApi.gdelt_day, FactApi.gkg_id)
             .limit(limit)
@@ -261,6 +262,10 @@ def get_urllist(session, limit=32, offset=0, **filters):
             facts_locations.c.location_names.label('location_names'),
             Analysis.authors.label('authors'),
             Analysis.title.label('title'),
+            DocumentContent.content_clean.label('content_clean'),
+            Fact.tag_locations.label('tags'),
+            Fact.excerpt_start.label('excerpt_start'),
+            Fact.excerpt_end.label('excerpt_end'),
             Validation.assigned_to.label('assigned_to'),
             Validation.missing.label('missing'),
             Validation.status.label('status'),
@@ -268,6 +273,9 @@ def get_urllist(session, limit=32, offset=0, **filters):
             ValidationValues.display_color.label('display_color'),
         )
             .join(Analysis, facts_locations.c.gkg_id == Analysis.gkg_id)
+            .join(DocumentContent, facts_locations.c.content_id == DocumentContent.id)
+            .join(Fact, facts_locations.c.fact == Fact.id)
+
             .outerjoin(Validation, facts_locations.c.fact == Validation.fact_id)
             .outerjoin(ValidationValues, Validation.status == ValidationValues.idetect_validation_key_value)
     )
@@ -305,16 +313,30 @@ def get_urllist_grouped(session, limit=32, offset=0, **filters):
     # join in the validation information for each fact
     fact_validation = (
         session.query(FactApi,
+                      Fact.tag_locations.label('tags'),
+                      Fact.excerpt_start.label('excerpt_start'),
+                      Fact.excerpt_end.label('excerpt_end'),
                       Validation.assigned_to.label('assigned_to'),
                       Validation.missing.label('missing'),
                       Validation.status.label('status'),
                       Validation.wrong.label('wrong'),
                       ValidationValues.display_color.label('display_color'))
             .distinct(FactApi.fact)
+            .join(Fact, FactApi.fact == Fact.id)
             .outerjoin(Validation, FactApi.fact == Validation.fact_id)
             .outerjoin(ValidationValues, Validation.status == ValidationValues.idetect_validation_key_value)
             .subquery().alias('fact')
     )
+
+    # make a list of all of the columns we want to call json_build_object on
+    # because we don't want to include content_clean in fact_validation above
+    # for performance reasons
+    json_labels = ["'{}'".format(c.name) for c in fact_validation.c]
+    json_labels.append("'content_clean'")
+    json_fields = ['fact.{}'.format(c.name) for c in fact_validation.c]
+    json_fields.append('{}.{}'.format(DocumentContent.__tablename__, DocumentContent.content_clean.name))
+    json_zip = zip(json_labels, json_fields)
+    json_build = ", ".join(["{}, {}".format(l, f) for l, f in json_zip])
 
     # form each of the groups
     facts_grouped = (
@@ -324,7 +346,7 @@ def get_urllist_grouped(session, limit=32, offset=0, **filters):
             facts_locations.c.unit.label('unit'),
             facts_locations.c.location_ids.label('location_ids'),
             func.min(facts_locations.c.location_names).label('location_names'),
-            func.json_agg(literal_column('fact.*')).label('entry'),
+            func.json_agg(func.json_build_object(literal_column(json_build))).label('entry'),
             func.count(1).label('nfacts')
         )
             .join(fact_validation, facts_locations.c.fact == fact_validation.c.fact)
@@ -332,6 +354,7 @@ def get_urllist_grouped(session, limit=32, offset=0, **filters):
                       facts_locations.c.term,
                       facts_locations.c.unit,
                       facts_locations.c.location_ids)
+            .join(DocumentContent, fact_validation.c.content_id == DocumentContent.id)
 
             .order_by(facts_locations.c.specific_reported_figure)
             .limit(limit)
