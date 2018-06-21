@@ -1,8 +1,18 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, column, func, or_, text, literal_column
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, column, func, or_, text, literal_column, ARRAY
 
 from idetect.model import Base, DocumentContent, Analysis, Location, fact_location
 from idetect.values import values
 
+class FactApiLocations(Base):
+    __tablename__ = 'idetect_fact_api_locations'
+
+    fact = Column(Integer,
+                  ForeignKey('idetect_fact_locations.fact'),
+                  primary_key=True)
+    location_ids = Column(ARRAY(Integer))
+    location_names = Column(ARRAY(String))
+    location_ids_idx = Column(Integer)
+    
 
 class FactApi(Base):
     __tablename__ = 'idetect_fact_api'
@@ -28,7 +38,9 @@ class FactApi(Base):
                     primary_key=True)
     category = Column(String)
     content_id = Column(Integer, ForeignKey('idetect_document_contents.id'))
-
+    location_ids_idx = Column(Integer,
+                    ForeignKey('idetect_fact_api_locations.fact'),
+                    primary_key=True)
 
 class Validation(Base):
     __tablename__ = 'idetect_validation'
