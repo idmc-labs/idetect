@@ -1,3 +1,25 @@
+DROP MATERIALIZED VIEW if EXISTS idetect_fact_api_locations;
+CREATE MATERIALIZED VIEW idetect_fact_api_locations AS
+WITH fact_locations AS (
+         SELECT idetect_fact_locations.fact,
+            sort(array_agg(idetect_fact_locations.location)) AS location_ids,
+            array_agg(idetect_locations.location_name) AS location_names
+           FROM (idetect_fact_locations
+             LEFT JOIN idetect_locations ON ((idetect_fact_locations.location = idetect_locations.id)))
+          WHERE (idetect_fact_locations.location IS NOT NULL)
+          GROUP BY idetect_fact_locations.fact
+        ), location_ids_uniqueid AS (
+         SELECT DISTINCT ON (fact_locations_1.location_ids) fact_locations_1.location_ids,
+            row_number() OVER (ORDER BY fact_locations_1.location_ids) AS location_ids_idx
+           FROM fact_locations fact_locations_1
+        )
+ SELECT DISTINCT ON (fact_locations.fact) fact_locations.fact,
+    fact_locations.location_ids,
+    fact_locations.location_names,
+    location_ids_uniqueid.location_ids_idx
+   FROM (fact_locations
+     LEFT JOIN location_ids_uniqueid USING (location_ids));
+
 DROP MATERIALIZED VIEW if EXISTS idetect_fact_api;
 CREATE MATERIALIZED VIEW idetect_fact_api AS (
           SELECT
