@@ -1,4 +1,5 @@
 -- idetect_fact_api_locations
+--TODO this can also be replaced by either a sequence or md5 hash of location names
 DROP MATERIALIZED VIEW if EXISTS idetect_fact_api_locations;
 CREATE MATERIALIZED VIEW idetect_fact_api_locations AS
 WITH fact_locations AS (
@@ -48,13 +49,15 @@ CREATE MATERIALIZED VIEW idetect_fact_api AS (
 );
 ALTER TABLE idetect_fact_api OWNER TO idetect;
 
+CREATE INDEX idetect_fact_api_fact_day_idx on idetect_fact_api (fact,gdelt_day);
 CREATE INDEX idetect_fact_api_loc_day_idx on idetect_fact_api (location, gdelt_day);
 CREATE INDEX idetect_fact_api_day_loc_idx on idetect_fact_api (gdelt_day, location);
-CREATE INDEX idetect_fact_api_loc_idx on idetect_fact_api (location, category);
-CREATE INDEX idetect_fact_api_day_idx on idetect_fact_api (gdelt_day, category);
-CREATE INDEX idetect_fact_api_category_idx on idetect_fact_api (category);
+CREATE INDEX idetect_fact_api_loc_cat_idx on idetect_fact_api (location, category);
+CREATE INDEX idetect_fact_api_day_cat_idx on idetect_fact_api (gdelt_day, category);
+CREATE INDEX idetect_fact_api_cat_idx on idetect_fact_api (category);
 CREATE INDEX idetect_fact_api_fact_hash ON idetect_fact_api USING HASH (fact);
-CREATE INDEX idetect_fact_api_location_ids_hash ON idetect_fact_api USING HASH (location_ids_idx);
+CREATE INDEX idetect_fact_api_locations_fact_hash ON idetect_fact_api_locations USING HASH (fact);
+CREATE INDEX idetect_fact_api_loc_idx ON idetect_fact_api (location_ids_idx);
 
 -- wordcloud
 

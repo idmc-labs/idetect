@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, column, func, or_, text, literal_column, ARRAY
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, column, func, or_, text, literal_column, ARRAY, desc, over
 
 from idetect.model import Base, DocumentContent, Analysis, Location, Fact, fact_location
 from idetect.values import values
@@ -135,7 +135,8 @@ def add_filters(query,
                 ts=None):
     '''Add some of the known filters to the query'''
     # if there are multiple facts for a single analysis, we only want one row
-    query = query.distinct()
+    query = query.distinct(FactApi.fact)
+    query = query.order_by(FactApi.fact)
     if fromdate:
         query = query.filter(FactApi.gdelt_day >= fromdate)
     if todate:
@@ -154,6 +155,7 @@ def add_filters(query,
         query = query.filter(FactApi.iso3.in_(iso3s))
     if specific_reported_figures:
         query = filter_by_specific_reported_figures(query, specific_reported_figures)
+    # TODO make sure we do full text search only after all the other filters have been applied
     if ts:
         query = (
             query
@@ -223,55 +225,21 @@ def get_count(session, **filters):
 
 def get_urllist(session, limit=32, offset=0, **filters):
     # select the facts that match the filters
-    facts = (
-        add_filters(session.query(
-            FactApi.document_identifier,
-            FactApi.fact,
-            FactApi.gdelt_day,
-            FactApi.iso3,
-            FactApi.source_common_name,
-            FactApi.specific_reported_figure,
-            FactApi.term,
-            FactApi.unit,
-            FactApi.vague_reported_figure,
-            FactApi.category,
-            FactApi.gkg_id,
-            FactApi.content_id,
-        ), **filters)
-            .order_by(FactApi.gdelt_day, FactApi.gkg_id)
-            .limit(limit)
-            .offset(offset)
-            .subquery()
-    )
-
-    # find all of the locations for the matching facts. this can't be done in the
-    # query above because there may be some location filters that interfere
-    # note: location names and ids are not always in the same order
-    facts_locations = (
-        session.query(facts,
-                      func.sort(func.array_agg(Location.id)).label('location_ids'),
-                      func.array_agg(Location.location_name).label('location_names'))
-            .join(fact_location, facts.c.fact == fact_location.c.fact)
-            .join(Location, fact_location.c.location == Location.id)
-            .group_by(facts)
-            .subquery()
-    )
-
-    query = (
+    facts = (add_filters(
         session.query(
-            facts_locations.c.document_identifier.label('document_identifier'),
-            facts_locations.c.fact.label('fact_id'),
-            facts_locations.c.gdelt_day.label('gdelt_day'),
-            facts_locations.c.iso3.label('iso3'),
-            facts_locations.c.source_common_name.label('source_common_name'),
-            facts_locations.c.specific_reported_figure.label('specific_reported_figure'),
-            facts_locations.c.term.label('term'),
-            facts_locations.c.unit.label('unit'),
-            facts_locations.c.vague_reported_figure.label('vague_reported_figure'),
-            facts_locations.c.category.label('category'),
-            facts_locations.c.gkg_id.label('gkg_id'),
-            facts_locations.c.location_ids.label('location_ids'),
-            facts_locations.c.location_names.label('location_names'),
+            FactApi.document_identifier.label('document_identifier'),
+            FactApi.fact.label('fact_id'),
+            FactApi.gdelt_day.label('gdelt_day'),
+            FactApi.iso3.label('iso3'),
+            FactApi.source_common_name.label('source_common_name'),
+            FactApi.specific_reported_figure.label('specific_reported_figure'),
+            FactApi.term.label('term'),
+            FactApi.unit.label('unit'),
+            FactApi.vague_reported_figure.label('vague_reported_figure'),
+            FactApi.category.label('category'),
+            FactApi.gkg_id.label('gkg_id'),
+            FactApiLocations.location_ids.label('location_ids'),
+            FactApiLocations.location_names.label('location_names'),
             Analysis.authors.label('authors'),
             Analysis.title.label('title'),
             DocumentContent.content_clean.label('content_clean'),
@@ -283,97 +251,97 @@ def get_urllist(session, limit=32, offset=0, **filters):
             Validation.status.label('status'),
             Validation.wrong.label('wrong'),
             ValidationValues.display_color.label('display_color'),
-        )
-            .join(Analysis, facts_locations.c.gkg_id == Analysis.gkg_id)
-            .join(DocumentContent, facts_locations.c.content_id == DocumentContent.id)
-            .join(Fact, facts_locations.c.fact == Fact.id)
-
-            .outerjoin(Validation, facts_locations.c.fact == Validation.fact_id)
+        ), **filters)
+            .outerjoin(FactApiLocations,FactApi.fact==FactApiLocations.fact)
+            .outerjoin(Analysis, FactApi.gkg_id == Analysis.gkg_id)
+            .outerjoin(Fact, FactApi.fact == Fact.id)
+            .outerjoin(DocumentContent, FactApi.content_id == DocumentContent.id)
+            .outerjoin(Validation, FactApi.fact == Validation.fact_id)
             .outerjoin(ValidationValues, Validation.status == ValidationValues.idetect_validation_key_value)
+            .order_by(FactApi.gdelt_day)
+            .limit(limit)
+            .offset(offset)
     )
-    return [dict(r.items()) for r in session.execute(query)]
+    # print(facts)
+    return [dict(r.items()) for r in session.execute(facts)]
 
 
 def get_urllist_grouped(session, limit=32, offset=0, **filters):
-    # select the things we want to group on: SRF, term, unit
-    facts = (
-        add_filters(session.query(
-            FactApi.fact,
-            FactApi.specific_reported_figure,
-            FactApi.term,
-            FactApi.unit
+    # select facts according to the filter without selecting content_clean    
+    facts = (add_filters(
+        session.query(
+            FactApi.document_identifier.label('document_identifier'),
+            FactApi.fact.label('fact_id'),
+            FactApi.gdelt_day.label('gdelt_day'),
+            FactApi.iso3.label('iso3'),
+            FactApi.source_common_name.label('source_common_name'),
+            FactApi.specific_reported_figure.label('specific_reported_figure'),
+            FactApi.term.label('term'),
+            FactApi.unit.label('unit'),
+            FactApi.vague_reported_figure.label('vague_reported_figure'),
+            FactApi.category.label('category'),
+            FactApi.gkg_id.label('gkg_id'),
+            FactApi.content_id.label('content_id'),
+            FactApiLocations.location_ids_idx.label('location_ids_idx'),
+            FactApiLocations.location_ids.label('location_ids'),
+            FactApiLocations.location_names.label('location_names'),
+            Analysis.authors.label('authors'),
+            Analysis.title.label('title'),
+            Fact.tag_locations.label('tags'),
+            Fact.excerpt_start.label('excerpt_start'),
+            Fact.excerpt_end.label('excerpt_end'),
+            Validation.assigned_to.label('assigned_to'),
+            Validation.missing.label('missing'),
+            Validation.status.label('status'),
+            Validation.wrong.label('wrong'),
+            ValidationValues.display_color.label('display_color'),
+            over(func.row_number(),
+            order_by=(FactApi.gdelt_day),
+            partition_by=(FactApi.specific_reported_figure,FactApi.unit,FactApi.term,FactApi.location_ids_idx))
+            .label('row_number')
         ), **filters)
-            .subquery()
-    )
-
-    # find all of the locations for the matching facts. this can't be done in the
-    # query above because there may be some location filters that interfere
-    # note: location names and ids are not always in the same order
-    facts_locations = (
-        session.query(facts,
-                      func.sort(func.array_agg(Location.id)).label('location_ids'),
-                      func.array_agg(Location.location_name).label('location_names'))
-            .join(fact_location, facts.c.fact == fact_location.c.fact)
-            .join(Location, fact_location.c.location == Location.id)
-            .group_by(facts.c.fact,
-                      facts.c.specific_reported_figure,
-                      facts.c.term,
-                      facts.c.unit)
-            .subquery()
-    )
-
-    # join in the validation information for each fact
-    fact_validation = (
-        session.query(FactApi,
-                      Fact.tag_locations.label('tags'),
-                      Fact.excerpt_start.label('excerpt_start'),
-                      Fact.excerpt_end.label('excerpt_end'),
-                      Validation.assigned_to.label('assigned_to'),
-                      Validation.missing.label('missing'),
-                      Validation.status.label('status'),
-                      Validation.wrong.label('wrong'),
-                      ValidationValues.display_color.label('display_color'))
-            .distinct(FactApi.fact)
-            .join(Fact, FactApi.fact == Fact.id)
+            .outerjoin(FactApiLocations,FactApi.fact==FactApiLocations.fact)
+            .outerjoin(Analysis, FactApi.gkg_id == Analysis.gkg_id)
+            .outerjoin(Fact, FactApi.fact == Fact.id)
             .outerjoin(Validation, FactApi.fact == Validation.fact_id)
             .outerjoin(ValidationValues, Validation.status == ValidationValues.idetect_validation_key_value)
+            .order_by(FactApi.gdelt_day)
             .subquery().alias('fact')
     )
-
-    # make a list of all of the columns we want to call json_build_object on
-    # because we don't want to include content_clean in fact_validation above
-    # for performance reasons
-    json_labels = ["'{}'".format(c.name) for c in fact_validation.c]
+    
+    json_labels = ["'{}'".format(c.name) for c in facts.c]
+    json_fields = ['fact.{}'.format(c.name) for c in facts.c]
     json_labels.append("'content_clean'")
-    json_fields = ['fact.{}'.format(c.name) for c in fact_validation.c]
     json_fields.append('{}.{}'.format(DocumentContent.__tablename__, DocumentContent.content_clean.name))
     json_zip = zip(json_labels, json_fields)
     json_build = ", ".join(["{}, {}".format(l, f) for l, f in json_zip])
 
-    # form each of the groups
     facts_grouped = (
         session.query(
-            facts_locations.c.specific_reported_figure.label('specific_reported_figure'),
-            facts_locations.c.term.label('term'),
-            facts_locations.c.unit.label('unit'),
-            facts_locations.c.location_ids.label('location_ids'),
-            func.min(facts_locations.c.location_names).label('location_names'),
+            facts.c.specific_reported_figure.label('specific_reported_figure'),
+            facts.c.term.label('term'),
+            facts.c.unit.label('unit'),
+            func.min(facts.c.location_names).label('location_names'),
+            # since we return only the first 50 facts the function over will get us the full count
+            over(func.count(1)).label('nfacts'),
             func.json_agg(func.json_build_object(literal_column(json_build))).label('entry'),
-            func.count(1).label('nfacts')
         )
-            .join(fact_validation, facts_locations.c.fact == fact_validation.c.fact)
-            .group_by(facts_locations.c.specific_reported_figure,
-                      facts_locations.c.term,
-                      facts_locations.c.unit,
-                      facts_locations.c.location_ids)
-            .join(DocumentContent, fact_validation.c.content_id == DocumentContent.id)
-
-            .order_by(facts_locations.c.specific_reported_figure)
-            .limit(limit)
-            .offset(offset)
+        .group_by(
+        facts.c.specific_reported_figure,
+        facts.c.term,
+        facts.c.unit,
+        facts.c.location_ids_idx)
+        .outerjoin(DocumentContent, facts.c.content_id == DocumentContent.id)
+        # getting the most reported figure first
+        .order_by(desc(func.count(1)))
+        # only report the first 50 rows to reduce data size
+        #TODO this is probably not the best place to put this filter
+        .filter(facts.c.row_number<=50)
+        .limit(limit)
+        .offset(offset)
     )
+    print(facts_grouped)
     return [dict(r.items()) for r in session.execute(facts_grouped)]
-
 
 def get_map_week(session):
     query = text("SELECT * FROM idetect_map_week_mview")
