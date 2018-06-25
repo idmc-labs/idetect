@@ -38,9 +38,7 @@ class FactApi(Base):
                     primary_key=True)
     category = Column(String)
     content_id = Column(Integer, ForeignKey('idetect_document_contents.id'))
-    location_ids_idx = Column(Integer,
-                    ForeignKey('idetect_fact_api_locations.fact'),
-                    primary_key=True)
+    location_ids_idx = Column(Integer,ForeignKey('idetect_fact_api_locations.location_ids_idx'))
 
 class Validation(Base):
     __tablename__ = 'idetect_validation'
@@ -269,7 +267,6 @@ def get_urllist(session, limit=32, offset=0, **filters):
             .limit(limit)
             .offset(offset)
     )
-    # print(facts)
     return [dict(r.items()) for r in session.execute(facts)]
 
 
@@ -347,7 +344,6 @@ def get_urllist_grouped(session, limit=32, offset=0, **filters):
         .limit(limit)
         .offset(offset)
     )
-    print(facts_grouped)
     return [dict(r.items()) for r in session.execute(facts_grouped)]
 
 def get_map_week(session):
