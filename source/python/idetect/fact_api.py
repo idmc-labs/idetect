@@ -132,11 +132,15 @@ def add_filters(query,
                 fromdate=None, todate=None, location_ids=None,
                 categories=None, units=None, source_common_names=None,
                 terms=None, iso3s=None, specific_reported_figures=None,
-                ts=None):
+                ts=None,distinct_on_fact=False):
     '''Add some of the known filters to the query'''
     # if there are multiple facts for a single analysis, we only want one row
-    query = query.distinct(FactApi.fact)
-    query = query.order_by(FactApi.fact)
+    if(distinct_on_fact):
+        query = query.distinct(FactApi.fact)
+        query = query.order_by(FactApi.fact)
+    else:
+        query = query.distinct()
+  
     if fromdate:
         query = query.filter(FactApi.gdelt_day >= fromdate)
     if todate:
@@ -251,7 +255,7 @@ def get_urllist(session, limit=32, offset=0, **filters):
             Validation.status.label('status'),
             Validation.wrong.label('wrong'),
             ValidationValues.display_color.label('display_color'),
-        ), **filters)
+        ), **filters,distinct_on_fact=True)
             .outerjoin(FactApiLocations,FactApi.fact==FactApiLocations.fact)
             .outerjoin(Analysis, FactApi.gkg_id == Analysis.gkg_id)
             .outerjoin(Fact, FactApi.fact == Fact.id)
@@ -299,7 +303,7 @@ def get_urllist_grouped(session, limit=32, offset=0, **filters):
             order_by=(FactApi.gdelt_day),
             partition_by=(FactApi.specific_reported_figure,FactApi.unit,FactApi.term,FactApi.location_ids_idx))
             .label('row_number')
-        ), **filters)
+        ), **filters,distinct_on_fact=True)
             .outerjoin(FactApiLocations,FactApi.fact==FactApiLocations.fact)
             .outerjoin(Analysis, FactApi.gkg_id == Analysis.gkg_id)
             .outerjoin(Fact, FactApi.fact == Fact.id)
