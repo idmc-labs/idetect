@@ -326,8 +326,8 @@ def get_urllist_grouped(session, limit=32, offset=0, **filters):
             facts.c.term.label('term'),
             facts.c.unit.label('unit'),
             func.min(facts.c.location_names).label('location_names'),
-            # since we return only the first 50 facts the function over will get us the full count
-            over(func.count(1)).label('nfacts'),
+            # TODO instert window function to get the true total number of facts
+            func.max(facts.c.row_number).label('nfacts'),
             func.json_agg(func.json_build_object(literal_column(json_build))).label('entry'),
         )
         .group_by(
