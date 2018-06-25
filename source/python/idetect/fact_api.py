@@ -222,7 +222,7 @@ def get_wordcloud(session, engine, sample=1000, **filters):
 
 
 def get_count(session, **filters):
-    return add_filters(session.query(FactApi), **filters).count()
+    return add_filters(session.query(FactApi.fact), **filters,distinct_on_fact=True).count()
 
 
 def get_urllist(session, limit=32, offset=0, **filters):
@@ -267,6 +267,7 @@ def get_urllist(session, limit=32, offset=0, **filters):
             .limit(limit)
             .offset(offset)
     )
+    # print(facts)
     return [dict(r.items()) for r in session.execute(facts)]
 
 
