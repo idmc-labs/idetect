@@ -229,6 +229,9 @@ def get_count(session, **filters):
 
 def get_urllist(session, limit=32, offset=0, **filters):
     # select the facts that match the filters
+    # TODO add one step to verify how many rows are selected,
+    # if the number is larger than a threshold (let's say 50000)
+    # we process only 50000 rows of idetect_fact_api using TABLESAMPLE
     facts = (add_filters(
         session.query(
             FactApi.document_identifier.label('document_identifier'),
