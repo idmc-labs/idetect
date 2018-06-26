@@ -123,6 +123,7 @@ def filter_params(data):
     filters['fromdate'] = data.get('fromdate')
     filters['todate'] = data.get('todate')
     filters['ts'] = data.get('text_in_content')
+    filters['location_ids_num'] = data.get('location_ids_num')
     return filters
 
 
@@ -130,7 +131,7 @@ def add_filters(query,
                 fromdate=None, todate=None, location_ids=None,
                 categories=None, units=None, source_common_names=None,
                 terms=None, iso3s=None, specific_reported_figures=None,
-                ts=None,distinct_on_fact=False):
+                ts=None,location_ids_num=None,distinct_on_fact=False):
     '''Add some of the known filters to the query'''
     # if there are multiple facts for a single analysis, we only want one row
     if(distinct_on_fact):
@@ -164,6 +165,8 @@ def add_filters(query,
                 .join(DocumentContent, DocumentContent.id == FactApi.content_id)
                 .filter(DocumentContent.content_ts.match(ts, postgresql_regconfig='simple_english'))
         )
+    if location_ids_num:
+        query = query.filter(FactApi.location_ids_num == location_ids_num)
     return query
 
 
