@@ -1,3 +1,28 @@
+-- idetect_fact_api_locations
+--TODO this can also be replaced by either a sequence or md5 hash of location names
+DROP MATERIALIZED VIEW if EXISTS idetect_fact_api_locations;
+CREATE MATERIALIZED VIEW idetect_fact_api_locations AS
+WITH fact_locations AS (
+         SELECT idetect_fact_locations.fact,
+            sort(array_agg(idetect_fact_locations.location)) AS location_ids,
+            array_agg(idetect_locations.location_name) AS location_names
+           FROM (idetect_fact_locations
+             LEFT JOIN idetect_locations ON ((idetect_fact_locations.location = idetect_locations.id)))
+          WHERE (idetect_fact_locations.location IS NOT NULL)
+          GROUP BY idetect_fact_locations.fact
+        ), location_ids_uniqueid AS (
+         SELECT DISTINCT ON (fact_locations_1.location_ids) fact_locations_1.location_ids,
+            row_number() OVER (ORDER BY fact_locations_1.location_ids) AS location_ids_num
+           FROM fact_locations fact_locations_1
+        )
+ SELECT fact_locations.fact,
+    fact_locations.location_ids,
+    fact_locations.location_names,
+    location_ids_uniqueid.location_ids_num
+   FROM (fact_locations
+     LEFT JOIN location_ids_uniqueid USING (location_ids));
+ALTER TABLE idetect_fact_api_locations OWNER TO idetect;
+-- idetect_fact_api
 DROP MATERIALIZED VIEW if EXISTS idetect_fact_api;
 CREATE MATERIALIZED VIEW idetect_fact_api AS (
           SELECT
@@ -13,20 +38,26 @@ CREATE MATERIALIZED VIEW idetect_fact_api AS (
     idetect_fact_locations.location,
     idetect_analyses.gkg_id,
     idetect_analyses.category,
-    idetect_analyses.content_id
+    idetect_analyses.content_id,
+    idetect_fact_api_locations.location_ids_num
   from idetect_facts
   join idetect_analysis_facts ON idetect_facts.id = idetect_analysis_facts.fact
   join idetect_analyses ON idetect_analysis_facts.analysis = idetect_analyses.gkg_id
   join gkg ON gkg.id = idetect_analyses.gkg_id
   left join idetect_fact_locations ON idetect_facts.id = idetect_fact_locations.fact
+  left join idetect_fact_api_locations ON idetect_fact_api_locations.fact=idetect_facts.id
 );
+ALTER TABLE idetect_fact_api OWNER TO idetect;
 
+CREATE INDEX idetect_fact_api_fact_day_idx on idetect_fact_api (fact,gdelt_day);
 CREATE INDEX idetect_fact_api_loc_day_idx on idetect_fact_api (location, gdelt_day);
 CREATE INDEX idetect_fact_api_day_loc_idx on idetect_fact_api (gdelt_day, location);
-CREATE INDEX idetect_fact_api_loc_idx on idetect_fact_api (location, category);
-CREATE INDEX idetect_fact_api_day_idx on idetect_fact_api (gdelt_day, category);
-CREATE INDEX idetect_fact_api_category_idx on idetect_fact_api (category);
-create INDEX idetect_fact_api_fact_hash ON idetect_fact_api USING HASH (fact);
+CREATE INDEX idetect_fact_api_loc_cat_idx on idetect_fact_api (location, category);
+CREATE INDEX idetect_fact_api_day_cat_idx on idetect_fact_api (gdelt_day, category);
+CREATE INDEX idetect_fact_api_cat_idx on idetect_fact_api (category);
+CREATE INDEX idetect_fact_api_fact_hash ON idetect_fact_api USING HASH (fact);
+CREATE INDEX idetect_fact_api_locations_fact_idx ON idetect_fact_api_locations (fact);
+CREATE INDEX idetect_fact_api_locidsnum_idx ON idetect_fact_api (location_ids_num);
 
 -- wordcloud
 

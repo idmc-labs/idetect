@@ -176,6 +176,7 @@ def urllist_grouped():
         limit = data.get('limit', 32)
         offset = data.get('offset', 0)
         entries = get_urllist_grouped(session, limit=limit, offset=offset, **filters)
+        # TODO for url_list grouped count should be the number of groups rather than the number of entries
         count = get_count(session, **filters)
         resp = jsonify({'entries': entries, 'nentries': count})
         resp.status_code = 200
