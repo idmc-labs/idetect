@@ -11,7 +11,7 @@ class FactApiLocations(Base):
                   primary_key=True)
     location_ids = Column(ARRAY(Integer))
     location_names = Column(ARRAY(String))
-    location_ids_idx = Column(Integer)
+    location_ids_num = Column(Integer)
     
 
 class FactApi(Base):
@@ -38,7 +38,7 @@ class FactApi(Base):
                     primary_key=True)
     category = Column(String)
     content_id = Column(Integer, ForeignKey('idetect_document_contents.id'))
-    location_ids_idx = Column(Integer,ForeignKey('idetect_fact_api_locations.location_ids_idx'))
+    location_ids_num = Column(Integer,ForeignKey('idetect_fact_api_locations.location_ids_num'))
 
 class Validation(Base):
     __tablename__ = 'idetect_validation'
@@ -287,7 +287,7 @@ def get_urllist_grouped(session, limit=32, offset=0, **filters):
             FactApi.category.label('category'),
             FactApi.gkg_id.label('gkg_id'),
             FactApi.content_id.label('content_id'),
-            FactApiLocations.location_ids_idx.label('location_ids_idx'),
+            FactApiLocations.location_ids_num.label('location_ids_num'),
             FactApiLocations.location_ids.label('location_ids'),
             FactApiLocations.location_names.label('location_names'),
             Analysis.authors.label('authors'),
@@ -302,7 +302,7 @@ def get_urllist_grouped(session, limit=32, offset=0, **filters):
             ValidationValues.display_color.label('display_color'),
             over(func.row_number(),
             order_by=(FactApi.gdelt_day),
-            partition_by=(FactApi.specific_reported_figure,FactApi.unit,FactApi.term,FactApi.location_ids_idx))
+            partition_by=(FactApi.specific_reported_figure,FactApi.unit,FactApi.term,FactApi.location_ids_num))
             .label('row_number')
         ), **filters,distinct_on_fact=True)
             .outerjoin(FactApiLocations,FactApi.fact==FactApiLocations.fact)
@@ -335,7 +335,7 @@ def get_urllist_grouped(session, limit=32, offset=0, **filters):
         facts.c.specific_reported_figure,
         facts.c.term,
         facts.c.unit,
-        facts.c.location_ids_idx)
+        facts.c.location_ids_num)
         .outerjoin(DocumentContent, facts.c.content_id == DocumentContent.id)
         # getting the most reported figure first
         .order_by(desc(func.count(1)))

@@ -12,13 +12,13 @@ WITH fact_locations AS (
           GROUP BY idetect_fact_locations.fact
         ), location_ids_uniqueid AS (
          SELECT DISTINCT ON (fact_locations_1.location_ids) fact_locations_1.location_ids,
-            row_number() OVER (ORDER BY fact_locations_1.location_ids) AS location_ids_idx
+            row_number() OVER (ORDER BY fact_locations_1.location_ids) AS location_ids_num
            FROM fact_locations fact_locations_1
         )
- SELECT DISTINCT ON (fact_locations.fact) fact_locations.fact,
+ SELECT fact_locations.fact,
     fact_locations.location_ids,
     fact_locations.location_names,
-    location_ids_uniqueid.location_ids_idx
+    location_ids_uniqueid.location_ids_num
    FROM (fact_locations
      LEFT JOIN location_ids_uniqueid USING (location_ids));
 ALTER TABLE idetect_fact_api_locations OWNER TO idetect;
@@ -39,7 +39,7 @@ CREATE MATERIALIZED VIEW idetect_fact_api AS (
     idetect_analyses.gkg_id,
     idetect_analyses.category,
     idetect_analyses.content_id,
-    idetect_fact_api_locations.location_ids_idx
+    idetect_fact_api_locations.location_ids_num
   from idetect_facts
   join idetect_analysis_facts ON idetect_facts.id = idetect_analysis_facts.fact
   join idetect_analyses ON idetect_analysis_facts.analysis = idetect_analyses.gkg_id
@@ -56,8 +56,8 @@ CREATE INDEX idetect_fact_api_loc_cat_idx on idetect_fact_api (location, categor
 CREATE INDEX idetect_fact_api_day_cat_idx on idetect_fact_api (gdelt_day, category);
 CREATE INDEX idetect_fact_api_cat_idx on idetect_fact_api (category);
 CREATE INDEX idetect_fact_api_fact_hash ON idetect_fact_api USING HASH (fact);
-CREATE INDEX idetect_fact_api_locations_fact_hash ON idetect_fact_api_locations USING HASH (fact);
-CREATE INDEX idetect_fact_api_loc_idx ON idetect_fact_api (location_ids_idx);
+CREATE INDEX idetect_fact_api_locations_fact_idx ON idetect_fact_api_locations (fact);
+CREATE INDEX idetect_fact_api_locidsnum_idx ON idetect_fact_api (location_ids_num);
 
 -- wordcloud
 
