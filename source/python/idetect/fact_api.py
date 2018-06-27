@@ -122,7 +122,7 @@ def filter_params(data):
     ]}
     filters['fromdate'] = data.get('fromdate')
     filters['todate'] = data.get('todate')
-    filters['ts'] = data.get('text_in_content')
+    # filters['ts'] = data.get('text_in_content')
     filters['location_ids_num'] = data.get('location_ids_num')
     return filters
 
