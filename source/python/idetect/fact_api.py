@@ -122,7 +122,7 @@ def filter_params(data):
     ]}
     filters['fromdate'] = data.get('fromdate')
     filters['todate'] = data.get('todate')
-    # filters['ts'] = data.get('text_in_content')
+    filters['ts'] = data.get('text_in_content')
     filters['location_ids_num'] = data.get('location_ids_num')
     return filters
 
@@ -131,14 +131,15 @@ def add_filters(query,
                 fromdate=None, todate=None, location_ids=None,
                 categories=None, units=None, source_common_names=None,
                 terms=None, iso3s=None, specific_reported_figures=None,
-                ts=None,location_ids_num=None,distinct_on_fact=False):
+                # ts=None,location_ids_num=None,distinct_on_fact=False):
+                ts=None,location_ids_num=None):
     '''Add some of the known filters to the query'''
     # if there are multiple facts for a single analysis, we only want one row
-    if(distinct_on_fact):
-        query = query.distinct(FactApi.fact)
-        query = query.order_by(FactApi.fact)
-    else:
-        query = query.distinct()
+    # if(distinct_on_fact):
+    #     query = query.distinct(FactApi.fact)
+    #     query = query.order_by(FactApi.fact)
+    # else:
+    #     query = query.distinct()
   
     if fromdate:
         query = query.filter(FactApi.gdelt_day >= fromdate)
@@ -174,7 +175,9 @@ def get_filter_counts(session, **filters):
     filter_counts = []
     for filter_column in ('category', 'unit', 'source_common_name', 'term', 'iso3', 'specific_reported_figure'):
         column = FactApi.__table__.c[filter_column]
-        query = add_filters(session.query(func.count(FactApi.fact), column), **filters).group_by(column)
+        query = (add_filters(session.query(func.count(FactApi.fact), column), **filters)
+        .distinct()
+        ).group_by(column)
         for count, value in query.all():
             filter_counts.append({'count': count, 'value': value, 'filter_type': filter_column})
     return filter_counts
@@ -186,6 +189,7 @@ def get_timeline_counts(session, **filters):
                                   FactApi.gdelt_day,
                                   FactApi.category),
                     **filters)
+            .distinct()
             .group_by(FactApi.gdelt_day, FactApi.category)
             .order_by(FactApi.gdelt_day, FactApi.category)
     )
@@ -199,6 +203,7 @@ def get_histogram_counts(session, **filters):
                                   FactApi.unit,
                                   FactApi.specific_reported_figure),
                     **filters)
+            .distinct()
             .group_by(FactApi.unit, FactApi.specific_reported_figure)
             .order_by(FactApi.unit, FactApi.specific_reported_figure)
     )
@@ -210,6 +215,7 @@ def get_wordcloud(session, engine, sample=1000, **filters):
     # select a random sampling of matching facts
     sample = (
         add_filters(session.query(FactApi.content_id), **filters)
+            .distinct()
             .order_by(func.random())
             .limit(sample)
     ).subquery()
@@ -225,7 +231,9 @@ def get_wordcloud(session, engine, sample=1000, **filters):
 
 
 def get_count(session, **filters):
-    return add_filters(session.query(FactApi.fact), **filters,distinct_on_fact=True).count()
+    return (add_filters(session.query(FactApi.fact), **filters)
+    .distinct(FactApi.fact)
+    .order_by(FactApi.fact)).count()
 
 def get_group_count(session, **filters):
     ngroups = (add_filters(session.query(FactApi.fact), **filters)
@@ -263,18 +271,19 @@ def get_urllist(session, limit=32, offset=0, **filters):
             Validation.status.label('status'),
             Validation.wrong.label('wrong'),
             ValidationValues.display_color.label('display_color'),
-        ), **filters,distinct_on_fact=True)
+        ), **filters)
+            .distinct(FactApi.fact)
             .outerjoin(FactApiLocations,FactApi.fact==FactApiLocations.fact)
             .outerjoin(Analysis, FactApi.gkg_id == Analysis.gkg_id)
             .outerjoin(Fact, FactApi.fact == Fact.id)
-            .outerjoin(DocumentContent, FactApi.content_id == DocumentContent.id)
+            # .outerjoin(DocumentContent, FactApi.content_id == DocumentContent.id)
             .outerjoin(Validation, FactApi.fact == Validation.fact_id)
             .outerjoin(ValidationValues, Validation.status == ValidationValues.idetect_validation_key_value)
-            .order_by(FactApi.gdelt_day)
+            .order_by(FactApi.fact,FactApi.gdelt_day)
             .limit(limit)
             .offset(offset)
     )
-    # print(facts)
+    print(facts)
     return [dict(r.items()) for r in session.execute(facts)]
 
 
@@ -288,7 +297,8 @@ def get_urllist_grouped(session, limit=32, offset=0, **filters):
             FactApi.unit.label('unit'),
             FactApi.location_ids_num.label('location_ids_num'),
             FactApiLocations.location_names.label('location_names'),
-            ), **filters,distinct_on_fact=True)
+            ), **filters)
+            .distinct(FactApi.fact)
             .outerjoin(FactApiLocations,FactApi.fact==FactApiLocations.fact)
             .subquery().alias('fact')
     )
