@@ -131,16 +131,8 @@ def add_filters(query,
                 fromdate=None, todate=None, location_ids=None,
                 categories=None, units=None, source_common_names=None,
                 terms=None, iso3s=None, specific_reported_figures=None,
-                # ts=None,location_ids_num=None,distinct_on_fact=False):
                 ts=None,location_ids_num=None):
-    '''Add some of the known filters to the query'''
-    # if there are multiple facts for a single analysis, we only want one row
-    # if(distinct_on_fact):
-    #     query = query.distinct(FactApi.fact)
-    #     query = query.order_by(FactApi.fact)
-    # else:
-    #     query = query.distinct()
-  
+    '''Add some of the known filters to the query'''  
     if fromdate:
         query = query.filter(FactApi.gdelt_day >= fromdate)
     if todate:
@@ -242,9 +234,6 @@ def get_group_count(session, **filters):
 
 def get_urllist(session, limit=32, offset=0, **filters):
     # select the facts that match the filters
-    # TODO add one step to verify how many rows are selected,
-    # if the number is larger than a threshold (let's say 50000)
-    # we process only 50000 rows of idetect_fact_api using TABLESAMPLE
     facts = (add_filters(
         session.query(
             FactApi.document_identifier.label('document_identifier'),
@@ -273,13 +262,13 @@ def get_urllist(session, limit=32, offset=0, **filters):
             ValidationValues.display_color.label('display_color'),
         ), **filters)
             .distinct(FactApi.fact)
+            .order_by(FactApi.fact,FactApi.gdelt_day)
             .outerjoin(FactApiLocations,FactApi.fact==FactApiLocations.fact)
             .outerjoin(Analysis, FactApi.gkg_id == Analysis.gkg_id)
             .outerjoin(Fact, FactApi.fact == Fact.id)
-            # .outerjoin(DocumentContent, FactApi.content_id == DocumentContent.id)
+            .outerjoin(DocumentContent, FactApi.content_id == DocumentContent.id)
             .outerjoin(Validation, FactApi.fact == Validation.fact_id)
             .outerjoin(ValidationValues, Validation.status == ValidationValues.idetect_validation_key_value)
-            .order_by(FactApi.fact,FactApi.gdelt_day)
             .limit(limit)
             .offset(offset)
     )
