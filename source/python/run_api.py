@@ -5,7 +5,7 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify, f
 from sqlalchemy import create_engine, desc
 
 from idetect.fact_api import get_filter_counts, get_histogram_counts, get_timeline_counts, \
-    get_urllist, get_wordcloud, filter_params, get_count, get_map_week, get_urllist_grouped
+    get_urllist, get_wordcloud, filter_params, get_count, get_group_count, get_map_week, get_urllist_grouped
 from idetect.model import db_url, Analysis, Session, Gkg
 
 logger = logging.getLogger(__name__)
@@ -177,8 +177,9 @@ def urllist_grouped():
         offset = data.get('offset', 0)
         entries = get_urllist_grouped(session, limit=limit, offset=offset, **filters)
         # TODO for url_list grouped count should be the number of groups rather than the number of entries
-        count = get_count(session, **filters)
-        resp = jsonify({'entries': entries, 'nentries': count})
+        factcount = get_count(session, **filters)
+        groupcount = get_group_count(session, **filters)
+        resp = jsonify({'groups': entries, 'ngroups': groupcount,'tot_nfacts':factcount})
         resp.status_code = 200
         return resp
     finally:
