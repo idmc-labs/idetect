@@ -263,10 +263,10 @@ def get_urllist(session, limit=32, offset=0, **filters):
         ), **filters)
             .distinct(FactApi.fact)
             .order_by(FactApi.fact,FactApi.gdelt_day)
-            .outerjoin(FactApiLocations,FactApi.fact==FactApiLocations.fact)
-            .outerjoin(Analysis, FactApi.gkg_id == Analysis.gkg_id)
-            .outerjoin(Fact, FactApi.fact == Fact.id)
-            .outerjoin(DocumentContent, FactApi.content_id == DocumentContent.id)
+            .join(FactApiLocations,FactApi.fact==FactApiLocations.fact)
+            .join(Analysis, FactApi.gkg_id == Analysis.gkg_id)
+            .join(Fact, FactApi.fact == Fact.id)
+            .join(DocumentContent, FactApi.content_id == DocumentContent.id)
             .outerjoin(Validation, FactApi.fact == Validation.fact_id)
             .outerjoin(ValidationValues, Validation.status == ValidationValues.idetect_validation_key_value)
             .limit(limit)
@@ -288,7 +288,7 @@ def get_urllist_grouped(session, limit=32, offset=0, **filters):
             FactApiLocations.location_names.label('location_names'),
             ), **filters)
             .distinct(FactApi.fact)
-            .outerjoin(FactApiLocations,FactApi.fact==FactApiLocations.fact)
+            .join(FactApiLocations,FactApi.fact==FactApiLocations.fact)
             .subquery().alias('fact')
     )
     
