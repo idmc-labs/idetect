@@ -1,5 +1,6 @@
 -- idetect_fact_api_locations
 --TODO this can also be replaced by either a sequence or md5 hash of location names
+DROP MATERIALIZED VIEW if EXISTS idetect_fact_api;
 DROP MATERIALIZED VIEW if EXISTS idetect_fact_api_locations;
 CREATE MATERIALIZED VIEW idetect_fact_api_locations AS
 WITH fact_locations AS (
@@ -23,7 +24,6 @@ WITH fact_locations AS (
      LEFT JOIN location_ids_uniqueid USING (location_ids));
 ALTER TABLE idetect_fact_api_locations OWNER TO idetect;
 -- idetect_fact_api
-DROP MATERIALIZED VIEW if EXISTS idetect_fact_api;
 CREATE MATERIALIZED VIEW idetect_fact_api AS (
           SELECT
     gkg.document_identifier,
@@ -44,8 +44,8 @@ CREATE MATERIALIZED VIEW idetect_fact_api AS (
   join idetect_analysis_facts ON idetect_facts.id = idetect_analysis_facts.fact
   join idetect_analyses ON idetect_analysis_facts.analysis = idetect_analyses.gkg_id
   join gkg ON gkg.id = idetect_analyses.gkg_id
-  left join idetect_fact_locations ON idetect_facts.id = idetect_fact_locations.fact
-  left join idetect_fact_api_locations ON idetect_fact_api_locations.fact=idetect_facts.id
+  inner join idetect_fact_locations ON idetect_facts.id = idetect_fact_locations.fact
+  join idetect_fact_api_locations ON idetect_fact_api_locations.fact=idetect_facts.id
 );
 ALTER TABLE idetect_fact_api OWNER TO idetect;
 

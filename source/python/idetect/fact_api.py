@@ -263,7 +263,7 @@ def get_urllist(session, limit=32, offset=0, **filters):
         ), **filters)
             .distinct(FactApi.fact)
             .order_by(FactApi.fact,FactApi.gdelt_day)
-            .outerjoin(FactApiLocations,FactApi.fact==FactApiLocations.fact)
+            .join(FactApiLocations,FactApi.fact == FactApiLocations.fact)
             .join(Analysis, FactApi.gkg_id == Analysis.gkg_id)
             .join(Fact, FactApi.fact == Fact.id)
             .join(DocumentContent, FactApi.content_id == DocumentContent.id)
@@ -272,7 +272,6 @@ def get_urllist(session, limit=32, offset=0, **filters):
             .limit(limit)
             .offset(offset)
     )
-    print(facts)
     return [dict(r.items()) for r in session.execute(facts)]
 
 
