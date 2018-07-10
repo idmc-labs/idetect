@@ -93,7 +93,7 @@ def filter_by_specific_reported_figures(query, figures):
     filters = []
     if None in figures or 'NULL' in figures or 'null' in figures:
         filters.append(FactApi.specific_reported_figure == None)
-        figures = [l for l in figures if isinstance(l, int)]
+        figures = [l for l in figures if l not in [None,'NULL','null']]
     if figures:
         # figures are typically passed in as all values in a range
         # it's more efficient to just test the endpoints of the range
