@@ -151,6 +151,8 @@ def add_filters(query,
         query = query.filter(FactApi.iso3.in_(iso3s))
     if specific_reported_figures:
         query = filter_by_specific_reported_figures(query, specific_reported_figures)
+    # by default we exclude specific reported figures unless it is specifically added in specific_reported_figures
+    else: query = query.filter(FactApi.specific_reported_figure != None)
     # TODO make sure we do full text search only after all the other filters have been applied
     if ts:
         query = (
