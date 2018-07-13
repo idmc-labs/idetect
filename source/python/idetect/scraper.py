@@ -116,7 +116,7 @@ def scrape_html(analysis):
                                   content=text,
                                   content_clean=text_clean,
                                   content_type='text',
-                                  content_ts=func.to_tsvector(text_ts)
+                                  content_ts=func.to_tsvector('simple_english',text_ts)
                                   )
         session = object_session(analysis)
         session.add(content)
