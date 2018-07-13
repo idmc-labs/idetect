@@ -268,12 +268,15 @@ def get_urllist(session, limit=32, offset=0, **filters):
             .join(FactApiLocations,FactApi.fact == FactApiLocations.fact)
             .join(Analysis, FactApi.gkg_id == Analysis.gkg_id)
             .join(Fact, FactApi.fact == Fact.id)
-            .join(DocumentContent, FactApi.content_id == DocumentContent.id)
             .outerjoin(Validation, FactApi.fact == Validation.fact_id)
             .outerjoin(ValidationValues, Validation.status == ValidationValues.idetect_validation_key_value)
-            .limit(limit)
-            .offset(offset)
+            
     )
+    # if we filter by text this is already joined and SQLAlchemy return an error
+    if filters['ts'] is None:
+        facts=facts.join(DocumentContent, FactApi.content_id == DocumentContent.id)
+    # limit and offset must be applied after all the joins
+    facts=facts.limit(limit).offset(offset)
     return [dict(r.items()) for r in session.execute(facts)]
 
 
