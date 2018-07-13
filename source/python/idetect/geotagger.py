@@ -86,14 +86,14 @@ def get_geo_info(place_name):
         coordinates: String of lat/long coordinates, if available
         flag: Indicator of number of results encountered
     '''
-
+    # TODO here we should limit the countries
     country_info = city_subdivision_country(place_name)
     if country_info:
         coords = nominatim_coordinates(place_name, country_info['country_code'])
         country_info['coordinates'] = coords['coordinates']
         country_info['flag'] = coords['flag']
     else:
-        country_info = nominatim_coordinates(place_name)
+        country_info = nominatim_coordinates(place_name,'USA')
 
     return country_info
 

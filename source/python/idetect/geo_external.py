@@ -26,6 +26,7 @@ def nominatim_coordinates(place_name, country_code='XXX'):
         try:
             country=pycountry.countries.get(alpha_3=country_code)
             base_params['countrycodes'] = country.alpha_2.lower()
+            # base_params['countrycodes'] = 'pt,tt'
         except:
             pass
     try:
@@ -43,7 +44,14 @@ def nominatim_coordinates(place_name, country_code='XXX'):
                 flag = "single-result"
         # in principle this is redundant as the data is already ordered by importance
         data.sort(key=lambda x: x['importance'], reverse=True)
-
+        for ge in data:
+            print('results from nominatim',match_iso3(ge['address']['country_code'].upper()))
+            try:
+                print(ge['display_name'])
+            except:
+                pass
+            # print('results from nominatim',ge)
+        # TODO here we should check if the iso is in the list
         geo_entity=data[0]
         placetype=LocationType.UNKNOWN
         try:

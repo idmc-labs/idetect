@@ -63,7 +63,8 @@ services:
       args:
         - UID=${UID}
     image: idetect
-    command: sh -c 'python3 -m unittest /home/idetect/python/idetect/tests/test_*.py'
+    # command: sh -c 'python3 -m unittest /home/idetect/python/idetect/tests/test_*.py'
+    command: sh -c 'python3 -m unittest /home/idetect/python/idetect/tests/test_bounding_box.py'
     volumes:
       - ./source:/home/idetect
     depends_on:

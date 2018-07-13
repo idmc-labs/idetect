@@ -57,6 +57,7 @@ def process_location(location_name, session):
     :params session: session object corresponding to location
     :return: Locations
     '''
+    #TODO here we should check that the iso is in the list
     location = session.query(Location).filter_by(
         location_name=location_name).one_or_none()
     if location:
