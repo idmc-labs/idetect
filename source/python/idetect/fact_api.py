@@ -7,7 +7,6 @@ class FactApiLocations(Base):
     __tablename__ = 'idetect_fact_api_locations'
 
     fact = Column(Integer,
-                  ForeignKey('idetect_fact_locations.fact'),
                   primary_key=True)
     location_ids = Column(ARRAY(Integer))
     location_names = Column(ARRAY(String))
@@ -38,7 +37,7 @@ class FactApi(Base):
                     primary_key=True)
     category = Column(String)
     content_id = Column(Integer, ForeignKey('idetect_document_contents.id'))
-    location_ids_num = Column(Integer,ForeignKey('idetect_fact_api_locations.location_ids_num'))
+    location_ids_num = Column(Integer)
 
 class Validation(Base):
     __tablename__ = 'idetect_validation'
