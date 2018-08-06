@@ -320,3 +320,15 @@ def get_urllist_grouped(session, limit=32, offset=0, **filters):
 def get_map_week(session):
     query = text("SELECT * FROM idetect_map_week_mview")
     return [{'entries': session.execute(query).first()[0]}]
+
+def get_facts_for_document(session, gkg_id=None):
+    # select the facts that match the filters
+
+    facts = ((
+        session.query(Fact,Analysis)
+        )
+        .join(Fact.analysis)
+        .filter(Analysis.gkg_id == gkg_id)
+        .limit(10)
+    )
+    return [dict(r.items()) for r in session.execute(facts)]
