@@ -4,17 +4,13 @@ import sys
 
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
 from sqlalchemy import create_engine, desc, func, asc
-import re
-import string
-import datetime
 
 from idetect.fact_api import get_filter_counts, get_histogram_counts, get_timeline_counts, \
     get_urllist, get_wordcloud, filter_params, get_count, get_group_count, get_map_week, get_urllist_grouped, \
-    get_facts_for_document
+    create_new_analysis_from_url,work, get_document, get_facts_for_document
 from idetect.model import db_url, Analysis, Session, Gkg, Status, Base
 from idetect.scraper import scrape
 from idetect.classifier import classify
-from idetect.fact_extractor import extract_facts
 from idetect.fact_extractor import extract_facts
 from idetect.geotagger import process_locations
 from idetect.nlp_models.category import * 
@@ -33,53 +29,6 @@ app.secret_key = 'my unobvious secret key'
 engine = create_engine(db_url())
 Session.configure(bind=engine)
 
-@app.route('/analyse_url', methods=['POST'])
-def analyse_url():    
-    session = Session()
-    url = request.get_json(silent=True)['url'] or request.form['url']
-    if url is None:
-        return json.dumps({'success': False}), 422, {'ContentType': 'application/json'}
-    # TODO speedup search with index?
-    gkg = session.query(Gkg.id).filter(
-         Gkg.document_identifier.like("%" + url + "%")).order_by(Gkg.date.asc()).first()
-    if gkg: 
-        gkg_id=gkg.id
-        print("url already in db",gkg_id)
-    else:
-        print('getting gkg_id')
-        gkg_id= session.query(func.max(Gkg.id)).scalar()
-        print('gkg_id:',gkg_id)
-        # source_common_name
-        scn=re.search('(?<=www.).*?(?=\/)',url).group(0)
-        # date
-        now=datetime.datetime.now()
-        gkg_date=('{:04d}{:02d}{:02d}{:02d}{:02d}{:02d}'.format(now.year,now.month,now.day,now.hour,now.minute,now.second))
-        print(scn,gkg_date)
-        article = Gkg(document_identifier=url,id=gkg_id+1,date=gkg_date,source_common_name=scn)
-        try:
-            analysis = Analysis(gkg=article, status=Status.NEW,retrieval_attempts=0)
-            session.add(analysis)
-            session.commit()
-            scrape(analysis)
-            analysis.create_new_version(Status.SCRAPED)
-            # TODO add classification
-            # c_m = CategoryModel()
-            # r_m = RelevanceModel()
-            # classify(analysis,c_m, r_m)
-            analysis.create_new_version(Status.CLASSIFIED)
-            extract_facts(analysis)
-            analysis.create_new_version(Status.EXTRACTED)
-            process_locations(analysis)
-            analysis.create_new_version(Status.GEOTAGGED)
-        except Exception as e:
-            return json.dumps({'success': False, 'Exception':str(e)}), 422, {'ContentType': 'application/json'}
-        finally:
-            session.close()
-    # TODO finalise query
-    entries = get_facts_for_document(session, gkg_id)
-    resp = jsonify({'entries': entries})
-    resp.status_code = 200
-    return resp
     
 @app.route('/')
 def homepage():
@@ -256,6 +205,43 @@ def map_week_mview():
     finally:
         session.close()
 
+@app.route('/analyse_url', methods=['POST'])
+def analyse_url():    
+    session = Session()
+    status=None
+    gkg_id=None
+    url = request.get_json(silent=True)['url'] or request.form['url']
+    if url is None:
+        return json.dumps({'success': False}), 422, {'ContentType': 'application/json'}
+    gkg = session.query(Gkg.id).filter(
+         Gkg.document_identifier.like("%" + url + "%")).order_by(Gkg.date.asc()).first()
+    if gkg: 
+        gkg_id=gkg.id
+        status='url already in DB'
+    else:
+        analysis=create_new_analysis_from_url(session,url)
+        gkg_id=analysis.gkg_id
+        status='url added to DB'
+        try:
+            work(session,analysis,Status.SCRAPING,Status.SCRAPED,Status.SCRAPING_FAILED,scrape)
+            # TODO add classification
+            # c_m = CategoryModel()
+            # r_m = RelevanceModel()
+            # classify(analysis,c_m, r_m)
+            work(session,analysis,Status.EXTRACTING,Status.EXTRACTED,Status.EXTRACTING_FAILED,extract_facts)
+            work(session,analysis,Status.GEOTAGGING,Status.GEOTAGGED,Status.GEOTAGGING_FAILED,process_locations)
+        except Exception as e:
+            return json.dumps({'success': False, 'Exception':str(e)}), 422, {'ContentType': 'application/json'}
+        finally:
+            session.close()
+    try:
+        document=get_document(session, gkg_id)
+        entries = get_facts_for_document(session, gkg_id)
+        resp = jsonify({'document': document, 'facts': entries, 'status' : status})
+        resp.status_code = 200
+        return resp
+    finally:
+        session.close()
 
 if __name__ == "__main__":
     # Start flask app

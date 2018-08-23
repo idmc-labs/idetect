@@ -1,6 +1,11 @@
+import time
+import datetime
+import re
+
+
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, column, func, or_, text, literal_column, ARRAY, desc, over
 
-from idetect.model import Base, DocumentContent, Analysis, Location, Fact, fact_location
+from idetect.model import Base, Gkg, DocumentContent, Analysis, Location, Country, Fact, Status
 from idetect.values import values
 
 class FactApiLocations(Base):
@@ -321,14 +326,83 @@ def get_map_week(session):
     query = text("SELECT * FROM idetect_map_week_mview")
     return [{'entries': session.execute(query).first()[0]}]
 
+def work(session, analysis, working_status, success_status, failure_status, function):
+    analysis.create_new_version(working_status)
+    session.commit()
+    start = time.time()
+    try:
+        analysis.create_new_version(working_status)
+        function(analysis)
+        delta = time.time() - start
+        analysis.error_msg = None
+        analysis.processing_time = delta
+        analysis.create_new_version(success_status)
+        session.commit()
+    except Exception as e:
+        delta = time.time() - start
+        analysis.error_msg = str(e)
+        analysis.processing_time = delta
+        analysis.create_new_version(failure_status)
+        session.commit()
+        return e
+    return True
+
+def create_new_analysis_from_url(session,url):
+    scn=re.search('(?<=www.).*?(?=\/)',url).group(0)
+    now=datetime.datetime.now()
+    gkg_date=('{:04d}{:02d}{:02d}{:02d}{:02d}{:02d}'.format(now.year,now.month,now.day,now.hour,now.minute,now.second))
+    article = Gkg(document_identifier=url,date=gkg_date,source_common_name=scn)
+    analysis=Analysis(gkg=article, status=Status.NEW,retrieval_attempts=0)
+    session.add(analysis)
+    session.commit()
+    return analysis
+
+def get_document(session, gkg_id=None):
+    # select the facts that match the filters
+    document = (
+        session.query(
+            Gkg.id.label('gkg_id'),
+            Gkg.date.label('gkg_date'),
+            Gkg.source_common_name.label('source_common_name'),
+            Gkg.document_identifier.label('document_identifier'),
+            Analysis.title.label('document_title'),
+            Analysis.publication_date.label('publication_date'),
+            Analysis.category.label('category'),
+            DocumentContent.content_clean.label('content_clean')
+        )
+        .join(Analysis)
+        .join(DocumentContent)
+        .filter(Analysis.gkg_id == gkg_id)
+    )
+    return [dict(r.items()) for r in session.execute(document)]
+    
+
 def get_facts_for_document(session, gkg_id=None):
     # select the facts that match the filters
-
-    facts = ((
-        session.query(Fact,Analysis)
+    facts = (
+        session.query(
+            Fact.id.label('fact_id'),
+            Fact.excerpt_start.label('excerpt_start'),
+            Fact.excerpt_end.label('excerpt_end'),
+            Fact.unit.label('unit'),
+            Fact.term.label('term'),
+            Fact.specific_reported_figure.label('specific_reported_figure'),
+            Fact.vague_reported_figure.label('vague_reported_figure'),
+            Fact.iso3.label('iso3'),
+            Fact.tag_locations.label('tags'),
+        func.array_agg(
+            func.json_build_object(
+                'location_name',Location.location_name,
+                'location_type',Location.location_type,
+                'iso3',Country.iso3,
+                'country_name',Country.preferred_term,
+                'latlong',Location.latlong)
+            ).label('locations')
         )
-        .join(Fact.analysis)
+        .join(Fact,Analysis.facts)
+        .join(Location,Fact.locations)
+        .join(Country,Location.country)
+        .group_by(Fact)
         .filter(Analysis.gkg_id == gkg_id)
-        .limit(10)
     )
     return [dict(r.items()) for r in session.execute(facts)]
