@@ -224,10 +224,10 @@ def analyse_url():
         status='url added to DB'
         try:
             work(session,analysis,Status.SCRAPING,Status.SCRAPED,Status.SCRAPING_FAILED,scrape)
+            c_m = CategoryModel()
+            r_m = RelevanceModel()
             # TODO add classification
-            # c_m = CategoryModel()
-            # r_m = RelevanceModel()
-            # classify(analysis,c_m, r_m)
+            # work(session,analysis,Status.CLASSIFYING,Status.CLASSIFIED,Status.CLASSIFYING_FAILED,lambda article: classify(article, c_m, r_m))
             work(session,analysis,Status.EXTRACTING,Status.EXTRACTED,Status.EXTRACTING_FAILED,extract_facts)
             work(session,analysis,Status.GEOTAGGING,Status.GEOTAGGED,Status.GEOTAGGING_FAILED,process_locations)
         except Exception as e:
