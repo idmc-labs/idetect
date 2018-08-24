@@ -1,5 +1,6 @@
 import json
 import logging
+import traceback
 
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
 from sqlalchemy import create_engine, desc, func, asc
@@ -27,6 +28,20 @@ app.secret_key = 'my unobvious secret key'
 
 engine = create_engine(db_url())
 Session.configure(bind=engine)
+
+c_m = None
+def get_c_m():
+    global c_m 
+    if c_m is None:
+        c_m = CategoryModel()
+    return c_m
+
+r_m = None
+def get_r_m():
+    global r_m
+    if r_m is None:
+        r_m = RelevanceModel()
+    return r_m
 
     
 @app.route('/')
@@ -223,13 +238,12 @@ def analyse_url():
         status='url added to DB'
         try:
             work(session,analysis,Status.SCRAPING,Status.SCRAPED,Status.SCRAPING_FAILED,scrape)
-            c_m = CategoryModel()
-            r_m = RelevanceModel()
             # TODO add classification
-            # work(session,analysis,Status.CLASSIFYING,Status.CLASSIFIED,Status.CLASSIFYING_FAILED,lambda article: classify(article, c_m, r_m))
+            # work(session,analysis,Status.CLASSIFYING,Status.CLASSIFIED,Status.CLASSIFYING_FAILED,lambda article: classify(article, get_c_m(), get_r_m()))
             work(session,analysis,Status.EXTRACTING,Status.EXTRACTED,Status.EXTRACTING_FAILED,extract_facts)
             work(session,analysis,Status.GEOTAGGING,Status.GEOTAGGED,Status.GEOTAGGING_FAILED,process_locations)
         except Exception as e:
+            print(traceback.format_exc())
             return json.dumps({'success': False, 'Exception':str(e)}), 422, {'ContentType': 'application/json'}
         finally:
             session.close()

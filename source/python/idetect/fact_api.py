@@ -347,8 +347,16 @@ def work(session, analysis, working_status, success_status, failure_status, func
         return e
     return True
 
+def get_scn_from_url(url):
+    try:
+        return re.search('(?<=www.).*?(?=\/)',url).group(0)
+    except:
+        try:
+            return  re.search('(?<=\/\/).*?(?=\/)',url).group(0)
+        except: return None  
+
 def create_new_analysis_from_url(session,url):
-    scn=re.search('(?<=www.).*?(?=\/)',url).group(0)
+    scn=get_scn_from_url(url)
     now=datetime.datetime.now()
     gkg_date=('{:04d}{:02d}{:02d}{:02d}{:02d}{:02d}'.format(now.year,now.month,now.day,now.hour,now.minute,now.second))
     article = Gkg(document_identifier=url,date=gkg_date,source_common_name=scn)
