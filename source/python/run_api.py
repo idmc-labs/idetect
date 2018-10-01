@@ -1,6 +1,5 @@
 import json
 import logging
-import traceback
 
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
 from sqlalchemy import create_engine, desc, func, asc
@@ -243,7 +242,6 @@ def analyse_url():
             work(session,analysis,Status.EXTRACTING,Status.EXTRACTED,Status.EXTRACTING_FAILED,extract_facts)
             work(session,analysis,Status.GEOTAGGING,Status.GEOTAGGED,Status.GEOTAGGING_FAILED,process_locations)
         except Exception as e:
-            print(traceback.format_exc())
             return json.dumps({'success': False, 'Exception':str(e)}), 422, {'ContentType': 'application/json'}
         finally:
             session.close()
