@@ -73,3 +73,7 @@ WHERE content_clean IS NOT NULL
 AND content_ts IS NULL;
 
 CREATE EXTENSION intarray;
+
+-- index on document identifier to speedup search for analyse_url API
+CREATE INDEX gkg_identifier_idx on gkg (document_identifier);
+
