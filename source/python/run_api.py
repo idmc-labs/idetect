@@ -223,21 +223,24 @@ def analyse_url():
     session = Session()
     status=None
     gkg_id=None
-    url = request.get_json(silent=True)['url'] or request.form['url']
+    try:
+        url = request.get_json(silent=True)['url'] or request.form['url']
+    except Exception as e:
+        return json.dumps({'success': False,'Exception':str(e),'status':'missing or null url parameter'}), 422, {'ContentType': 'application/json'}
     if url is None:
-        return json.dumps({'success': False}), 422, {'ContentType': 'application/json'}
+        return json.dumps({'success': False,'status':'null url parameter'}), 422, {'ContentType': 'application/json'}
     gkg = session.query(Gkg.id).filter(
          Gkg.document_identifier.like("%" + url + "%")).order_by(Gkg.date.asc()).first()
     if gkg: 
         gkg_id=gkg.id
-        status='url already in DB'
+        status='url already in IDETECT DB'
     else:
         analysis=create_new_analysis_from_url(session,url)
         gkg_id=analysis.gkg_id
-        status='url added to DB'
+        status='url added to IDETECT DB'
         try:
             work(session,analysis,Status.SCRAPING,Status.SCRAPED,Status.SCRAPING_FAILED,scrape)
-            # TODO add classification
+            # TODO add classification, missing modules
             # work(session,analysis,Status.CLASSIFYING,Status.CLASSIFIED,Status.CLASSIFYING_FAILED,lambda article: classify(article, get_c_m(), get_r_m()))
             work(session,analysis,Status.EXTRACTING,Status.EXTRACTED,Status.EXTRACTING_FAILED,extract_facts)
             work(session,analysis,Status.GEOTAGGING,Status.GEOTAGGED,Status.GEOTAGGING_FAILED,process_locations)
