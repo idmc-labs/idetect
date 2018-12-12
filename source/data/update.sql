@@ -67,6 +67,15 @@ ALTER TABLE idetect_document_contents ADD COLUMN content_ts tsvector;
 CREATE INDEX idetect_document_contents_gin
   ON idetect_document_contents using GIN (content_ts);
 
+CREATE TEXT SEARCH DICTIONARY simple_english
+   (TEMPLATE = pg_catalog.simple, STOPWORDS = english);
+
+CREATE TEXT SEARCH CONFIGURATION simple_english
+   (copy = english);
+ALTER TEXT SEARCH CONFIGURATION simple_english
+   ALTER MAPPING FOR asciihword, asciiword, hword, hword_asciipart, hword_part, word
+   WITH simple_english;
+
 UPDATE idetect_document_contents
 SET content_ts = to_tsvector('simple_english',
 REGEXP_REPLACE(content_clean,'[0-9]|said|year|people|says|one|two', '','g'))
