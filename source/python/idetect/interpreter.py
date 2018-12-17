@@ -720,6 +720,8 @@ class Interpreter(object):
             return FactTerm.DAMAGED
         elif "uninhabitable" in reporting_term:
             return FactTerm.UNINHABITABLE
+        elif "evict" in reporting_term:
+            return FactTerm.EVICTED
         else:
             return FactTerm.DISPLACED
 
