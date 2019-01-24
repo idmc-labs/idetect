@@ -4,7 +4,7 @@ from unittest import TestCase
 from sqlalchemy import create_engine
 
 from idetect.model import Base, Session, Status, Gkg, Analysis, DocumentContent, Country, Location, \
-    FactTerm
+    FactTerm, FactKeyword
 from idetect.fact_extractor import extract_facts, process_location
 from idetect.load_data import load_countries, load_terms
 
@@ -58,6 +58,19 @@ class TestFactExtractor(TestCase):
         extract_facts(analysis)
         self.assertEqual(FactTerm.REFUGEE, analysis.facts[0].term)
 
+    def test_extract_evicted_facts(self):
+        """Extracts eviction-related facts with eviction Term"""
+        gkg = Gkg()
+        analysis = Analysis(gkg=gkg, status=Status.NEW)
+        self.session.add(analysis)
+        content = DocumentContent(
+            content_clean="ordered forced eviction for 2000 people from their homes in Bosnia")
+        self.session.add(content)
+        self.session.commit()
+        analysis.content_id = content.id
+        self.session.commit()
+        extract_facts(analysis)
+        self.assertEqual(FactTerm.EVICTED, analysis.facts[0].term)
 
     def test_create_locations_with_names(self):
         """Creates locations for facts only with location names"""

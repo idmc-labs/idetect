@@ -2,11 +2,20 @@ import json
 import logging
 
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
-from sqlalchemy import create_engine, desc
+from sqlalchemy import create_engine, desc, func, asc
 
 from idetect.fact_api import get_filter_counts, get_histogram_counts, get_timeline_counts, \
-    get_urllist, get_wordcloud, filter_params, get_count, get_group_count, get_map_week, get_urllist_grouped
-from idetect.model import db_url, Analysis, Session, Gkg
+    get_urllist, get_wordcloud, filter_params, get_count, get_group_count, get_map_week, get_urllist_grouped, \
+    create_new_analysis_from_url,work, get_document, get_facts_for_document
+from idetect.model import db_url, Analysis, Session, Gkg, Status, Base
+from idetect.scraper import scrape
+from idetect.classifier import classify
+from idetect.fact_extractor import extract_facts
+from idetect.geotagger import process_locations
+from idetect.nlp_models.category import * 
+from idetect.nlp_models.relevance import * 
+from idetect.nlp_models.base_model import CustomSklLsiModel
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -19,10 +28,21 @@ app.secret_key = 'my unobvious secret key'
 engine = create_engine(db_url())
 Session.configure(bind=engine)
 
+c_m = None
+def get_c_m():
+    global c_m 
+    if c_m is None:
+        c_m = CategoryModel()
+    return c_m
 
-# Base.metadata.create_all(engine)
+r_m = None
+def get_r_m():
+    global r_m
+    if r_m is None:
+        r_m = RelevanceModel()
+    return r_m
 
-
+    
 @app.route('/')
 def homepage():
     session = Session()
@@ -84,6 +104,7 @@ def search_url():
             return json.dumps({'success': False}), 422, {'ContentType': 'application/json'}
     finally:
         session.close()
+
 
 
 @app.context_processor
@@ -197,6 +218,44 @@ def map_week_mview():
     finally:
         session.close()
 
+@app.route('/analyse_url', methods=['POST'])
+def analyse_url():    
+    session = Session()
+    status=None
+    gkg_id=None
+    try:
+        url = request.get_json(silent=True)['url'] or request.form['url']
+    except Exception as e:
+        return json.dumps({'success': False,'Exception':str(e),'status':'missing or null url parameter'}), 422, {'ContentType': 'application/json'}
+    if url is None:
+        return json.dumps({'success': False,'status':'null url parameter'}), 422, {'ContentType': 'application/json'}
+    gkg = session.query(Gkg.id).filter(
+         Gkg.document_identifier.like("%" + url + "%")).order_by(Gkg.date.asc()).first()
+    if gkg: 
+        gkg_id=gkg.id
+        status='url already in IDETECT DB'
+    else:
+        analysis=create_new_analysis_from_url(session,url)
+        gkg_id=analysis.gkg_id
+        status='url added to IDETECT DB'
+        try:
+            work(session,analysis,Status.SCRAPING,Status.SCRAPED,Status.SCRAPING_FAILED,scrape)
+            # TODO add classification, missing modules
+            # work(session,analysis,Status.CLASSIFYING,Status.CLASSIFIED,Status.CLASSIFYING_FAILED,lambda article: classify(article, get_c_m(), get_r_m()))
+            work(session,analysis,Status.EXTRACTING,Status.EXTRACTED,Status.EXTRACTING_FAILED,extract_facts)
+            work(session,analysis,Status.GEOTAGGING,Status.GEOTAGGED,Status.GEOTAGGING_FAILED,process_locations)
+        except Exception as e:
+            return json.dumps({'success': False, 'Exception':str(e)}), 422, {'ContentType': 'application/json'}
+        finally:
+            session.close()
+    try:
+        document=get_document(session, gkg_id)
+        entries = get_facts_for_document(session, gkg_id)
+        resp = jsonify({'document': document, 'facts': entries, 'status' : status})
+        resp.status_code = 200
+        return resp
+    finally:
+        session.close()
 
 if __name__ == "__main__":
     # Start flask app
