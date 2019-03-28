@@ -3,7 +3,8 @@ FROM ubuntu:latest
 ENV DEBIAN_FRONTEND noninteractive
 
 # python basics
-RUN apt-get update && \
+RUN apt-get clean && \
+    apt-get update && \
     apt-get -y install python3 python3-pip python3-dev
 
 ## download the spacy model using curl for progress indication

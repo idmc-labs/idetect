@@ -12,9 +12,9 @@ from idetect.scraper import scrape
 from idetect.classifier import classify
 from idetect.fact_extractor import extract_facts
 from idetect.geotagger import process_locations
-from idetect.nlp_models.category import * 
-from idetect.nlp_models.relevance import * 
-from idetect.nlp_models.base_model import CustomSklLsiModel
+# from idetect.nlp_models.category import * 
+# from idetect.nlp_models.relevance import * 
+# from idetect.nlp_models.base_model import CustomSklLsiModel
 
 
 logger = logging.getLogger(__name__)

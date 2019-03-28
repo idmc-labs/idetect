@@ -374,7 +374,7 @@ def get_document(session, gkg_id=None):
             Gkg.source_common_name.label('source_common_name'),
             Gkg.document_identifier.label('document_identifier'),
             Analysis.title.label('document_title'),
-            Analysis.publication_date.label('publication_date'),
+            func.to_char(Analysis.publication_date,'YYYY-MM-DD').label('publication_date'),
             Analysis.category.label('category'),
             DocumentContent.content_clean.label('content_clean')
         )
