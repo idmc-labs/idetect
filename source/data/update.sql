@@ -1,5 +1,7 @@
 -- idetect_fact_api_locations
 --TODO this can also be replaced by either a sequence or md5 hash of location names
+CREATE EXTENSION intarray;
+
 DROP MATERIALIZED VIEW if EXISTS idetect_fact_api;
 DROP MATERIALIZED VIEW if EXISTS idetect_fact_api_locations;
 CREATE MATERIALIZED VIEW idetect_fact_api_locations AS
@@ -61,8 +63,7 @@ CREATE INDEX idetect_fact_api_locations_fact_idx ON idetect_fact_api_locations (
 CREATE INDEX idetect_fact_api_locidsnum_idx ON idetect_fact_api (location_ids_num);
 
 -- wordcloud
-
-ALTER TABLE idetect_document_contents ADD COLUMN content_ts tsvector;
+-- ALTER TABLE idetect_document_contents ADD COLUMN content_ts tsvector;
 
 CREATE INDEX idetect_document_contents_gin
   ON idetect_document_contents using GIN (content_ts);
@@ -82,7 +83,6 @@ REGEXP_REPLACE(content_clean,'[0-9]|said|year|people|says|one|two', '','g'))
 WHERE content_clean IS NOT NULL
 AND content_ts IS NULL;
 
-CREATE EXTENSION intarray;
 
 -- index on document identifier to speedup search for analyse_url API
 CREATE INDEX gkg_identifier_idx on gkg (document_identifier);
