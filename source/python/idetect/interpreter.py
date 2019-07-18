@@ -722,6 +722,8 @@ class Interpreter(object):
             return FactTerm.UNINHABITABLE
         elif "evict" in reporting_term:
             return FactTerm.EVICTED
+        elif "sack" in reporting_term:
+            return FactTerm.SACKED
         else:
             return FactTerm.DISPLACED
 

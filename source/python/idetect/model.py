@@ -319,6 +319,7 @@ class FactTerm:
     REFUGEE = 'Refugee'
     ASYLUM_SEEKER = 'Asylum Seeker'
     EVICTED = 'Evicted'
+    SACKED = 'Sacked'
 
 
 fact_location = Table(

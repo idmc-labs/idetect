@@ -72,6 +72,20 @@ class TestFactExtractor(TestCase):
         extract_facts(analysis)
         self.assertEqual(FactTerm.EVICTED, analysis.facts[0].term)
 
+    def test_extract_sacked_facts(self):
+        """Extracts sacked-related facts with eviction Term"""
+        gkg = Gkg()
+        analysis = Analysis(gkg=gkg, status=Status.NEW)
+        self.session.add(analysis)
+        content = DocumentContent(
+            content_clean="2000 people have been sacked from their homes in Bosnia")
+        self.session.add(content)
+        self.session.commit()
+        analysis.content_id = content.id
+        self.session.commit()
+        extract_facts(analysis)
+        self.assertEqual(FactTerm.SACKED, analysis.facts[0].term)
+
     def test_create_locations_with_names(self):
         """Creates locations for facts only with location names"""
         gkg = Gkg()

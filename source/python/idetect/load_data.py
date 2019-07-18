@@ -38,7 +38,7 @@ def load_terms(session):
     person_reporting_terms = [
         'displaced', 'evacuated', 'forced', 'flee', 'homeless', 'relief camp',
         'sheltered', 'relocated', 'stranded', 'stuck', 'accommodated', 'refugee camp',
-        'refugee center','evicted','eviction']
+        'refugee center','evicted','eviction','sacked']
 
     structure_reporting_terms = [
         'destroyed', 'damaged', 'swept', 'collapsed',
