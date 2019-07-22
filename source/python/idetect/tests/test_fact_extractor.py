@@ -64,7 +64,49 @@ class TestFactExtractor(TestCase):
         analysis = Analysis(gkg=gkg, status=Status.NEW)
         self.session.add(analysis)
         content = DocumentContent(
+            content_clean="2000 people have been evicted from their homes in Bosnia")
+        self.session.add(content)
+        self.session.commit()
+        analysis.content_id = content.id
+        self.session.commit()
+        extract_facts(analysis)
+        self.assertEqual(FactTerm.EVICTED, analysis.facts[0].term)
+
+    def test_extract_eviction_facts(self):
+        """Extracts eviction-related facts with eviction Term"""
+        gkg = Gkg()
+        analysis = Analysis(gkg=gkg, status=Status.NEW)
+        self.session.add(analysis)
+        content = DocumentContent(
+            content_clean="ordered eviction for 2000 people from their homes in Bosnia")
+        self.session.add(content)
+        self.session.commit()
+        analysis.content_id = content.id
+        self.session.commit()
+        extract_facts(analysis)
+        self.assertEqual(FactTerm.EVICTED, analysis.facts[0].term)
+    
+    def test_extract_forced_eviction_facts(self):
+        """Extracts eviction-related facts with eviction Term"""
+        gkg = Gkg()
+        analysis = Analysis(gkg=gkg, status=Status.NEW)
+        self.session.add(analysis)
+        content = DocumentContent(
             content_clean="ordered forced eviction for 2000 people from their homes in Bosnia")
+        self.session.add(content)
+        self.session.commit()
+        analysis.content_id = content.id
+        self.session.commit()
+        extract_facts(analysis)
+        self.assertEqual(FactTerm.EVICTED, analysis.facts[0].term)
+
+    def test_extract_forcibly_evicted_facts(self):
+        """Extracts eviction-related facts with eviction Term"""
+        gkg = Gkg()
+        analysis = Analysis(gkg=gkg, status=Status.NEW)
+        self.session.add(analysis)
+        content = DocumentContent(
+            content_clean="2000 people were forcibly evicted from their homes in Bosnia")
         self.session.add(content)
         self.session.commit()
         analysis.content_id = content.id
@@ -78,7 +120,7 @@ class TestFactExtractor(TestCase):
         analysis = Analysis(gkg=gkg, status=Status.NEW)
         self.session.add(analysis)
         content = DocumentContent(
-            content_clean="2000 people have been sacked from their homes in Bosnia")
+            content_clean="last week 2000 people have been sacked from their homes in Nigeria")
         self.session.add(content)
         self.session.commit()
         analysis.content_id = content.id

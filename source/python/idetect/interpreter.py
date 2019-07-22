@@ -143,7 +143,6 @@ class Interpreter(object):
         returns: Boolean
         """
         tokens_ = [t.text for t in tokens]
-        ret = False
         for token in entity:
             if token.text in tokens_:
                 return True
@@ -368,7 +367,14 @@ class Interpreter(object):
         2. Comparing to person term lemmas
         3. Looking for special cases such as 'leave homeless'
         """
-        if verb.lemma_ in self.joint_term_lemmas:
+        # case for eviction first because we have 'forced eviction' case which would be picked by the 'elif' below
+        if 'eviction' in [obj.lemma_ for obj in get_objects_of_verb(verb)]:
+            verb_objects = get_objects_of_verb(verb)
+            for verb_object in verb_objects:
+                if verb_object.text == 'eviction' or verb_object.text == 'evictions':
+                    return self.structure_unit_lemmas + self.person_unit_lemmas, Fact(verb, article[verb.i: verb_object.i + 1],
+                                                        verb.lemma_ + " " + "eviction", "term")
+        elif verb.lemma_ in self.joint_term_lemmas:
             return self.structure_unit_lemmas + self.person_unit_lemmas, Fact(verb, verb, verb.lemma_, "term")
         elif verb.lemma_ in self.structure_term_lemmas:
             return self.structure_unit_lemmas, Fact(verb, verb, verb.lemma_, "term")
@@ -524,7 +530,7 @@ class Interpreter(object):
                 verb_objects.extend(self.simple_subjects_and_objects(anc))
 
         # Look for 'pobj' in sentence
-        if verb.dep_ == 'ROOT':
+        if verb.dep_ in ['ROOT','xcomp']:
             for token in sentence:
                 if token.dep_ == 'pobj':
                     verb_objects.append(token)
@@ -721,6 +727,8 @@ class Interpreter(object):
         elif "uninhabitable" in reporting_term:
             return FactTerm.UNINHABITABLE
         elif "evict" in reporting_term:
+            return FactTerm.EVICTED
+        elif any(evterm in reporting_term for evterm in ["eviction","evictions"]):
             return FactTerm.EVICTED
         elif "sack" in reporting_term:
             return FactTerm.SACKED
