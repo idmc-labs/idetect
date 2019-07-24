@@ -379,12 +379,11 @@ def get_document(session, gkg_id=None):
             DocumentContent.content_clean.label('content_clean')
         )
         .join(Analysis)
-        .join(DocumentContent)
+        .join(DocumentContent,isouter=True)
         .filter(Analysis.gkg_id == gkg_id)
     )
     return [dict(r.items()) for r in session.execute(document)]
     
-
 def get_facts_for_document(session, gkg_id=None):
     # select the facts that match the filters
     facts = (
