@@ -1,1 +1,1 @@
-17 8 * * *   idetect     /home/idetect/scripts/update_mviews.bash
+30 8,16 * * *   idetect     /home/idetect/scripts/update_mviews.bash
