@@ -21,6 +21,14 @@ docker-compose build
 docker-compose up workers
 ```
 
+Next run the update script to create the fact API tables. Assuming the
+localdb docker container is running and you have psql installed on your
+host machine, you can use:
+
+```
+psql -U postgres -h localhost -p 5433 idetect < source/data/update.sql
+```
+
 ## running after initial setup
 
 Start LocalDB, Workers, Flask App, Jupyter:
