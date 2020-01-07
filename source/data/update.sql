@@ -114,4 +114,26 @@ CREATE MATERIALIZED VIEW idetect_map_week_mview AS (
 );
 ALTER TABLE idetect_map_week_mview OWNER TO idetect;
 
+DROP TABLE IF EXISTS idetect_validation;
+CREATE TABLE idetect_validation (
+    fact_id integer PRIMARY KEY REFERENCES idetect_facts(id),
+    status character varying,
+    missing character varying,
+    wrong character varying,
+    assigned_to character varying,
+    created_by character varying,
+    created_at date
+);
+ALTER TABLE idetect_validation OWNER TO idetect;
+
+DROP TABLE IF EXISTS idetect_validation_values;
+CREATE TABLE idetect_validation_values (
+    idetect_validation_key_id integer,
+    idetect_validation_key_value character varying,
+    status character varying PRIMARY KEY,
+    missing character varying,
+    wrong character varying,
+    display_color character varying
+);
+ALTER TABLE idetect_validation_values OWNER TO idetect;
 

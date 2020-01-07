@@ -1,8 +1,9 @@
+spacy~=1.9.0
+nltk
+textacy==0.6.1
 Flask
 psycopg2-binary
 SQLAlchemy
-spacy
-textacy
 parsedatetime
 requests
 schedule
@@ -10,6 +11,5 @@ pycountry
 newspaper3k
 pdfminer.six
 jupyter
-nltk
 langdetect
 tabulate
