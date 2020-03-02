@@ -39,11 +39,19 @@ COPY ./config/nginx.conf /etc/nginx/nginx.conf
 RUN pip install uwsgi
 COPY ./config/uwsgi.ini /etc/uwsgi/uwsgi.ini
 
+# NOTE: This configs are used when starting containers
+COPY ./config/api-supervisord.conf \
+    ./config/worker-supervisord.conf \
+    ./config/crontab \
+    /idetect-configs/
+
 ARG UID
-RUN useradd -ms /bin/bash -u $UID idetect
+# Make sure all containers have save UID
+RUN useradd -ms /bin/bash -u ${UID:-1001} idetect
+
 RUN mkdir -p /var/log/nginx && chown -R idetect /var/log/nginx && \
     mkdir -p /var/lib/nginx && chown -R idetect /var/lib/nginx
 
 USER idetect
 WORKDIR /home/idetect
-COPY ./source /home/idetect
+COPY --chown=idetect ./source /home/idetect

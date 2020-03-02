@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - feature/docker-setup
+    tags:
+      - v*
+
+jobs:
+  test:
+    name: Test and Push docker image
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Docker Setup
+        run: |
+          # docker login
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
+
+          # Strip git ref prefix from version
+          export ID_BRANCH_NAME=`echo ${{ github.ref }} | sed -e 's,.*/\(.*\),\1,'`
+          if [[ "$ID_BRANCH_NAME" = "master" ]] ; then export ID_BRANCH_NAME=; fi
+
+          # Share PA_BRANCH variable amount steps
+          echo "::set-env name=ID_BRANCH_NAME::$ID_BRANCH_NAME"
+          touch .env
+
+      - name: Docker pull
+        run: docker-compose pull localdb api || ID_BRANCH_NAME= docker-compose pull localdb api || true
+
+      - name: Build docker image
+        run: docker-compose build localdb api
+
+      - name: Initialize Idetect DB
+        run: |
+          # Start DB and wait unit it's ready
+          docker-compose up -d localdb && ./source/scripts/wait-for-it.sh localhost:5433
+          # Run initial DB migrations
+          docker-compose run --rm api bash -c 'python3 python/setup.py'
+          # Run custom DB migrations
+          docker cp ./source/data/update.sql `docker-compose ps -q localdb`:/tmp/update.sql
+          docker-compose exec -T localdb bash -c 'psql -U postgres idetect < /tmp/update.sql'
+
+      - name: Run test
+        run: docker-compose run --rm unittests
+
+      - name: Push image
+        if: github.event_name == 'push'
+        run: docker-compose push
