@@ -131,7 +131,6 @@ def subdivision_country_code(place_name):
     for sub_division in subdivisions:
         if compare_strings(sub_division.name, place_name):
             return sub_division.country.alpha_3, sub_division.country.name
-            break
     return None, None
 
 
@@ -143,15 +142,12 @@ def match_country_name(place_name):
     for country in countries:  # Loop through all countries
         if country.name == place_name:  # Look directly at country name
             return country.alpha_3, country.name
-            break
         # In some cases the country also has a common name
         elif hasattr(country, 'common_name') and country.common_name == place_name:
             return country.alpha_3, country.common_name
-            break
         # In some cases the country also has an official name
         elif hasattr(country, 'official_name') and country.official_name == place_name:
             return country.alpha_3, country.name
-            break
     return None, None
 
 

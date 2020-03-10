@@ -1,3 +1,4 @@
+import os
 import json
 import logging
 
@@ -23,7 +24,7 @@ logger.setLevel(logging.INFO)
 app = Flask(__name__,
             static_folder="/home/idetect/web/static",
             template_folder="/home/idetect/web/templates")
-app.secret_key = 'my unobvious secret key'
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'my unobvious secret key')
 
 engine = create_engine(db_url())
 Session.configure(bind=engine)
