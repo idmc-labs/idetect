@@ -40,11 +40,17 @@ jobs:
         run: |
           # Start DB and wait unit it's ready
           docker-compose up -d localdb && ./source/scripts/wait-for-it.sh localhost:5433
+
           # Run initial DB migrations
           docker-compose run --rm api bash -c 'python3 python/setup.py'
+
           # Run custom DB migrations
           docker cp ./source/data/update.sql `docker-compose ps -q localdb`:/tmp/update.sql
           docker-compose exec -T localdb bash -c 'psql -U postgres idetect < /tmp/update.sql'
+          # Also apply update configuration to idetect_test database
+          cat source/data/update.sql | sed "s/ALTER TABLE \(\w*\) OWNER TO idetect;/ALTER TABLE \1 OWNER TO tester;/" > source/data/update_test.sql
+          docker cp ./source/data/update_test.sql `docker-compose ps -q localdb`:/tmp/update_test.sql
+          docker-compose exec -T localdb bash -c 'psql -U postgres idetect_test < /tmp/update_test.sql'
 
       - name: Run test
         run: docker-compose run --rm unittests

@@ -277,7 +277,7 @@ def get_urllist(session, limit=32, offset=0, **filters):
             
     )
     # if we filter by text this is already joined and SQLAlchemy return an error
-    if filters['ts'] is None:
+    if filters.get('ts') is None:
         facts=facts.join(DocumentContent, FactApi.content_id == DocumentContent.id)
     # limit and offset must be applied after all the joins
     facts=facts.limit(limit).offset(offset)
