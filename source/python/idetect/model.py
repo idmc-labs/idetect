@@ -31,7 +31,7 @@ def db_url():
         user=os.environ.get('DB_USER'),
         passwd=os.environ.get('DB_PASSWORD'),
         db_host=os.environ.get('DB_HOST'),
-        db_port=os.environ.get('DB_PORT'),
+        db_port=os.environ.get('DB_PORT', 5432),
         db=os.environ.get('DB_NAME'))
 
 

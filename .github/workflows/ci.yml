@@ -28,7 +28,7 @@ jobs:
 
           # Share PA_BRANCH variable amount steps
           echo "::set-env name=ID_BRANCH_NAME::$ID_BRANCH_NAME"
-          touch .env
+          cp docker-sample.env docker.env
 
       - name: Docker pull
         run: docker-compose pull localdb api || ID_BRANCH_NAME= docker-compose pull localdb api || true

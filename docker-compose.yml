@@ -24,7 +24,7 @@ services:
       # IMPORTANT: Remove this on production
       - POSTGRES_HOST_AUTH_METHOD=trust
     volumes:
-      - ./pgdata:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
     ports:
       - 127.0.0.1:5433:5432
 
@@ -66,3 +66,7 @@ services:
     command: sh -c './scripts/wait-for-it.sh localdb:5432 && python3 -m unittest /home/idetect/python/idetect/tests/test_*.py'
     volumes:
       - ./source:/home/idetect
+
+
+volumes:
+  postgres-data:

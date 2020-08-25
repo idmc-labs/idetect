@@ -56,6 +56,18 @@ def homepage():
         session.close()
 
 
+@app.route('/health_checkup')
+def health_checkup():
+    session = Session()
+    try:
+        return json.dumps({
+            'status': 'okay',
+        })
+    finally:
+        session.close()
+
+
+
 @app.route('/add_url', methods=['POST'])
 def add_url():
     url = request.form['url']

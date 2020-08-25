@@ -1,11 +1,11 @@
-FROM ubuntu:latest
+FROM ubuntu:18.04
 
 ENV DEBIAN_FRONTEND noninteractive
 
 # python basics
 RUN apt-get clean && \
     apt-get update && \
-    apt-get -y install python3 python3-pip python3-dev
+    apt-get -y install python3.6 python3-pip python3-dev
 
 ## download the spacy model using curl for progress indication
 # This is quite large, so we're downloading it early in the build for the sake of caching
