@@ -32,7 +32,8 @@ def db_url():
         passwd=os.environ.get('DB_PASSWORD'),
         db_host=os.environ.get('DB_HOST'),
         db_port=os.environ.get('DB_PORT', 5432),
-        db=os.environ.get('DB_NAME'))
+        db=os.environ.get('DB_NAME')
+    )
 
 
 class Status:

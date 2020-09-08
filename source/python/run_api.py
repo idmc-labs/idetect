@@ -4,6 +4,7 @@ import logging
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
 from sqlalchemy import create_engine, desc, func, asc
 
+from idetect.configs import get_logger
 from idetect.fact_api import get_filter_counts, get_histogram_counts, get_timeline_counts, \
     get_urllist, get_wordcloud, filter_params, get_count, get_group_count, get_map_week, get_urllist_grouped, \
     create_new_analysis_from_url,work, get_document, get_facts_for_document
@@ -17,8 +18,7 @@ from idetect.geotagger import process_locations
 # from idetect.nlp_models.base_model import CustomSklLsiModel
 
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger = get_logger(__name__)
 
 app = Flask(__name__,
             static_folder="/home/idetect/web/static",

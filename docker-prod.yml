@@ -20,7 +20,7 @@ services:
     <<: *x-base-idetect-setup
     command: sh -c "/usr/bin/supervisord -c /idetect-configs/api-supervisord.conf"
     ports:
-      - 80:5001
+      - 5001:5001
 
   workers:
     <<: *x-base-idetect-setup
