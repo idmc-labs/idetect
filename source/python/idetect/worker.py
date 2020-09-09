@@ -9,7 +9,6 @@ from multiprocessing import Process
 from idetect.model import Analysis, Session, Gkg, Status
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 class Worker:
@@ -82,9 +81,12 @@ class Worker:
             analysis.create_new_version(self.success_status)
         except Exception as e:
             delta = time.time() - start
-            logger.warning("Worker {} failed to process Analysis {} {} -> {}".format(
-                os.getpid(), analysis.gkg_id, analysis_status, self.failure_status),
-                exc_info=e)
+            logger.warning(
+                "Worker {} failed to process Analysis {} {} -> {}".format(
+                    os.getpid(), analysis.gkg_id, analysis_status, self.failure_status
+                ),
+                exc_info=e,
+            )
             analysis.error_msg = str(e)
             analysis.processing_time = delta
             analysis.create_new_version(self.failure_status)

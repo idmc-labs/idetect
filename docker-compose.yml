@@ -1,87 +1,72 @@
-version: '3'
+version: '3.4'
+
+x-base-idetect-setup: &x-base-idetect-setup
+  image: docker.pkg.github.com/idmc-labs/idetect/idetect:${ID_BRANCH_NAME:-latest}
+  build:
+    context: .
+    dockerfile: ./docker/idetect/Dockerfile
+    cache_from:
+      - "docker.pkg.github.com/idmc-labs/idetect/idetect:${ID_BRANCH_NAME}"
+      - docker.pkg.github.com/idmc-labs/idetect/idetect:latest
+    args:
+      - UID=${UID}
+  env_file: docker.env
+  user: ${UID}
+  depends_on:
+    - localdb
+
+
 services:
   localdb:
-    build: docker/postgres
-    image: localdb
-    ports:
-      - 5433:5432
+    image: docker.pkg.github.com/idmc-labs/idetect/localdb:${ID_BRANCH_NAME:-latest}
+    build: ./docker/postgres
+    environment:
+      # IMPORTANT: Remove this on production
+      - POSTGRES_HOST_AUTH_METHOD=trust
     volumes:
-      - ./pgdata:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - 127.0.0.1:5433:5432
+
   api:
-    build:
-      context: .
-      dockerfile: ./docker/idetect/Dockerfile
-      args:
-        - UID=${UID}
-    image: idetect
-    command: sh -c "sleep 5; /usr/bin/supervisord"
+    <<: *x-base-idetect-setup
+    command: sh -c "./scripts/wait-for-it.sh localdb:5432 && /usr/bin/supervisord"
     volumes:
       - ./source:/home/idetect
       - ./config/api-supervisord.conf:/etc/supervisord.conf
     ports:
       - 5001:5001
-    depends_on:
-      - localdb
-    env_file: docker.env
-    user: ${UID}
+
   workers:
-    build:
-      context: .
-      dockerfile: ./docker/idetect/Dockerfile
-      args:
-        - UID=${UID}
-    image: idetect
+    <<: *x-base-idetect-setup
     command: sh -c "python3 python/setup.py && /usr/bin/supervisord"
     volumes:
       - ./source:/home/idetect
-      - ./logs:/var/log
       - ./config/worker-supervisord.conf:/etc/supervisord.conf
-    depends_on:
-      - localdb
-    env_file: docker.env
-    user: ${UID}
-#  notebooks:
-#    build:
-#      context: .
-#      dockerfile: ./docker/idetect/Dockerfile
-#      args:
-#        - UID=${UID}
-#    image: idetect
-#    command: jupyter notebook --no-browser --ip=0.0.0.0 --port 5002 /home/idetect/notebooks
-#    volumes:
-#      - ./source:/home/idetect
-#    ports:
-#      - 5002:5002
-#    depends_on:
-#      - localdb
-#    env_file: docker.env
-#    user: ${UID}
-  unittests:
-    build:
-      context: .
-      dockerfile: ./docker/idetect/Dockerfile
-      args:
-        - UID=${UID}
-    image: idetect
-    command: sh -c 'python3 -m unittest /home/idetect/python/idetect/tests/test_*.py'
+      - ./logs:/var/log
+
+  notebooks:
+    <<: *x-base-idetect-setup
+    command: jupyter notebook --no-browser --ip=0.0.0.0 --port 5002 /home/idetect/notebooks
     volumes:
       - ./source:/home/idetect
-    depends_on:
-      - localdb
-    env_file: docker.env
-    user: ${UID}
+    ports:
+      - 5002:5002
+
   cron:
-    build:
-      context: .
-      dockerfile: ./docker/idetect/Dockerfile
-      args:
-        - UID=${UID}
-    image: idetect
+    <<: *x-base-idetect-setup
     user: root
     command: sh -c 'cp /tmp/crontab /etc/cron.d/idetect ; cron -f -L 7'
     volumes:
       - ./source:/home/idetect
       - ./config/crontab:/tmp/crontab
-    depends_on:
-      - localdb
-    env_file: docker.env
+
+  unittests:
+    <<: *x-base-idetect-setup
+    command: sh -c './scripts/wait-for-it.sh localdb:5432 && python3 -m unittest /home/idetect/python/idetect/tests/test_*.py'
+    volumes:
+      - ./source:/home/idetect
+
+
+volumes:
+  postgres-data:

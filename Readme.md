@@ -1,5 +1,7 @@
 # idetect
 
+[Technical Flow](./source/python/)
+
 ## intial setup
 
 Edit `idetect/docker.env` to add the appropriate environment variables

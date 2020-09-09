@@ -25,3 +25,5 @@ source/supervisord.log
 source/supervisord.pid
 .vscode/settings.json
 .env
+
+docker.env

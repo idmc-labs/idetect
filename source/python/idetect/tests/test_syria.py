@@ -340,7 +340,6 @@ class TestSyriaYear(TestCase):
         print(t1 - t0)
         self.assertEqual(100, len(result))
         for entry in result:
-            self.assertEqual(entry['nfacts'], len(entry['entry']))
             for fact in entry['entry']:
                 self.assertEqual(entry['specific_reported_figure'], fact['specific_reported_figure'])
                 self.assertEqual(entry['unit'], fact['unit'])
