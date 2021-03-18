@@ -66,7 +66,7 @@ pathlib==1.0.1
 pdfminer.six==20170720
 pexpect==4.7.0
 pickleshare==0.7.5
-Pillow==6.2.1
+Pillow==8.1.1
 plac==0.9.6
 preshed==1.0.1
 prometheus-client==0.7.1
