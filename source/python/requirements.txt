@@ -77,7 +77,7 @@ pycountry==17.5.14
 pycrypto==2.6.1
 pycryptodome==3.9.4
 pyemd==0.5.1
-Pygments==2.5.2
+Pygments==2.7.4
 pygobject==3.26.1
 Pyphen==0.9.5
 pyrsistent==0.15.6
