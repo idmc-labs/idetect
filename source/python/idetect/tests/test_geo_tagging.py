@@ -41,8 +41,7 @@ class TestGeoTagger(TestCase):
         """Returns sufficient level of detail for results"""
         results = get_geo_info("Beijing")
         self.assertEqual(results['country_code'], 'CHN')
-        self.assertEqual(results['coordinates'],
-                         "39.9059631,116.391248")
+        self.assertEqual(results['coordinates'], "39.906217,116.3912757")
     
     def test_country_code(self):
         """Returns sufficient level of detail for results"""

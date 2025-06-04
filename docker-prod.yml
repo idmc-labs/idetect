@@ -1,0 +1,40 @@
+version: '3.4'
+
+x-base-idetect-setup: &x-base-idetect-setup
+  image: docker.pkg.github.com/idmc-labs/idetect/idetect:${RELEASE-release}
+  build:
+    context: .
+    dockerfile: ./docker/idetect/Dockerfile
+    cache_from:
+      - "docker.pkg.github.com/idmc-labs/idetect/idetect:${RELEASE}"
+      - docker.pkg.github.com/idmc-labs/idetect/idetect:release
+      - docker.pkg.github.com/idmc-labs/idetect/idetect:latest
+    args:
+      - UID=${UID}
+  env_file: docker.env
+  user: ${UID}
+  restart: on-failure
+
+services:
+  api:
+    <<: *x-base-idetect-setup
+    command: sh -c "/usr/bin/supervisord -c /idetect-configs/api-supervisord.conf"
+    ports:
+      - 5001:5001
+
+  workers:
+    <<: *x-base-idetect-setup
+    command: sh -c "python3 python/setup.py && /usr/bin/supervisord -c /idetect-configs/worker-supervisord.conf"
+    volumes:
+      - ./logs:/var/log
+
+  cron:
+    <<: *x-base-idetect-setup
+    user: root
+    command: sh -c 'cron -f -L 7 /idetect-configs/crontab'
+
+  # notebooks:
+  #   <<: *x-base-idetect-setup
+  #   command: jupyter notebook --no-browser --ip=0.0.0.0 --port 5002 /home/idetect/notebooks
+  #   ports:
+  #     - 5002:5002
