@@ -16,11 +16,10 @@ def match_iso3(iso2):
     for country in countries:  # Loop through all countries
         if country.alpha_2 == iso2:  # Look directly at iso2
             return country.alpha_3
-            break
     return 'XXX'
 
 def nominatim_coordinates(place_name, country_code='XXX'):
-    base_url='http://nominatim.openstreetmap.org/search'
+    base_url='https://nominatim.openstreetmap.org/search'
     base_params = {'q':place_name,'addressdetails': 1,'format':'json','extratags':1,'accept-language':'en'}
     if country_code != 'XXX':
         try:
